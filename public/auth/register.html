@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Notaire</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="./assets/css/register.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Background Particle Canvas -->
+    <canvas id="windCanvas"></canvas>
+
+    <div class="register-container">
+        <h2>Register</h2>
+
+        <form id="registerForm">
+            <!-- User Name -->
+            <div class="input-group">
+                <div class="input-icon"><i class="fa-solid fa-user"></i></div>
+                <input type="text" id="username" class="input-field" placeholder="User Name" required>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="input-group">
+                <div class="input-icon"><i class="fa-solid fa-phone"></i></div>
+                <input type="tel" id="phone" class="input-field" placeholder="Phone Number" required>
+            </div>
+
+            <!-- Email Address -->
+            <div class="input-group">
+                <div class="input-icon"><i class="fa-regular fa-envelope"></i></div>
+                <input type="email" id="email" class="input-field" placeholder="Email Address" required>
+            </div>
+
+            <!-- Password -->
+            <div class="input-group">
+                <div class="input-icon"><i class="fa-solid fa-lock"></i></div>
+                <input type="password" id="password" class="input-field" placeholder="Password" required>
+                <div class="password-toggle" onclick="togglePassword('password', this)">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="input-group">
+                <div class="input-icon"><i class="fa-solid fa-lock"></i></div>
+                <input type="password" id="confirmPassword" class="input-field" placeholder="Confirm Password" required>
+                <div class="password-toggle" onclick="togglePassword('confirmPassword', this)">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-create">Create Account</button>
+
+            <div class="btn-wrapper">
+                <button type="button" class="btn-cancel" onclick="window.location.href='#'">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Script -->
+    <script src="./assets/js/register.js"></script>
+</body>
+
+</html>
