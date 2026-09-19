@@ -54,6 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initCharts();
     updateAllMetrics();
     setupCurrentDates();
+    // Restaurar estado del sidebar
+    if (localStorage.getItem('notaire_sidebar_collapsed') === '1') {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.classList.add('collapsed');
+    }
 });
 
 /* ==========================================================================
@@ -353,7 +358,13 @@ function renderUltimosMovimientos() {
                     <span class="transaction-date">${g.fecha || 'Hoy'}</span>
                 </div>
             </div>
-            <span class="transaction-amount-negative">-${formatCOP(g.monto)}</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="transaction-amount-negative">-${formatCOP(g.monto)}</span>
+                <div class="transaction-actions">
+                    <button class="btn-tx-edit" title="Editar" onclick="openModalEditarGasto(${g.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn-tx-delete" title="Eliminar" onclick="eliminarGasto(${g.id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
         </div>
     `).join('');
 }
@@ -371,7 +382,13 @@ function renderUltimosIngresos() {
                     <span class="transaction-date">${i.fecha || 'Hoy'}</span>
                 </div>
             </div>
-            <span class="transaction-amount-positive">+${formatCOP(i.monto)}</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="transaction-amount-positive">+${formatCOP(i.monto)}</span>
+                <div class="transaction-actions">
+                    <button class="btn-tx-edit" title="Editar" onclick="openModalEditarIngreso(${i.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn-tx-delete" title="Eliminar" onclick="eliminarIngreso(${i.id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
         </div>
     `).join('');
 }
@@ -407,9 +424,13 @@ function renderGoalsGrid() {
                     <span>Falta: ${formatCOP(falta)}</span>
                     <span>Fecha: ${meta.fecha || '2026'}</span>
                 </div>
-                <button class="btn-aportar-goal" onclick="openModalAportarMeta(${meta.id}, '${escapeHtml(meta.nombre)}')">
-                    <i class="fas fa-plus"></i> Aportar
-                </button>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button class="btn-aportar-goal" style="flex:1;" onclick="openModalAportarMeta(${meta.id}, '${escapeHtml(meta.nombre)}')">
+                        <i class="fas fa-plus"></i> Aportar
+                    </button>
+                    <button class="btn-tx-edit" title="Editar meta" onclick="openModalEditarMeta(${meta.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn-tx-delete" title="Eliminar meta" onclick="eliminarMeta(${meta.id})"><i class="fas fa-trash"></i></button>
+                </div>
             </div>
         `;
     }).join('');
@@ -700,4 +721,125 @@ function escapeHtml(str) {
     return str.replace(/[&<>"']/g, function(m) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
     });
+}
+
+/* ==========================================================================
+   7. FUNCIONES EDITAR / ELIMINAR MOVIMIENTOS
+   ========================================================================== */
+
+// --- GASTOS ---
+function openModalEditarGasto(id) {
+    const g = NotaireState.gastos.find(x => x.id === id);
+    if (!g) return;
+    document.getElementById('editGastoId').value = g.id;
+    document.getElementById('editGastoMonto').value = g.monto;
+    document.getElementById('editGastoCategoria').value = g.categoria;
+    document.getElementById('editGastoDescripcion').value = g.concepto;
+    document.getElementById('editGastoFecha').value = getTodayIso();
+    openModal('modalEditarGasto');
+}
+
+function handleGuardarEdicionGasto(event) {
+    event.preventDefault();
+    const id = parseInt(document.getElementById('editGastoId').value);
+    const g = NotaireState.gastos.find(x => x.id === id);
+    if (!g) return;
+
+    const iconMap = { 'Alimentación': '🍔', 'Transporte': '🚌', 'Entretenimiento': '🎮', 'Servicios': '🏠', 'Otros': '🛒' };
+    g.monto = parseFloat(document.getElementById('editGastoMonto').value);
+    g.categoria = document.getElementById('editGastoCategoria').value;
+    g.concepto = document.getElementById('editGastoDescripcion').value;
+    g.icono = iconMap[g.categoria] || '💳';
+
+    updateAllMetrics();
+    closeModal('modalEditarGasto');
+    showToast('¡Gasto actualizado correctamente!');
+}
+
+function eliminarGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    NotaireState.gastos = NotaireState.gastos.filter(x => x.id !== id);
+    updateAllMetrics();
+    showToast('Gasto eliminado.');
+}
+
+// --- INGRESOS ---
+function openModalEditarIngreso(id) {
+    const i = NotaireState.ingresos.find(x => x.id === id);
+    if (!i) return;
+    document.getElementById('editIngresoId').value = i.id;
+    document.getElementById('editIngresoMonto').value = i.monto;
+    document.getElementById('editIngresoFuente').value = i.fuente;
+    document.getElementById('editIngresoDescripcion').value = i.concepto;
+    document.getElementById('editIngresoFecha').value = getTodayIso();
+    openModal('modalEditarIngreso');
+}
+
+function handleGuardarEdicionIngreso(event) {
+    event.preventDefault();
+    const id = parseInt(document.getElementById('editIngresoId').value);
+    const i = NotaireState.ingresos.find(x => x.id === id);
+    if (!i) return;
+
+    const iconMap = { 'Salario': '💼', 'Freelance': '💻', 'Negocio': '🛍️', 'Intereses': '💰', 'Otros': '🟢' };
+    i.monto = parseFloat(document.getElementById('editIngresoMonto').value);
+    i.fuente = document.getElementById('editIngresoFuente').value;
+    i.concepto = document.getElementById('editIngresoDescripcion').value;
+    i.icono = iconMap[i.fuente] || '💰';
+
+    updateAllMetrics();
+    closeModal('modalEditarIngreso');
+    showToast('¡Ingreso actualizado correctamente!');
+}
+
+function eliminarIngreso(id) {
+    if (!confirm('¿Eliminar este ingreso?')) return;
+    NotaireState.ingresos = NotaireState.ingresos.filter(x => x.id !== id);
+    updateAllMetrics();
+    showToast('Ingreso eliminado.');
+}
+
+// --- METAS / AHORROS ---
+function openModalEditarMeta(id) {
+    const m = NotaireState.metas.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('editMetaId').value = m.id;
+    document.getElementById('editMetaNombre').value = m.nombre;
+    document.getElementById('editMetaObjetivo').value = m.objetivo;
+    document.getElementById('editMetaActual').value = m.actual;
+    document.getElementById('editMetaFecha').value = m.fecha || getTodayIso();
+    openModal('modalEditarMeta');
+}
+
+function handleGuardarEdicionMeta(event) {
+    event.preventDefault();
+    const id = parseInt(document.getElementById('editMetaId').value);
+    const m = NotaireState.metas.find(x => x.id === id);
+    if (!m) return;
+
+    m.nombre = document.getElementById('editMetaNombre').value;
+    m.objetivo = parseFloat(document.getElementById('editMetaObjetivo').value);
+    m.actual = parseFloat(document.getElementById('editMetaActual').value);
+    m.fecha = document.getElementById('editMetaFecha').value;
+
+    updateAllMetrics();
+    closeModal('modalEditarMeta');
+    showToast('¡Meta actualizada correctamente!');
+}
+
+function eliminarMeta(id) {
+    if (!confirm('¿Eliminar esta meta de ahorro?')) return;
+    NotaireState.metas = NotaireState.metas.filter(x => x.id !== id);
+    updateAllMetrics();
+    showToast('Meta eliminada.');
+}
+
+/* Sidebar toggle (si no fue definido por un script previo) */
+if (typeof toggleSidebar === 'undefined') {
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('notaire_sidebar_collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+    }
 }

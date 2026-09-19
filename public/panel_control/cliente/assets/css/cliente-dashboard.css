@@ -286,6 +286,131 @@ body {
     padding: 24px 16px;
     z-index: 10;
     justify-content: space-between;
+    transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1), padding 0.32s ease;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+    width: 72px;
+    padding: 24px 10px;
+}
+
+.sidebar.collapsed .brand-title,
+.sidebar.collapsed .sidebar-nav li a span,
+.sidebar.collapsed .profile-info,
+.sidebar.collapsed .sidebar-bell-card h4,
+.sidebar.collapsed .sidebar-bell-card p,
+.sidebar.collapsed .sidebar-bell-card .btn-sidebar-bell {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-profile {
+    padding: 10px;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-profile .profile-avatar-circle {
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .sidebar-nav li a {
+    justify-content: center;
+    gap: 0;
+    padding: 12px;
+}
+
+.sidebar.collapsed .sidebar-nav li a i {
+    width: auto;
+    font-size: 20px;
+}
+
+.sidebar.collapsed .sidebar-bell-card {
+    padding: 10px;
+}
+
+.sidebar.collapsed .brand-header {
+    justify-content: center;
+    padding-bottom: 24px;
+    gap: 0;
+}
+
+.sidebar-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    color: var(--color-primary);
+    background: rgba(140, 0, 255, 0.12);
+}
+
+.sidebar.collapsed .sidebar-toggle-btn {
+    margin-left: 0;
+    margin: 0 auto;
+}
+
+/* Edit/Delete action buttons on transaction rows */
+.transaction-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.transaction-row:hover .transaction-actions {
+    opacity: 1;
+}
+
+.transaction-row {
+    position: relative;
+}
+
+.btn-tx-edit, .btn-tx-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.18s ease;
+}
+
+.btn-tx-edit {
+    color: var(--color-secondary-light);
+    background: rgba(140, 0, 255, 0.08);
+}
+
+.btn-tx-edit:hover {
+    background: rgba(140, 0, 255, 0.22);
+    color: #fff;
+}
+
+.btn-tx-delete {
+    color: var(--color-accent-red);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.btn-tx-delete:hover {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fff;
 }
 
 .brand-header {

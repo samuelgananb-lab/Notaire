@@ -30,6 +30,9 @@
                         <text x="50" y="70" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold" fill="white" text-anchor="middle">N</text>
                     </svg>
                     <span class="brand-title">NOTAIRE</span>
+                    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Colapsar menú" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
 
                 <nav class="sidebar-nav">
@@ -618,8 +621,6 @@
                                 <div class="month-title-select" id="calMonthTitle">Agosto 2026 <i class="fas fa-chevron-down" style="font-size: 14px;"></i></div>
                                 <div class="view-toggle-pill">
                                     <button class="view-toggle-btn active" id="calViewMonth">Mes</button>
-                                    <button class="view-toggle-btn" id="calViewWeek">Semana</button>
-                                    <button class="view-toggle-btn" id="calViewDay">Día</button>
                                 </div>
                             </div>
 
@@ -762,37 +763,7 @@
                                 </div>
                             </div>
 
-                            <!-- Idioma y región -->
-                            <div class="config-card">
-                                <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">
-                                        <i class="fas fa-globe"></i>
-                                    </div>
-                                    <div>
-                                        <h3>Idioma y Región</h3>
-                                        <p>Moneda, fecha y formato</p>
-                                    </div>
-                                </div>
-                                <div class="config-fields">
-                                    <div class="form-group">
-                                        <label class="config-field-label">Idioma</label>
-                                        <select class="form-control" id="cfgIdioma" onchange="setLanguageFromSelect(this.value)">
-                                            <option value="es" selected>Español (Colombia)</option>
-                                            <option value="es-mx">Español (México)</option>
-                                            <option value="en">English (US)</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="config-field-label">Moneda</label>
-                                        <select class="form-control" id="cfgMoneda">
-                                            <option selected>COP – Peso Colombiano</option>
-                                            <option>USD – Dólar Americano</option>
-                                            <option>EUR – Euro</option>
-                                        </select>
-                                    </div>
-                                    <button class="btn-config-save" onclick="saveRegionConfig()"><i class="fas fa-check"></i> Guardar preferencias</button>
-                                </div>
-                            </div>
+                            <!-- Idioma y región eliminado: el idioma se gestiona desde el botón arriba a la derecha -->
                         </div>
 
                         <!-- Col derecha -->
@@ -1049,6 +1020,51 @@
         <div class="modal-container-box" style="max-width: 680px;">
             <div class="modal-header-box"><h3 id="verTodosTitle">Historial</h3><button class="modal-close-btn" onclick="closeModal('modalVerTodos')">&times;</button></div>
             <div class="transactions-list" id="verTodosContentList" style="max-height: 350px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Gasto -->
+    <div class="modal-overlay" id="modalEditarGasto">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: #d299ff; margin-right: 10px;"></i>Editar Gasto</h3><button class="modal-close-btn" onclick="closeModal('modalEditarGasto')">&times;</button></div>
+            <form id="formEditarGasto" onsubmit="handleGuardarEdicionGasto(event)">
+                <input type="hidden" id="editGastoId">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control" id="editGastoMonto" required></div>
+                <div class="form-group"><label>Categoría</label><select class="form-control" id="editGastoCategoria"><option value="Alimentación">🍔 Alimentación</option><option value="Transporte">🚌 Transporte</option><option value="Entretenimiento">🎮 Entretenimiento</option><option value="Servicios">🏠 Servicios</option><option value="Otros">🛒 Otros</option></select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="editGastoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="editGastoFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Ingreso -->
+    <div class="modal-overlay" id="modalEditarIngreso">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: #10b981; margin-right: 10px;"></i>Editar Ingreso</h3><button class="modal-close-btn" onclick="closeModal('modalEditarIngreso')">&times;</button></div>
+            <form id="formEditarIngreso" onsubmit="handleGuardarEdicionIngreso(event)">
+                <input type="hidden" id="editIngresoId">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control" id="editIngresoMonto" required></div>
+                <div class="form-group"><label>Fuente</label><select class="form-control" id="editIngresoFuente"><option value="Salario">💼 Salario</option><option value="Freelance">💻 Freelance</option><option value="Negocio">🛍️ Negocio</option><option value="Intereses">💰 Intereses</option><option value="Otros">🟢 Otros</option></select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="editIngresoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="editIngresoFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Meta (Ahorro) -->
+    <div class="modal-overlay" id="modalEditarMeta">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: #3b82f6; margin-right: 10px;"></i>Editar Meta</h3><button class="modal-close-btn" onclick="closeModal('modalEditarMeta')">&times;</button></div>
+            <form id="formEditarMeta" onsubmit="handleGuardarEdicionMeta(event)">
+                <input type="hidden" id="editMetaId">
+                <div class="form-group"><label>Nombre de la meta</label><input type="text" class="form-control" id="editMetaNombre" required></div>
+                <div class="form-group"><label>Monto objetivo ($)</label><input type="number" class="form-control" id="editMetaObjetivo" required></div>
+                <div class="form-group"><label>Monto actual ($)</label><input type="number" class="form-control" id="editMetaActual" required></div>
+                <div class="form-group"><label>Fecha límite</label><input type="date" class="form-control" id="editMetaFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
         </div>
     </div>
 
