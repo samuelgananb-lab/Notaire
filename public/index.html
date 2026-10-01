@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notaire - Inicio</title>
+    <!-- Incluimos tipografía de Google para un aspecto premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Phosphor para una interfaz moderna -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Estilos específicos de la Landing Page -->
+    <link rel="stylesheet" href="assets/css/landing.css">
+</head>
+
+<body>
+    <!-- Fondo Animado (Controlado vía JS) -->
+    <canvas id="windCanvas"></canvas>
+
+    <!-- Barra de Estado Superior -->
+    <div class="top-bar">
+        <div class="top-bar-content container">
+            <div class="top-bar-left">
+                <span class="active">Plataforma Integral de Gestión</span>
+                <span>Productividad</span>
+                <span>Finanzas Personales</span>
+            </div>
+            <div class="top-bar-right">
+                <span class="lang-icon">ES</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación Principal -->
+    <header class="main-header" id="mainHeader">
+        <div class="header-content container">
+            <a href="index.html" class="logo">
+                <svg width="36" height="36" viewBox="0 0 100 100" class="brand-logo-svg">
+                    <polygon points="50 3, 93 25, 93 75, 50 97, 7 75, 7 25" fill="#a233ff" />
+                    <text x="50" y="72" font-family="'Outfit', sans-serif" font-size="65" fill="#ffffff"
+                        font-weight="bold" text-anchor="middle">N</text>
+                </svg>
+                <span style="margin-left: 8px;">Notaire</span>
+            </a>
+            <nav class="main-nav">
+                <a href="#inicio" class="active">Inicio</a>
+                <a href="#solucion">¿Qué es Notaire?</a>
+                <a href="#caracteristicas">Características</a>
+                <a href="#vision">Nuestra Visión</a>
+            </nav>
+            <div class="header-actions">
+                <a href="auth/login.html" class="btn btn-primary">Registrarse / Ingresar</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sección Hero: Llamada a la acción principal -->
+    <section class="hero" id="inicio">
+        <div class="hero-bg"></div>
+        <div class="hero-content container">
+            <div class="hero-text fade-in-up">
+                <h1>Toma el control de tu tiempo y tus finanzas.</h1>
+                <p>Notaire es un sistema digital innovador diseñado para revolucionar tu productividad y transformar tu
+                    economía personal. Organiza tus tareas, domina tus gastos y alcanza tus metas con una sola
+                    herramienta, reduciendo el estrés y la ansiedad financiera.</p>
+                <div class="hero-buttons">
+                    <a href="auth/login.html" class="btn btn-primary btn-large">Comienza ahora <i
+                            class="ph ph-arrow-right"></i></a>
+                    <a href="#solucion" class="btn btn-secondary btn-large">Conoce más</a>
+                </div>
+            </div>
+            <div class="hero-image-box fade-in-up delay-1">
+                <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"
+                    alt="Gestión financiera y de tiempo">
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección de Características y Estadísticas -->
+    <section class="stats" id="caracteristicas">
+        <div class="container">
+            <div class="section-header fade-in-up text-center">
+                <h2>Herramientas para tu Productividad y Economía</h2>
+                <p style="text-align: center; color: var(--text-muted); max-width: 800px; margin: 15px auto 0;">Notaire
+                    centraliza tu vida diaria. Evita gastos impulsivos, organiza tu jornada y construye una relación
+                    saludable con el dinero.</p>
+            </div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-card fade-in-up delay-1">
+                    <i class="ph ph-notebook"></i>
+                    <h3>Gestión de Tareas y Notas</h3>
+                    <p style="font-size: 14px; margin-top: 10px; color: #666;">Crea, edita y organiza tus notas con
+                        categorías y etiquetas para búsquedas rápidas.</p>
+                </div>
+                <div class="stat-card fade-in-up delay-2">
+                    <i class="ph ph-alarm"></i>
+                    <h3>Recordatorios Inteligentes</h3>
+                    <p style="font-size: 14px; margin-top: 10px; color: #666;">Alarmas personalizadas para optimizar tu
+                        tiempo y asegurar que ninguna tarea quede en el olvido.</p>
+                </div>
+                <div class="stat-card fade-in-up delay-3">
+                    <i class="ph ph-chart-line-up"></i>
+                    <h3>Control Financiero</h3>
+                    <p style="font-size: 14px; margin-top: 10px; color: #666;">Registra tus ingresos y gastos, establece
+                        metas de ahorro y fomenta la estabilidad económica.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección de Solución: El Problema y Cómo lo Resolvemos -->
+    <section class="investors" id="solucion">
+        <div class="investors-bg"></div>
+        <div class="container investors-content fade-in-up">
+            <h2>El Desafío Actual y Nuestra Solución</h2>
+            <p style="margin-bottom: 20px;">Muchas personas enfrentan altos niveles de desorganización y estrés por el
+                ritmo acelerado de la vida moderna. La falta de educación financiera y herramientas integrales lleva a
+                gastos emocionales y deudas innecesarias.</p>
+            <p><strong>Notaire entra en escena</strong> para combatir esto mediante la <em>psicología del dinero</em>,
+                promoviendo presupuestos efectivos y hábitos de planificación que mejoran tu bienestar emocional y te
+                acercan a tus metas.</p>
+            <a href="auth/login.html" class="btn btn-light mt-4"
+                style="color: var(--primary-color);">Registrarse ahora</a>
+        </div>
+    </section>
+
+    <!-- Sección de Visión y Futuro -->
+    <section class="news-sustainability" id="vision">
+        <div class="container">
+            <div class="news-grid">
+                <div class="news-card fade-in-up delay-1">
+                    <div class="news-img">
+                        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                            alt="Nuestra Visión">
+                    </div>
+                    <div class="news-body">
+                        <h3>Nuestra Visión</h3>
+                        <p>Posicionarnos como plataforma líder en gestión integral. Queremos ser un aliado estratégico
+                            en tu desarrollo personal y financiero, fomentando disciplina y decisiones conscientes para
+                            un crecimiento continuo.</p>
+                    </div>
+                </div>
+                <div class="news-card fade-in-up delay-2">
+                    <div class="news-img">
+                        <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                            alt="Estabilidad Económica">
+                    </div>
+                    <div class="news-body">
+                        <h3>Educación y Control Económico</h3>
+                        <p>Entendiendo la psicología del dinero, te ayudamos a evitar decisiones impulsivas.
+                            Presupuestar y ahorrar no solo protege tu cartera, sino que reduce la ansiedad y proporciona
+                            tranquilidad en el día a día.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pie de Página (Footer) -->
+    <footer class="main-footer" id="contacto">
+        <div class="footer-top container">
+            <div class="footer-logo">
+                <svg width="32" height="32" viewBox="0 0 100 100" class="brand-logo-svg">
+                    <polygon points="50 3, 93 25, 93 75, 50 97, 7 75, 7 25" fill="#a233ff" />
+                    <text x="50" y="72" font-family="'Outfit', sans-serif" font-size="65" fill="#ffffff"
+                        font-weight="bold" text-anchor="middle">N</text>
+                </svg>
+                <span style="margin-left: 10px;">Notaire</span>
+            </div>
+            <div class="footer-links">
+                <a href="#"><i class="ph ph-phone-call"></i> Contáctanos</a>
+                <a href="#"><i class="ph ph-briefcase"></i> Trabaja con nosotros</a>
+            </div>
+        </div>
+        <div class="footer-bottom container">
+            <div class="footer-bottom-links">
+                <a href="#">Protección de Datos</a>
+                <a href="#">Condiciones de uso</a>
+                <a href="#">Mapa del sitio</a>
+                <a href="#">Privacidad</a>
+            </div>
+            <div class="footer-copyright">
+                &copy; 2026 Grupo Notaire. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lógica de Interactividad y Animaciones -->
+    <script src="assets/js/landing.js"></script>
+</body>
+
+</html>

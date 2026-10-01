@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notaire - Panel de Administración</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/admin-dashboard.css">
+    <script src="../../assets/js/auth-guard.js"></script>
+</head>
+
+<body>
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-top-section">
+                <div class="brand-header">
+                    <svg class="brand-logo-hex" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="#7c3aed" />
+                        <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="#6d28d9" />
+                        <text x="50" y="70" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold"
+                            fill="white" text-anchor="middle">N</text>
+                    </svg>
+                    <span class="brand-title">NOTAIRE</span>
+                    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Colapsar menú"
+                        onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <ul id="sidebarMenu">
+                        <li class="active"><a href="#" data-target="view-inicio"><i class="fas fa-home"></i>
+                                <span>Inicio</span></a></li>
+                        <li class="has-submenu">
+                            <a href="#" class="submenu-toggle" data-submenu-toggle="submenuPoderes"><i class="fas fa-crown"></i>
+                                <span>Poderes</span><i class="fas fa-chevron-down submenu-arrow"></i></a>
+                            <ul class="submenu" id="submenuPoderes">
+                                <li><a href="#" data-target="view-usuarios"><i class="fas fa-users"></i>
+                                    <span>Usuarios</span></a></li>
+                                <li><a href="#" data-target="view-tramites"><i class="fas fa-file-signature"></i>
+                                    <span>Trámites</span></a></li>
+                                <li><a href="#" data-target="view-auditoria"><i class="fas fa-list-check"></i>
+                                    <span>Auditoría</span></a></li>
+                                <li><a href="#" data-target="view-notificaciones"><i class="fas fa-bell"></i>
+                                    <span>Notificaciones</span><span class="admin-notification-badge" id="adminNotificationBadge">0</span></a></li>
+                                <li><a href="#" data-target="view-reportes"><i class="fas fa-chart-pie"></i>
+                                    <span>Reportes</span></a></li>
+                            </ul>
+                        </li>
+                        <li class="has-submenu">
+                            <a href="#" class="submenu-toggle" data-submenu-toggle="submenuMovimientos"><i class="fas fa-right-left"></i>
+                                <span>Movimientos</span><i class="fas fa-chevron-down submenu-arrow"></i></a>
+                            <ul class="submenu" id="submenuMovimientos">
+                                <li><a href="#" data-target="view-ingresos"><i class="fas fa-chart-line"></i>
+                                        <span>Ingresos</span></a></li>
+                                <li><a href="#" data-target="view-gastos"><i class="fas fa-receipt"></i> <span>Gastos</span></a>
+                                </li>
+                                <li><a href="#" data-target="view-metas"><i class="fas fa-bullseye"></i> <span>Metas</span></a>
+                                </li>
+                                <li><a href="#" data-target="view-ahorros"><i class="fas fa-piggy-bank"></i>
+                                        <span>Ahorros</span></a></li>
+                                <li><a href="#" data-target="view-saldo"><i class="fas fa-scale-balanced"></i>
+                                        <span>Saldo</span></a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#" data-target="view-recordatorios"><i class="fas fa-calendar-alt"></i>
+                                <span>Calendario</span></a></li>
+                        <li><a href="#" data-target="view-configuracion"><i class="fas fa-cog"></i>
+                                <span>Configuración</span></a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="sidebar-profile" onclick="openModalPerfil()" title="Ver perfil de administrador">
+                <div class="profile-avatar-circle" id="sidebarAvatarCircle">
+                    <span>SG</span>
+                </div>
+                <div class="profile-info">
+                    <span class="profile-name-text" id="sidebarUserName">Cargando...</span>
+                    <span class="profile-action-link"><i class="fas fa-shield-alt" style="color: #10b981;"></i>
+                        <span id="sidebarRoleLabel">Cargando...</span></span>
+                </div>
+            </div>
+        </aside>
+
+        <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop" aria-hidden="true"></div>
+        <main class="main-content">
+            <button class="mobile-menu-trigger" id="mobileMenuTrigger" type="button" aria-label="Abrir menú" aria-expanded="false"><i class="fas fa-bars"></i></button>
+            <header class="top-header">
+                <div class="header-title-box">
+                    <h1 id="headerDynamicTitle">PANEL PRINCIPAL</h1>
+                </div>
+
+                <div class="header-right">
+                    <div class="search-box">
+                        <input type="text" id="globalSearchInput" placeholder="Buscar movimientos..."
+                            autocomplete="off">
+                        <i class="fas fa-search"></i>
+                    </div>
+
+                    <div class="header-actions">
+                        <button class="icon-btn-action lang-btn" id="langToggleBtn"
+                            title="Cambiar idioma / Switch language">
+                            <span class="lang-flag">🌐</span> <span class="lang-text" id="headerLangCode">ES</span>
+                        </button>
+                        <button class="icon-btn-action" id="themeToggleBtn" title="Cambiar Tema">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button class="icon-btn-action" onclick="openModalPerfil()" title="Mi Cuenta">
+                            <i class="fas fa-user"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="views-container">
+
+                <div class="content-section" id="view-usuarios">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>GESTIÓN DE USUARIOS</h2>
+                            <p>Administra cuentas y roles de la plataforma.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" id="btnRefreshUsers" type="button">
+                                <i class="fas fa-rotate"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <label class="admin-search-field">
+                            <i class="fas fa-search"></i>
+                            <input id="adminUsersSearch" type="search" placeholder="Buscar por nombre o correo..." autocomplete="off">
+                        </label>
+                        <span class="admin-users-count" id="adminUsersCount">Cargando...</span>
+                    </div>
+                    <div class="card-box admin-users-card">
+                        <div class="admin-users-table-wrap">
+                            <table class="admin-users-table">
+                                <thead>
+                                    <tr><th>Usuario</th><th>Correo</th><th>Teléfono</th><th>Rol</th><th>Acción</th></tr>
+                                </thead>
+                                <tbody id="adminUsersTableBody">
+                                    <tr><td colspan="5" class="admin-users-state">Cargando usuarios...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="view-tramites">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>TRÁMITES NOTARIALES</h2>
+                            <p>Controla cada caso desde la recepción hasta su finalización.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" id="btnNewTramite" type="button">
+                                <i class="fas fa-plus"></i> Nuevo trámite
+                            </button>
+                        </div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <label class="admin-search-field"><i class="fas fa-search"></i>
+                            <input id="adminTramitesSearch" type="search" placeholder="Buscar trámite o cliente..." autocomplete="off">
+                        </label>
+                        <select class="admin-role-select" id="adminTramitesStatusFilter">
+                            <option value="">Todos los estados</option>
+                            <option value="recibido">Recibido</option>
+                            <option value="en_revision">En revisión</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="aprobado">Aprobado</option>
+                            <option value="finalizado">Finalizado</option>
+                            <option value="rechazado">Rechazado</option>
+                        </select>
+                        <span class="admin-users-count" id="adminTramitesCount">Cargando...</span>
+                    </div>
+                    <div class="card-box admin-users-card">
+                        <div class="admin-users-table-wrap">
+                            <table class="admin-users-table">
+                                <thead><tr><th>Trámite</th><th>Cliente</th><th>Responsable</th><th>Estado</th><th>Fecha límite</th><th>Acción</th></tr></thead>
+                                <tbody id="adminTramitesTableBody"><tr><td colspan="6" class="admin-users-state">Cargando trámites...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="view-auditoria">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>AUDITORÍA</h2>
+                            <p>Consulta las acciones importantes realizadas en Notaire.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" id="btnRefreshAudit" type="button"><i class="fas fa-rotate"></i> Actualizar</button>
+                        </div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <select class="admin-role-select" id="adminAuditActionFilter">
+                            <option value="">Todas las acciones</option>
+                            <option value="cambiar_rol">Cambios de rol</option>
+                            <option value="crear_tramite">Trámites creados</option>
+                            <option value="actualizar_tramite">Trámites actualizados</option>
+                            <option value="eliminar_tramite">Trámites eliminados</option>
+                        </select>
+                        <span class="admin-users-count" id="adminAuditCount">Cargando...</span>
+                    </div>
+                    <div class="card-box admin-users-card">
+                        <div class="admin-users-table-wrap">
+                            <table class="admin-users-table">
+                                <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Recurso</th><th>Detalles</th></tr></thead>
+                                <tbody id="adminAuditTableBody"><tr><td colspan="5" class="admin-users-state">Cargando auditoría...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="view-notificaciones">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>CENTRO DE NOTIFICACIONES</h2>
+                            <p>Alertas operativas, trámites y actividad reciente de Notaire.</p>
+                        </div>
+                        <div class="section-actions-group"><button class="btn-primary-action" id="btnRefreshNotifications" type="button"><i class="fas fa-rotate"></i> Actualizar</button></div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <select class="admin-role-select" id="adminNotificationFilter">
+                            <option value="">Todas las alertas</option>
+                            <option value="tramite">Trámites</option>
+                            <option value="recordatorio">Recordatorios</option>
+                            <option value="evento">Eventos</option>
+                            <option value="auditoria">Actividad administrativa</option>
+                        </select>
+                        <button class="btn-secondary-action" type="button" id="btnMarkNotificationsRead">Marcar como revisadas</button>
+                        <span class="admin-users-count" id="adminNotificationsCount">Cargando...</span>
+                    </div>
+                    <div class="admin-notifications-list" id="adminNotificationsList"><p class="admin-users-state">Cargando notificaciones...</p></div>
+                </div>
+
+                <div class="content-section" id="view-reportes">
+                    <div class="section-header-bar">
+                        <div class="section-title-group"><h2>REPORTES</h2><p>Analiza el rendimiento operativo y financiero de Notaire.</p></div>
+                        <div class="section-actions-group"><button class="btn-primary-action" id="btnExportReport" type="button"><i class="fas fa-download"></i> Exportar CSV</button></div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <label class="admin-report-date">Desde <input type="date" id="reportFrom"></label>
+                        <label class="admin-report-date">Hasta <input type="date" id="reportTo"></label>
+                        <button class="btn-secondary-action" id="btnLoadReport" type="button"><i class="fas fa-filter"></i> Aplicar filtros</button>
+                    </div>
+                    <div class="home-stats-row admin-report-kpis">
+                        <div class="home-stat-card"><div class="home-stat-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="home-stat-info"><span class="home-stat-label">Ingresos</span><span class="home-stat-value" id="reportIncome">Cargando...</span></div></div>
+                        <div class="home-stat-card"><div class="home-stat-icon"><i class="fas fa-arrow-trend-down"></i></div><div class="home-stat-info"><span class="home-stat-label">Gastos</span><span class="home-stat-value" id="reportExpense">Cargando...</span></div></div>
+                        <div class="home-stat-card"><div class="home-stat-icon"><i class="fas fa-scale-balanced"></i></div><div class="home-stat-info"><span class="home-stat-label">Balance</span><span class="home-stat-value" id="reportBalance">Cargando...</span></div></div>
+                        <div class="home-stat-card"><div class="home-stat-icon"><i class="fas fa-file-signature"></i></div><div class="home-stat-info"><span class="home-stat-label">Trámites</span><span class="home-stat-value" id="reportTramites">Cargando...</span></div></div>
+                    </div>
+                    <div class="two-column-grid admin-report-grid">
+                        <div class="card-box"><div class="card-box-header"><h3>Gastos por categoría</h3></div><div id="reportExpensesByCategory" class="admin-report-list"></div></div>
+                        <div class="card-box"><div class="card-box-header"><h3>Trámites por estado</h3></div><div id="reportTramitesByStatus" class="admin-report-list"></div></div>
+                    </div>
+                    <div class="card-box"><div class="card-box-header"><h3>Evolución mensual</h3></div><div id="reportMonthly" class="admin-report-list"></div></div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- INICIO - HERO DASHBOARD                                       -->
+                <!-- ============================================================ -->
+                <div class="content-section active" id="view-inicio">
+                    <!-- Hero Welcome Banner -->
+                    <div class="hero-welcome-banner">
+                        <div class="hero-welcome-left">
+                            <div class="hero-greeting-badge"><i class="fas fa-shield-halved"></i> Panel Notarial y
+                                Financiero • Admin</div>
+                            <h2 class="hero-welcome-title">¡Buenas noches, <span id="heroUserName">Samuel</span>! 👋
+                            </h2>
+                            <p class="hero-welcome-subtitle">Aquí tienes un resumen de tu situación financiera de hoy.
+                                Todo está bajo control.</p>
+                            <div class="hero-cta-group">
+                                <button class="btn-hero-action" onclick="navigateTo('view-gastos')"><i
+                                        class="fas fa-plus"></i> Registrar movimiento</button>
+                                <button class="btn-hero-secondary" onclick="navigateTo('view-recordatorios')"><i
+                                        class="fas fa-calendar-alt"></i> Ver calendario</button>
+                            </div>
+                        </div>
+                        <div class="hero-welcome-right">
+                            <div class="hero-balance-card">
+                                <div class="hero-balance-label">Patrimonio Neto</div>
+                                <div class="hero-balance-amount" id="adminNetWorth">Cargando...</div>
+                                <div class="hero-balance-trend"><i class="fas fa-arrow-trend-up"></i> Datos reales del sistema
+                                </div>
+                                <div class="hero-balance-decoration"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats Row -->
+                    <div class="home-stats-row">
+                        <div class="home-stat-card home-stat-income">
+                            <div class="home-stat-icon"><i class="fas fa-arrow-down-to-bracket"></i></div>
+                            <div class="home-stat-info">
+                                <span class="home-stat-label">Usuarios registrados</span>
+                                <span class="home-stat-value" id="adminUsersTotal">Cargando...</span>
+                                <span class="home-stat-sub trend-neutral">Total del sistema</span>
+                            </div>
+                        </div>
+                        <div class="home-stat-card home-stat-expense">
+                            <div class="home-stat-icon"><i class="fas fa-arrow-up-from-bracket"></i></div>
+                            <div class="home-stat-info">
+                                <span class="home-stat-label">Clientes registrados</span>
+                                <span class="home-stat-value" id="adminClientsTotal">Cargando...</span>
+                                <span class="home-stat-sub trend-neutral">Rol cliente</span>
+                            </div>
+                        </div>
+                        <div class="home-stat-card home-stat-savings">
+                            <div class="home-stat-icon"><i class="fas fa-piggy-bank"></i></div>
+                            <div class="home-stat-info">
+                                <span class="home-stat-label">Ingresos del mes</span>
+                                <span class="home-stat-value" id="adminIncomeMonth">Cargando...</span>
+                                <span class="home-stat-sub trend-up">Transacciones reales</span>
+                            </div>
+                        </div>
+                        <div class="home-stat-card home-stat-goals">
+                            <div class="home-stat-icon"><i class="fas fa-bullseye"></i></div>
+                            <div class="home-stat-info">
+                                <span class="home-stat-label">Gastos del mes</span>
+                                <span class="home-stat-value" id="adminExpenseMonth">Cargando...</span>
+                                <span class="home-stat-sub trend-neutral">Transacciones reales</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Two Column -->
+                    <div class="two-column-grid">
+                        <!-- Recent Activity -->
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3><i class="fas fa-clock"
+                                        style="color: var(--color-secondary-light); margin-right: 8px;"></i>Actividad
+                                    reciente</h3>
+                                <button class="btn-link-action" onclick="navigateTo('view-gastos')">Ver gastos</button>
+                            </div>
+                            <div class="transactions-list" id="adminRecentTransactions">
+                                <p class="data-state data-state-loading">Cargando movimientos...</p>
+                            </div>
+                        </div>
+
+                        <!-- Goals Progress -->
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3><i class="fas fa-trophy"
+                                        style="color: var(--color-accent-orange); margin-right: 8px;"></i>Progreso de
+                                    metas</h3>
+                                <button class="btn-link-action" onclick="navigateTo('view-metas')">Ver todas</button>
+                            </div>
+                            <div class="home-goals-list" id="adminGoalsList">
+                                <p class="data-state data-state-loading">Cargando metas...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Next Reminders Banner -->
+                    <div class="home-reminders-preview">
+                        <div class="home-reminders-header">
+                            <div class="home-reminders-title-group">
+                                <i class="fas fa-bell" style="color: var(--color-accent-orange);"></i>
+                                <span>Próximos recordatorios</span>
+                            </div>
+                            <button class="btn-link-action" onclick="navigateTo('view-recordatorios')">Ver calendario <i
+                                    class="fas fa-arrow-right"></i></button>
+                        </div>
+                        <div class="home-reminders-chips" id="homeRemindersChips">
+                            <p class="data-state data-state-loading">Cargando recordatorios...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- MIS GASTOS                                                    -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-gastos">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>MIS GASTOS</h2>
+                            <p>Controla y analiza en qué estás utilizando tu dinero.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <select class="period-select" id="gastosPeriodSelect">
+                                <option value="este_mes">Este mes</option>
+                                <option value="mes_pasado">Mes pasado</option>
+                            </select>
+                            <button class="btn-primary-action" onclick="openModalRegistrarGasto()">
+                                <i class="fas fa-plus"></i> Registrar gasto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-card-header">GASTADO ESTE MES</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valGastadoEsteMes">Cargando...</div>
+                            </div>
+                                <div><span class="metric-trend-badge trend-neutral">Datos reales</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">PRESUPUESTO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valPresupuestoTotal">Sin presupuesto</div>
+                            </div>
+                            <div><span class="progress-pill-red" id="valPresupuestoPct">82.7% utilizado</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">DISPONIBLE</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valDisponibleGastos">Sin presupuesto</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">restante</span></div>
+                        </div>
+                    </div>
+
+                    <div class="two-column-grid">
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>¿En qué gastas más?</h3>
+                            </div>
+                            <div class="donut-container">
+                                <canvas id="chartGastosDona" width="220" height="220"></canvas>
+                                <div class="donut-center-label">
+                                    <span id="centerGastosTotal">Cargando...</span>
+                                    <small>Gastos totales</small>
+                                </div>
+                            </div>
+                            <div class="legend-list" id="adminExpenseLegend"></div>
+                        </div>
+
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Tus mayores gastos</h3>
+                            </div>
+                            <div class="category-progress-list" id="listMayoresGastos">
+                                <p class="data-state data-state-loading">Cargando categorías...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-box">
+                        <div class="card-box-header">
+                            <h3>Últimos movimientos</h3>
+                            <button class="btn-link-action" onclick="openModalVerTodos('movimientos')">Ver
+                                todos</button>
+                        </div>
+                        <div class="transactions-list" id="listUltimosMovimientos">
+                            <p class="data-state data-state-loading">Cargando movimientos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- MIS INGRESOS                                                  -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-ingresos">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>MIS INGRESOS</h2>
+                            <p>Visualiza tus fuentes de dinero y su evolución.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" onclick="openModalRegistrarIngreso()">
+                                <i class="fas fa-plus"></i> Registrar ingreso
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-card-header">TOTAL INGRESOS</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valTotalIngresos">Cargando...</div>
+                            </div>
+                                <div><span class="metric-trend-badge trend-neutral">Datos reales</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">PROMEDIO MENSUAL</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valPromedioMensual">Sin datos</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">Sin comparación</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">MAYOR INGRESO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valMayorIngreso">Sin datos</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">Sin datos</span></div>
+                        </div>
+                    </div>
+
+                    <div class="two-column-grid">
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Evolución de ingresos</h3>
+                            </div>
+                            <div style="height: 220px; position: relative;"><canvas
+                                    id="chartEvolucionIngresos"></canvas></div>
+                        </div>
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Fuentes de ingresos</h3>
+                            </div>
+                            <div class="donut-container">
+                                <canvas id="chartFuentesIngresos" width="220" height="220"></canvas>
+                                <div class="donut-center-label"><span
+                                        id="centerIngresosTotal">Cargando...</span><small>Total</small></div>
+                            </div>
+                            <div class="legend-list" id="adminIncomeLegend"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-box">
+                        <div class="card-box-header">
+                            <h3>Últimos ingresos</h3>
+                            <button class="btn-link-action" onclick="openModalVerTodos('ingresos')">Ver todos</button>
+                        </div>
+                        <div class="transactions-list" id="listUltimosIngresos">
+                            <p class="data-state data-state-loading">Cargando ingresos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- MIS AHORROS                                                   -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-ahorros">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>MIS AHORROS</h2>
+                            <p>Sigue el progreso de tus metas y alcanza tus sueños.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" onclick="openModalNuevaMeta()"><i
+                                    class="fas fa-plus"></i> Nueva meta</button>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-card-header">TOTAL AHORRADO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valTotalAhorrado">Cargando...</div>
+                            </div>
+                                <div><span class="metric-trend-badge trend-neutral">Datos reales</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">METAS ACTIVAS</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valMetasActivasCount">Cargando...</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">en progreso</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">PORCENTAJE TOTAL</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valPorcentajeTotalMetas">Sin datos</div>
+                            </div>
+                            <div>
+                                <div class="progress-track-bg" style="margin-top: 10px;">
+                                    <div class="progress-fill-bar" style="width: 0%; background: #10b981;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-box" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+                        <h3 style="font-size: 18px; color: white; margin-bottom: 16px;">Mis metas</h3>
+                        <div class="goals-grid" id="containerGoalsGrid"></div>
+                    </div>
+
+                    <div class="two-column-grid">
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Ahorros recientes</h3>
+                            </div>
+                            <div class="transactions-list" id="listAhorrosRecientes">
+                                <p class="data-state data-state-loading">Cargando aportes...</p>
+                            </div>
+                        </div>
+                        <div class="savings-tip-card">
+                            <div class="tip-icon-glow">i</div>
+                            <div class="tip-content">
+                                <h4>Resumen de ahorro</h4>
+                                <p>Los aportes y el progreso se muestran con datos registrados en Supabase.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- MI SALDO                                                      -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-saldo">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>MI SALDO</h2>
+                            <p>Conoce tu situación financiera total.</p>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid-4">
+                        <div class="metric-card">
+                            <div class="metric-card-header">PATRIMONIO NETO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valPatrimonioNeto">Cargando...</div>
+                            </div>
+                                <div><span class="metric-trend-badge trend-neutral">Datos reales</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">ACTIVOS</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valActivosTotal">Sin datos</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">Total</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">PASIVOS</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valPasivosTotal">Sin datos</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">Total</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">LIQUIDEZ</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valLiquidezPct">Sin datos</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-up">Salud financiera</span></div>
+                        </div>
+                    </div>
+
+                    <div class="two-column-grid">
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Evolución de tu patrimonio</h3>
+                            </div>
+                            <div style="height: 220px; position: relative;"><canvas
+                                    id="chartPatrimonioEvolucion"></canvas></div>
+                        </div>
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Distribución</h3>
+                            </div>
+                            <div class="donut-container">
+                                <canvas id="chartDistribucionActivos" width="220" height="220"></canvas>
+                                <div class="donut-center-label"><span
+                                        id="centerActivosTotal">Sin datos</span><small>Activos</small></div>
+                            </div>
+                            <div class="legend-list" id="adminAssetsLegend"></div>
+                        </div>
+                    </div>
+
+                    <div class="two-column-grid">
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Tus cuentas</h3>
+                                <button class="btn-link-action" onclick="openModalCuentas()">Ver todos</button>
+                            </div>
+                            <div class="transactions-list" id="adminAssetsList">
+                                <p class="data-state data-state-loading">Cargando patrimonio...</p>
+                            </div>
+                        </div>
+                        <div class="card-box">
+                            <div class="card-box-header">
+                                <h3>Resumen financiero</h3>
+                            </div>
+                                <div class="summary-financial-list" id="adminFinancialSummary">
+                                <p class="data-state data-state-loading">Cargando resumen...</p>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- METAS – Vista completa con agregar meta                      -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-metas">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>GESTIÓN DE METAS</h2>
+                            <p>Define tus objetivos financieros y alcanza tus sueños.</p>
+                        </div>
+                    </div>
+
+                    <!-- Hero CTA para agregar meta -->
+                    <div class="metas-hero-cta" onclick="openModalNuevaMeta()">
+                        <div class="metas-hero-cta-left">
+                            <div class="metas-hero-icon">🎯</div>
+                            <div class="metas-hero-text">
+                                <h3>Crear nueva meta de ahorro</h3>
+                                <p>Define tu objetivo, monto y fecha límite. Notaire te ayuda a llegar allá.</p>
+                            </div>
+                        </div>
+                        <button class="btn-add-meta-hero">
+                            <i class="fas fa-plus"></i>
+                            <span>Agregar Meta</span>
+                        </button>
+                    </div>
+
+                    <!-- Stats rápidos -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-card-header">TOTAL AHORRADO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valTotalAhorradoMetas">Cargando...</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">Datos reales</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">METAS ACTIVAS</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valMetasCount">Cargando...</div>
+                            </div>
+                            <div><span class="metric-trend-badge trend-neutral">en progreso</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-card-header">PROGRESO PROMEDIO</div>
+                            <div class="metric-card-body">
+                                <div class="metric-value" id="valMetasAvgPct">Sin datos</div>
+                            </div>
+                            <div>
+                                <div class="progress-track-bg" style="margin-top: 10px;">
+                                    <div class="progress-fill-bar" style="width: 0%; background: #10b981;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grilla de metas -->
+                    <div class="card-box" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                            <h3 style="font-size: 18px; color: white;">Mis metas activas</h3>
+                            <span style="font-size: 13px; color: var(--color-text-muted);" id="metasCountLabel">Cargando...</span>
+                        </div>
+                        <div class="goals-grid" id="metasGoalsGrid"></div>
+                    </div>
+
+                    <!-- Empty state (se muestra cuando no hay metas) -->
+                    <div class="metas-empty-state" id="metasEmptyState" style="display: none;">
+                        <div class="empty-state-icon">🎯</div>
+                        <h3>Aún no tienes metas</h3>
+                        <p>Crea tu primera meta de ahorro y empieza a avanzar hacia tus objetivos financieros.</p>
+                        <button class="btn-hero-action" onclick="openModalNuevaMeta()"><i class="fas fa-plus"></i> Crear
+                            primera meta</button>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- CALENDARIO / RECORDATORIOS                                    -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-recordatorios">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>CALENDARIO NOTARIAL</h2>
+                            <p>Organiza tus fechas importantes y recibe recordatorios.</p>
+                        </div>
+                        <div class="section-actions-group">
+                            <button class="btn-primary-action" onclick="openModalNuevoEvento()">
+                                <i class="fas fa-plus"></i> Nuevo evento
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-layout-grid">
+                        <!-- Calendario principal -->
+                        <div class="calendar-main-card">
+                            <div class="calendar-top-controls">
+                                <div class="nav-btn-group">
+                                    <button class="btn-cal-nav" id="btnCalToday">Hoy</button>
+                                    <button class="btn-cal-nav" id="btnCalPrev"><i
+                                            class="fas fa-chevron-left"></i></button>
+                                    <button class="btn-cal-nav" id="btnCalNext"><i
+                                            class="fas fa-chevron-right"></i></button>
+                                </div>
+                                <div class="month-title-select" id="calMonthTitle">Agosto 2026 <i
+                                        class="fas fa-chevron-down" style="font-size: 14px;"></i></div>
+                                <div class="view-toggle-pill">
+                                    <button class="view-toggle-btn active" id="calViewMonth">Mes</button>
+                                </div>
+                            </div>
+
+                            <div class="calendar-legend-tags">
+                                <div class="tag-item"><span class="legend-dot"
+                                        style="background: var(--color-primary);"></span> Notarial</div>
+                                <div class="tag-item"><span class="legend-dot" style="background: #10b981;"></span> Pago
+                                    / Financiero</div>
+                                <div class="tag-item"><span class="legend-dot" style="background: #f59e0b;"></span>
+                                    Recordatorio</div>
+                                <div class="tag-item"><span class="legend-dot" style="background: #06b6d4;"></span>
+                                    Personal</div>
+                                <div class="tag-item"><span class="legend-dot" style="background: #ec4899;"></span>
+                                    Cumpleaños</div>
+                            </div>
+
+                            <!-- Grid del calendario (días) -->
+                            <div class="calendar-month-grid" id="calendarMonthGrid">
+                                <!-- Encabezados días -->
+                                <div class="cal-day-header">Dom</div>
+                                <div class="cal-day-header">Lun</div>
+                                <div class="cal-day-header">Mar</div>
+                                <div class="cal-day-header">Mié</div>
+                                <div class="cal-day-header">Jue</div>
+                                <div class="cal-day-header">Vie</div>
+                                <div class="cal-day-header">Sáb</div>
+                                <!-- Las celdas se generan dinámicamente -->
+                            </div>
+
+                            <!-- Barra inferior de notificaciones -->
+                            <div class="cal-notif-bar">
+                                <div class="cal-notif-left">
+                                    <div class="cal-notif-icon-shield"><i class="fas fa-shield-halved"></i></div>
+                                    <div>
+                                        <span class="cal-notif-title">Notificaciones activas <i
+                                                class="fas fa-circle-check"
+                                                style="color: #10b981; font-size: 12px;"></i></span>
+                                        <span class="cal-notif-sub">Recibirás recordatorios 24h y 1h antes de cada
+                                            evento.</span>
+                                    </div>
+                                </div>
+                                <button class="btn-cal-notif" onclick="openNotifSettings()">
+                                    <i class="fas fa-gear"></i> Gestionar notificaciones
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Panel derecho: Próximos eventos + resumen -->
+                        <div class="calendar-right-sidebar">
+                            <div class="card-box">
+                                <div class="card-box-header">
+                                    <h3>Próximos eventos</h3>
+                                    <button class="btn-link-action">Ver todos</button>
+                                </div>
+                                <div class="upcoming-events-list" id="upcomingEventsList">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+
+                            <div class="card-box">
+                                <div class="card-box-header">
+                                    <h3>Resumen del mes</h3>
+                                </div>
+                                <div class="month-summary-grid" id="calMonthSummary">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+
+                            <div class="cal-tip-card">
+                                <div class="cal-tip-icon">💡</div>
+                                <div class="cal-tip-content">
+                                    <h4>Tip Notaire</h4>
+                                    <p>Activa las notificaciones para recibir recordatorios antes de cada evento.</p>
+                                </div>
+                                <i class="fas fa-chevron-right" style="color: var(--color-text-dim);"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- CONFIGURACIÓN                                                 -->
+                <!-- ============================================================ -->
+                <div class="content-section" id="view-configuracion">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>CONFIGURACIÓN</h2>
+                            <p>Personaliza tu experiencia Notaire.</p>
+                        </div>
+                    </div>
+
+                    <div class="config-layout">
+                        <!-- Col izquierda -->
+                        <div class="config-col">
+
+                            <!-- Perfil -->
+                            <div class="config-card">
+                                <div class="config-card-header">
+                                    <div class="config-card-icon"
+                                        style="background: linear-gradient(135deg, #8c00ff, #a225f5);">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Mi Perfil</h3>
+                                        <p>Información personal y cuenta</p>
+                                    </div>
+                                </div>
+                                <div class="config-fields">
+                                    <div class="config-field-row">
+                                        <div class="config-avatar-large" id="configAvatarLarge">SG</div>
+                                        <button class="btn-config-action" onclick="openModalPerfil()"><i
+                                                class="fas fa-pen"></i> Editar perfil</button>
+                                    </div>
+                                    <div class="config-info-row"><span class="config-info-label"><i
+                                                class="fas fa-user-circle"></i> Nombre</span><span
+                                            class="config-info-val" id="configNombre">Cargando...</span></div>
+                                    <div class="config-info-row"><span class="config-info-label"><i
+                                                class="fas fa-envelope"></i> Correo</span><span class="config-info-val"
+                                            id="configEmail">Cargando...</span></div>
+                                    <div class="config-info-row"><span class="config-info-label"><i
+                                                class="fas fa-phone"></i> Teléfono</span><span
+                                            class="config-info-val" id="configTelefono">Cargando...</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Apariencia -->
+                            <div class="config-card">
+                                <div class="config-card-header">
+                                    <div class="config-card-icon"
+                                        style="background: linear-gradient(135deg, #f59e0b, #ec4899);">
+                                        <i class="fas fa-palette"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Apariencia</h3>
+                                        <p>Tema y colores del panel</p>
+                                    </div>
+                                </div>
+                                <div class="config-fields">
+                                    <label class="config-field-label">Tema de color</label>
+                                    <div class="theme-swatches">
+                                        <div class="theme-swatch active" data-theme="purple" title="Púrpura Notaire"
+                                            style="background: linear-gradient(135deg, #8c00ff, #a225f5);"
+                                            onclick="setThemeSwatch('purple', this)"></div>
+                                        <div class="theme-swatch" data-theme="blue" title="Azul Profundo"
+                                            style="background: linear-gradient(135deg, #2563eb, #06b6d4);"
+                                            onclick="setThemeSwatch('blue', this)"></div>
+                                        <div class="theme-swatch" data-theme="emerald" title="Esmeralda"
+                                            style="background: linear-gradient(135deg, #059669, #10b981);"
+                                            onclick="setThemeSwatch('emerald', this)"></div>
+                                        <div class="theme-swatch" data-theme="rose" title="Rosa"
+                                            style="background: linear-gradient(135deg, #e11d48, #ec4899);"
+                                            onclick="setThemeSwatch('rose', this)"></div>
+                                        <div class="theme-swatch" data-theme="amber" title="Ámbar"
+                                            style="background: linear-gradient(135deg, #d97706, #f59e0b);"
+                                            onclick="setThemeSwatch('amber', this)"></div>
+                                    </div>
+                                    <label class="config-field-label" style="margin-top: 16px;">Modo de
+                                        visualización</label>
+                                    <div class="config-toggle-row">
+                                        <div class="config-toggle-opt active" id="themeOptDark"
+                                            onclick="setDisplayMode('dark', this)">
+                                            <i class="fas fa-moon"></i> Oscuro
+                                        </div>
+                                        <div class="config-toggle-opt" id="themeOptLight"
+                                            onclick="setDisplayMode('light', this)">
+                                            <i class="fas fa-sun"></i> Claro
+                                        </div>
+                                        <div class="config-toggle-opt" id="themeOptAuto"
+                                            onclick="setDisplayMode('auto', this)">
+                                            <i class="fas fa-circle-half-stroke"></i> Auto
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Idioma y región eliminado: el idioma se gestiona desde el botón arriba a la derecha -->
+                        </div>
+
+                        <!-- Col derecha -->
+                        <div class="config-col">
+
+                            <!-- Notificaciones -->
+                            <div class="config-card">
+                                <div class="config-card-header">
+                                    <div class="config-card-icon"
+                                        style="background: linear-gradient(135deg, #10b981, #06b6d4);">
+                                        <i class="fas fa-bell"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Notificaciones</h3>
+                                        <p>Alertas y recordatorios</p>
+                                    </div>
+                                </div>
+                                <div class="config-fields">
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Notificaciones del navegador</span>
+                                            <span class="config-toggle-sub">Recibir alertas en el navegador</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifBrowser" checked
+                                                onchange="toggleNotifBrowser(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Recordatorio 24h antes</span>
+                                            <span class="config-toggle-sub">Un día antes del evento</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotif24h" checked
+                                                onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Recordatorio 1h antes</span>
+                                            <span class="config-toggle-sub">Una hora antes del evento</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotif1h" checked onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Alertas de gastos</span>
+                                            <span class="config-toggle-sub">Cuando superes el presupuesto</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifGastos" checked
+                                                onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Resumen semanal</span>
+                                            <span class="config-toggle-sub">Reporte cada lunes</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifSemanal" onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Presupuesto -->
+                            <div class="config-card">
+                                <div class="config-card-header">
+                                    <div class="config-card-icon"
+                                        style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+                                        <i class="fas fa-wallet"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Presupuesto Mensual</h3>
+                                        <p>Límite de gastos por categoría</p>
+                                    </div>
+                                </div>
+                                <div class="config-fields">
+                                    <div class="form-group">
+                                        <label class="config-field-label">Presupuesto total mensual ($)</label>
+                                        <input type="number" class="form-control" id="cfgPresupuesto" placeholder="Sin configurar">
+                                    </div>
+                                    <div class="budget-categories-list">
+                                        <div class="budget-cat-row">
+                                            <span class="budget-cat-icon">🍔</span>
+                                            <span class="budget-cat-name">Alimentación</span>
+                                            <input type="number" class="budget-cat-input"
+                                                placeholder="$">
+                                        </div>
+                                        <div class="budget-cat-row">
+                                            <span class="budget-cat-icon">🚌</span>
+                                            <span class="budget-cat-name">Transporte</span>
+                                            <input type="number" class="budget-cat-input"
+                                                placeholder="$">
+                                        </div>
+                                        <div class="budget-cat-row">
+                                            <span class="budget-cat-icon">🎮</span>
+                                            <span class="budget-cat-name">Entretenimiento</span>
+                                            <input type="number" class="budget-cat-input"
+                                                placeholder="$">
+                                        </div>
+                                        <div class="budget-cat-row">
+                                            <span class="budget-cat-icon">🏠</span>
+                                            <span class="budget-cat-name">Servicios</span>
+                                            <input type="number" class="budget-cat-input"
+                                                placeholder="$">
+                                        </div>
+                                    </div>
+                                    <button class="btn-config-save" onclick="saveBudgetConfig()"><i
+                                            class="fas fa-check"></i> Guardar presupuesto</button>
+                                </div>
+                            </div>
+
+                            <!-- Seguridad -->
+                            <div class="config-card">
+                                <div class="config-card-header">
+                                    <div class="config-card-icon"
+                                        style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Seguridad</h3>
+                                        <p>Contraseña y acceso</p>
+                                    </div>
+                                </div>
+                                <div class="config-fields">
+                                    <div class="config-security-row">
+                                        <div class="config-security-info">
+                                            <i class="fas fa-key"></i>
+                                            <span>Cambiar contraseña</span>
+                                        </div>
+                                        <button class="btn-config-action"
+                                            onclick="showToast('Redirigiendo al flujo de cambio de contraseña...')"><i
+                                                class="fas fa-arrow-right"></i></button>
+                                    </div>
+                                    <div class="config-security-row">
+                                        <div class="config-security-info">
+                                            <i class="fas fa-shield-halved"></i>
+                                            <span>Autenticación 2FA</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="tog2FA"
+                                                onchange="showToast('2FA ' + (this.checked ? 'activado' : 'desactivado'))">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-security-row">
+                                        <div class="config-security-info">
+                                            <i class="fas fa-right-from-bracket" style="color: #ef4444;"></i>
+                                            <span style="color: #ef4444;">Cerrar sesión</span>
+                                        </div>
+                                        <button class="btn-config-danger" onclick="confirmLogout()"><i
+                                                class="fas fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <footer class="dashboard-footer">
+                &copy; <span id="currentYear">2026</span> NOTAIRE SYSTEM
+            </footer>
+        </main>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODALES                                                              -->
+    <!-- ================================================================== -->
+
+    <!-- Modal: Registrar Gasto -->
+    <div class="modal-overlay" id="modalRegistrarGasto">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-receipt" style="color: #ef4444; margin-right: 10px;"></i>Registrar Nuevo Gasto</h3>
+                <button class="modal-close-btn" onclick="closeModal('modalRegistrarGasto')">&times;</button>
+            </div>
+            <form id="formRegistrarGasto" onsubmit="handleGuardarGasto(event)">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control"
+                        id="gastoMonto" placeholder="Ej: 50000" required></div>
+                <div class="form-group"><label>Categoría</label><select class="form-control" id="gastoCategoria">
+                        <option value="Alimentación">🍔 Alimentación</option>
+                        <option value="Transporte">🚌 Transporte</option>
+                        <option value="Entretenimiento">🎮 Entretenimiento</option>
+                        <option value="Servicios">🏠 Servicios</option>
+                        <option value="Otros">🛒 Otros</option>
+                    </select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control"
+                        id="gastoDescripcion" placeholder="Ej: Almuerzo con compañeros" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="gastoFecha"
+                        required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Gasto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Registrar Ingreso -->
+    <div class="modal-overlay" id="modalRegistrarIngreso">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-chart-line" style="color: #10b981; margin-right: 10px;"></i>Registrar Nuevo Ingreso
+                </h3><button class="modal-close-btn" onclick="closeModal('modalRegistrarIngreso')">&times;</button>
+            </div>
+            <form id="formRegistrarIngreso" onsubmit="handleGuardarIngreso(event)">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control"
+                        id="ingresoMonto" placeholder="Ej: 1800000" required></div>
+                <div class="form-group"><label>Fuente</label><select class="form-control" id="ingresoCategoria">
+                        <option value="Salario">💼 Salario</option>
+                        <option value="Freelance">💻 Freelance</option>
+                        <option value="Negocio">🛍️ Negocio</option>
+                        <option value="Intereses">💰 Intereses</option>
+                    </select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control"
+                        id="ingresoDescripcion" placeholder="Ej: Salario agosto" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="ingresoFecha"
+                        required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Ingreso</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Nueva Meta -->
+    <div class="modal-overlay" id="modalNuevaMeta">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-bullseye" style="color: #10b981; margin-right: 10px;"></i>Crear Nueva Meta</h3>
+                <button class="modal-close-btn" onclick="closeModal('modalNuevaMeta')">&times;</button>
+            </div>
+            <form id="formNuevaMeta" onsubmit="handleGuardarNuevaMeta(event)">
+                <div class="form-group"><label>Ícono de la meta</label>
+                    <div class="emoji-picker-row" id="emojiPickerMeta">
+                        <span class="emoji-opt selected" data-emoji="🎯">🎯</span>
+                        <span class="emoji-opt" data-emoji="✈️">✈️</span>
+                        <span class="emoji-opt" data-emoji="🏠">🏠</span>
+                        <span class="emoji-opt" data-emoji="🚗">🚗</span>
+                        <span class="emoji-opt" data-emoji="💻">💻</span>
+                        <span class="emoji-opt" data-emoji="🛡️">🛡️</span>
+                        <span class="emoji-opt" data-emoji="🎓">🎓</span>
+                        <span class="emoji-opt" data-emoji="💍">💍</span>
+                        <span class="emoji-opt" data-emoji="🏋️">🏋️</span>
+                        <span class="emoji-opt" data-emoji="🌴">🌴</span>
+                    </div>
+                    <input type="hidden" id="metaIcono" value="🎯">
+                </div>
+                <div class="form-group"><label>Nombre de la meta</label><input type="text" class="form-control"
+                        id="metaNombre" placeholder="Ej: Viaje a Cartagena" required></div>
+                <div class="form-group"><label>Monto Objetivo ($)</label><input type="number" class="form-control"
+                        id="metaObjetivo" placeholder="Ej: 5000000" required></div>
+                <div class="form-group"><label>Monto Inicial (ahorro actual)</label><input type="number"
+                        class="form-control" id="metaInicial" placeholder="0"></div>
+                <div class="form-group"><label>Fecha Límite</label><input type="date" class="form-control"
+                        id="metaFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;"><i
+                        class="fas fa-plus"></i> Crear Meta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Aportar a Meta -->
+    <div class="modal-overlay" id="modalAportarMeta">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-piggy-bank" style="color: #10b981; margin-right: 10px;"></i>Aportar a Meta</h3>
+                <button class="modal-close-btn" onclick="closeModal('modalAportarMeta')">&times;</button>
+            </div>
+            <form onsubmit="handleGuardarAporteMeta(event)">
+                <input type="hidden" id="aporteMetaId">
+                <div class="form-group"><label>Meta</label><input type="text" class="form-control" id="aporteMetaNombre"
+                        readonly></div>
+                <div class="form-group"><label>Monto a Aportar ($)</label><input type="number" class="form-control"
+                        id="aporteMonto" placeholder="Ej: 200000" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Confirmar
+                    Aporte</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Perfil -->
+    <div class="modal-overlay" id="modalPerfil">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-user-circle"
+                        style="color: var(--color-secondary-light); margin-right: 10px;"></i>Perfil de Usuario</h3>
+                <button class="modal-close-btn" onclick="closeModal('modalPerfil')">&times;</button>
+            </div>
+            <form onsubmit="handleGuardarPerfil(event)">
+                <div class="form-group"><label>Nombre completo</label><input type="text" class="form-control"
+                        id="perfilNombre" required></div>
+                <div class="form-group"><label>Correo electrónico</label><input type="email" class="form-control"
+                        id="perfilEmail" required></div>
+                <div class="form-group"><label>Teléfono</label><input type="tel" class="form-control"
+                        id="perfilTelefono"></div>
+                <div class="form-group"><label>Documento</label><input type="text" class="form-control"
+                        id="perfilDocumento"></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Todos -->
+    <div class="modal-overlay" id="modalVerTodos">
+        <div class="modal-container-box" style="max-width: 680px;">
+            <div class="modal-header-box">
+                <h3 id="verTodosTitle">Historial</h3><button class="modal-close-btn"
+                    onclick="closeModal('modalVerTodos')">&times;</button>
+            </div>
+            <div class="transactions-list" id="verTodosContentList" style="max-height: 350px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Gasto -->
+    <div class="modal-overlay" id="modalEditarGasto">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-pen" style="color: #d299ff; margin-right: 10px;"></i>Editar Gasto</h3><button
+                    class="modal-close-btn" onclick="closeModal('modalEditarGasto')">&times;</button>
+            </div>
+            <form id="formEditarGasto" onsubmit="handleGuardarEdicionGasto(event)">
+                <input type="hidden" id="editGastoId">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control"
+                        id="editGastoMonto" required></div>
+                <div class="form-group"><label>Categoría</label><select class="form-control" id="editGastoCategoria">
+                        <option value="Alimentación">🍔 Alimentación</option>
+                        <option value="Transporte">🚌 Transporte</option>
+                        <option value="Entretenimiento">🎮 Entretenimiento</option>
+                        <option value="Servicios">🏠 Servicios</option>
+                        <option value="Otros">🛒 Otros</option>
+                    </select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control"
+                        id="editGastoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="editGastoFecha"
+                        required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Ingreso -->
+    <div class="modal-overlay" id="modalEditarIngreso">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-pen" style="color: #10b981; margin-right: 10px;"></i>Editar Ingreso</h3><button
+                    class="modal-close-btn" onclick="closeModal('modalEditarIngreso')">&times;</button>
+            </div>
+            <form id="formEditarIngreso" onsubmit="handleGuardarEdicionIngreso(event)">
+                <input type="hidden" id="editIngresoId">
+                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control"
+                        id="editIngresoMonto" required></div>
+                <div class="form-group"><label>Fuente</label><select class="form-control" id="editIngresoFuente">
+                        <option value="Salario">💼 Salario</option>
+                        <option value="Freelance">💻 Freelance</option>
+                        <option value="Negocio">🛍️ Negocio</option>
+                        <option value="Intereses">💰 Intereses</option>
+                        <option value="Otros">🟢 Otros</option>
+                    </select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control"
+                        id="editIngresoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control"
+                        id="editIngresoFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Meta (Ahorro) -->
+    <div class="modal-overlay" id="modalEditarMeta">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-pen" style="color: #3b82f6; margin-right: 10px;"></i>Editar Meta</h3><button
+                    class="modal-close-btn" onclick="closeModal('modalEditarMeta')">&times;</button>
+            </div>
+            <form id="formEditarMeta" onsubmit="handleGuardarEdicionMeta(event)">
+                <input type="hidden" id="editMetaId">
+                <div class="form-group"><label>Nombre de la meta</label><input type="text" class="form-control"
+                        id="editMetaNombre" required></div>
+                <div class="form-group"><label>Monto objetivo ($)</label><input type="number" class="form-control"
+                        id="editMetaObjetivo" required></div>
+                <div class="form-group"><label>Monto actual ($)</label><input type="number" class="form-control"
+                        id="editMetaActual" required></div>
+                <div class="form-group"><label>Fecha límite</label><input type="date" class="form-control"
+                        id="editMetaFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar
+                    Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Nuevo Evento (Calendario) -->
+    <div class="modal-overlay" id="modalNuevoEvento">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3><i class="fas fa-calendar-plus"
+                        style="color: var(--color-secondary-light); margin-right: 10px;"></i>Nuevo Evento</h3><button
+                    class="modal-close-btn" onclick="closeModal('modalNuevoEvento')">&times;</button>
+            </div>
+            <form id="formNuevoEvento" onsubmit="handleGuardarEvento(event)">
+                <div class="form-group"><label>Título del evento</label><input type="text" class="form-control"
+                        id="eventoTitulo" placeholder="Ej: Pago de hipoteca" required></div>
+                <div class="form-group"><label>Tipo</label>
+                    <select class="form-control" id="eventoTipo">
+                        <option value="purple">🟣 Notarial</option>
+                        <option value="green">🟢 Pago / Financiero</option>
+                        <option value="orange">🟠 Recordatorio</option>
+                        <option value="blue">🔵 Personal</option>
+                        <option value="pink">🩷 Cumpleaños</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="eventoFecha"
+                        required></div>
+                <div class="form-group"><label>Hora</label><input type="time" class="form-control" id="eventoHora">
+                </div>
+                <div class="form-group"><label>Nota / Descripción</label><textarea class="form-control" id="eventoNota"
+                        rows="3" placeholder="Detalles del evento..."></textarea></div>
+                <div class="form-group">
+                    <label>Notificaciones</label>
+                    <div class="notif-opts-row">
+                        <label class="notif-opt-label"><input type="checkbox" id="notifDiaBefore" checked> 24h
+                            antes</label>
+                        <label class="notif-opt-label"><input type="checkbox" id="notifHourBefore" checked> 1h
+                            antes</label>
+                        <label class="notif-opt-label"><input type="checkbox" id="notifOnDay"> El mismo día</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;"><i
+                        class="fas fa-calendar-plus"></i> Guardar Evento</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Detalle Evento -->
+    <div class="modal-overlay" id="modalDetalleEvento">
+        <div class="modal-container-box">
+            <div class="modal-header-box">
+                <h3 id="detalleEventoTitulo">Detalle del evento</h3>
+                <button class="modal-close-btn" onclick="closeModal('modalDetalleEvento')">&times;</button>
+            </div>
+            <div id="detalleEventoBody"></div>
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn-primary-action" style="flex: 1; justify-content: center;"
+                    onclick="closeModal('modalDetalleEvento')"><i class="fas fa-check"></i> Aceptar</button>
+                <button class="btn-config-danger" style="flex: 0.4;" onclick="deleteCurrentEvent()"><i
+                        class="fas fa-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-notification" id="toastNotification">
+        <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px;"></i>
+        <span id="toastMessage">Operación realizada con éxito</span>
+    </div>
+
+    <!-- System Notification Banner -->
+    <div class="system-notif-banner" id="systemNotifBanner" style="display:none;">
+        <i class="fas fa-bell" id="systemNotifIcon"></i>
+        <div class="system-notif-content">
+            <span class="system-notif-title" id="systemNotifTitle"></span>
+            <span class="system-notif-sub" id="systemNotifSub"></span>
+        </div>
+        <button class="system-notif-close"
+            onclick="document.getElementById('systemNotifBanner').style.display='none'">&times;</button>
+    </div>
+
+    <div class="modal-overlay" id="modalNuevoTramite">
+        <div class="modal-container-box admin-tramite-modal">
+            <div class="modal-header-box"><h3>Nuevo trámite</h3><button type="button" class="modal-close-btn" data-close-tramite><i class="fas fa-xmark"></i></button></div>
+            <form id="formNuevoTramite" class="modal-form-grid">
+                <div class="form-group"><label for="tramiteTitulo">Título</label><input class="form-control" id="tramiteTitulo" required placeholder="Ej. Compraventa de inmueble"></div>
+                <div class="form-group"><label for="tramiteTipo">Tipo</label><input class="form-control" id="tramiteTipo" required placeholder="Ej. Escritura pública"></div>
+                <div class="form-group"><label for="tramiteCliente">Cliente</label><select class="form-control" id="tramiteCliente"><option value="">Sin asignar</option></select></div>
+                <div class="form-group"><label for="tramiteResponsable">Responsable</label><select class="form-control" id="tramiteResponsable"><option value="">Sin asignar</option></select></div>
+                <div class="form-group"><label for="tramiteEstado">Estado</label><select class="form-control" id="tramiteEstado"><option value="recibido">Recibido</option><option value="en_revision">En revisión</option><option value="pendiente">Pendiente</option></select></div>
+                <div class="form-group"><label for="tramiteFechaLimite">Fecha límite</label><input class="form-control" type="date" id="tramiteFechaLimite"></div>
+                <div class="form-group form-group-wide"><label for="tramiteDescripcion">Descripción</label><textarea class="form-control" id="tramiteDescripcion" rows="4" placeholder="Documentos, notas o requisitos pendientes"></textarea></div>
+                <div class="modal-actions form-group-wide"><button type="button" class="btn-secondary-action" data-close-tramite>Cancelar</button><button class="btn-primary-action" type="submit">Guardar trámite</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/js/admin-dashboard.js"></script>
+    <script src="assets/js/admin-dashboard-ext.js"></script>
+    <script src="assets/js/admin-live.js"></script>
+    <script src="assets/js/admin-users.js"></script>
+    <script src="assets/js/admin-tramites.js"></script>
+    <script src="assets/js/admin-audit.js"></script>
+    <script src="assets/js/admin-notifications.js"></script>
+    <script src="assets/js/admin-reports.js"></script>
+    <script src="../../assets/js/notaire-i18n.js"></script>
+</body>
+
+</html>
