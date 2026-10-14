@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import vm from 'node:vm';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -192,6 +193,67 @@ test('el panel admin incluye reportes exportables', async () => {
     assert.match(reportsScript, /\/api\/admin\/reports/);
     assert.match(reportsScript, /text\/csv/);
     assert.match(adminRoute, /router\.get\('\/reports', verificarAdmin/);
+});
+
+test('la gráfica compartida suma los ingresos mensuales y calcula patrimonio acumulado', async () => {
+    const source = await read('public/panel_control/assets/js/financial-chart.js');
+    const context = { window: {} };
+    vm.runInNewContext(source, context);
+
+    const transactions = [
+        { fecha: '2026-08-03', tipo: 'ingreso', monto: 1200000 },
+        { fecha: '2026-08-05', tipo: 'gasto', monto: 200000 },
+        { fecha: '2026-09-03', tipo_registro: 'ingreso', monto: 500000 }
+    ];
+    const now = new Date(2026, 9, 9);
+    const api = context.window.NotaireFinancialChart;
+    const income = api.createMonthlyTotals(transactions, 'ingreso', 6, now);
+    const netWorth = api.createMonthlySeries(transactions, 6, now);
+
+    assert.deepEqual(Array.from(income.values), [0, 0, 0, 1200000, 500000, 0]);
+    assert.deepEqual(Array.from(netWorth.values), [0, 0, 0, 1000000, 1500000, 1500000]);
+    const config = api.createConfig(income.labels, income.values, String, 'Ingresos');
+    assert.equal(config.options.scales.y.ticks.callback(1), '$1');
+});
+
+test('las vistas cargan la gráfica compartida desde su ruta real y evitan JS obsoleto', async () => {
+    const [clientHtml, adminHtml] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/admin/dashboard.html')
+    ]);
+
+    for (const html of [clientHtml, adminHtml]) {
+        assert.match(html, /src="\.\.\/assets\/js\/financial-chart\.js\?v=\d+"/);
+    }
+    assert.match(clientHtml, /cliente-dashboard\.js\?v=\d+/);
+    assert.match(adminHtml, /admin-dashboard\.js\?v=\d+/);
+    assert.match(adminHtml, /admin-live\.js\?v=\d+/);
+});
+
+test('la administración edita y elimina metas mediante rutas protegidas de administrador', async () => {
+    const adminScript = await read('public/panel_control/admin/assets/js/admin-live.js');
+    const adminExtension = await read('public/panel_control/admin/assets/js/admin-dashboard-ext.js');
+    const adminRoute = await read('src/app/routes/admin.routes.js');
+
+    assert.match(adminScript, /\/api\/admin\/metas\//);
+    assert.match(adminScript, /method: 'PUT'/);
+    assert.match(adminScript, /method: 'DELETE'/);
+    assert.match(adminExtension, /openModalEditarMeta\(\$\{meta\.id\}\)/);
+    assert.match(adminRoute, /router\.put\('\/metas\/:id', verificarOperacion/);
+    assert.match(adminRoute, /router\.delete\('\/metas\/:id', verificarOperacion/);
+    assert.match(adminRoute, /req\.usuario\.rol === 'empleado'/);
+    assert.match(adminRoute, /lookup\.eq\('usuario_id', req\.usuario\.id\)/);
+    assert.match(adminRoute, /deletion\.eq\('usuario_id', req\.usuario\.id\)/);
+    assert.match(adminRoute, /Meta no encontrada o no tienes permiso/);
+    assert.match(adminScript, /HTTP \$\{response\.status\} sin JSON/);
+    assert.doesNotMatch(adminScript, /response\.json\(\)\.catch\(\(\) => \(\{\}\)\)/);
+});
+
+test('las operaciones de metas del cliente reportan los IDs inexistentes en vez de aparentar éxito', async () => {
+    const goalsRoute = await read('src/app/routes/metas.routes.js');
+    assert.match(goalsRoute, /Meta no encontrada para este usuario/);
+    assert.match(goalsRoute, /La meta ya no existe o no pertenece a este usuario/);
+    assert.match(goalsRoute, /if \(!data\) return res\.status\(404\)/);
 });
 
 test('el login tiene límite de intentos y auditoría', async () => {

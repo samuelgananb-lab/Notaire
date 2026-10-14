@@ -470,12 +470,13 @@ function requestBrowserNotifications() {
 function scheduleEventNotifications(evt) {
     if (!evt.fecha) return;
     const evtDateTime = new Date(`${evt.fecha}T${evt.hora || '08:00'}:00`);
+    const cfg = notifCfg();
 
-    if (evt.notif24h) {
+    if (evt.notif24h && cfg.h24) {
         const notif24 = new Date(evtDateTime.getTime() - 24 * 60 * 60 * 1000);
         scheduleNotification(notif24, `📅 Recordatorio mañana: ${evt.titulo}`, evt.nota || '');
     }
-    if (evt.notif1h) {
+    if (evt.notif1h && cfg.h1) {
         const notif1 = new Date(evtDateTime.getTime() - 60 * 60 * 1000);
         scheduleNotification(notif1, `⏰ En 1 hora: ${evt.titulo}`, evt.nota || '');
     }
@@ -496,9 +497,15 @@ function scheduleNotification(triggerTime, title, body) {
     }
 }
 
+const recentNotifs = new Map();
+
 function triggerSystemNotif(title, body) {
+    const last = recentNotifs.get(title);
+    if (last && Date.now() - last < 5 * 60 * 1000) return;
+    recentNotifs.set(title, Date.now());
+
     // Notificación del navegador
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (notifCfg().browser && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(title, {
             body: body,
             icon: '/public/assets/image/notaire-icon.png',
@@ -535,12 +542,15 @@ function scheduleNotificationChecks() {
             const diffMin = (evtTime - now) / 60000;
 
             // 24h antes (entre 1439 y 1441 minutos)
-            if (evt.notif24h && diffMin > 1438 && diffMin < 1442) {
+            if (evt.notif24h && notifCfg().h24 && diffMin > 1438 && diffMin < 1442) {
                 triggerSystemNotif(`📅 Recordatorio mañana: ${evt.titulo}`, evt.nota || '');
             }
             // 1h antes (entre 59 y 61 minutos)
-            if (evt.notif1h && diffMin > 58 && diffMin < 62) {
+            if (evt.notif1h && notifCfg().h1 && diffMin > 58 && diffMin < 62) {
                 triggerSystemNotif(`⏰ En 1 hora: ${evt.titulo}`, evt.nota || '');
+            }
+            if (evt.notifOnDay && diffMin > -1 && diffMin < 1) {
+                triggerSystemNotif(`🔔 Ahora: ${evt.titulo}`, evt.nota || '');
             }
         });
     }, 60000);
@@ -582,6 +592,7 @@ function initEmojiPicker() {
    ============================================================ */
 function initConfigView() {
     refreshConfigDisplay();
+    cargarPreferenciasNotificacion();
 }
 
 function refreshConfigDisplay() {
@@ -619,6 +630,59 @@ function toggleNotifBrowser(input) {
     saveNotifConfig();
 }
 
+function notifCfg() {
+    const defaults = { browser: true, h24: true, h1: true, gastos: true, semanal: false };
+    try {
+        return { ...defaults, ...JSON.parse(localStorage.getItem('notaire_notif_cfg') || '{}') };
+    } catch {
+        return defaults;
+    }
+}
+
+function authHeadersExt() {
+    return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('notaire_token') };
+}
+
+function applyNotifConfigToUI(cfg, presupuesto) {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.checked = Boolean(value); };
+    set('togNotifBrowser', cfg.browser);
+    set('togNotif24h', cfg.h24);
+    set('togNotif1h', cfg.h1);
+    set('togNotifGastos', cfg.gastos);
+    set('togNotifSemanal', cfg.semanal);
+    const budgetInput = document.getElementById('cfgPresupuesto');
+    if (budgetInput && presupuesto > 0) budgetInput.value = presupuesto;
+}
+
+async function cargarPreferenciasNotificacion() {
+    applyNotifConfigToUI(notifCfg(), Number(localStorage.getItem('notaire_presupuesto') || 0));
+    if (!localStorage.getItem('notaire_token')) return;
+    try {
+        const response = await fetch('/api/auth/preferencias', { headers: authHeadersExt() });
+        if (!response.ok) return;
+        const { presupuesto, ...cfg } = await response.json();
+        localStorage.setItem('notaire_notif_cfg', JSON.stringify(cfg));
+        if (presupuesto > 0) localStorage.setItem('notaire_presupuesto', String(presupuesto));
+        applyNotifConfigToUI(cfg, presupuesto);
+        if (typeof cargarDatosFinancieros === 'function') cargarDatosFinancieros();
+    } catch (error) {
+        console.error('No se pudieron cargar las preferencias de notificación:', error);
+    }
+}
+
+async function persistirPreferencias() {
+    if (!localStorage.getItem('notaire_token')) return;
+    try {
+        await fetch('/api/auth/preferencias', {
+            method: 'PUT',
+            headers: authHeadersExt(),
+            body: JSON.stringify({ ...notifCfg(), presupuesto: Number(localStorage.getItem('notaire_presupuesto') || 0) })
+        });
+    } catch (error) {
+        console.error('No se pudieron guardar las preferencias de notificación:', error);
+    }
+}
+
 function saveNotifConfig() {
     const cfg = {
         browser: document.getElementById('togNotifBrowser')?.checked,
@@ -628,6 +692,7 @@ function saveNotifConfig() {
         semanal: document.getElementById('togNotifSemanal')?.checked,
     };
     localStorage.setItem('notaire_notif_cfg', JSON.stringify(cfg));
+    persistirPreferencias();
 }
 
 function saveRegionConfig() {
@@ -638,12 +703,44 @@ function saveRegionConfig() {
 }
 
 function saveBudgetConfig() {
-    const total = document.getElementById('cfgPresupuesto')?.value;
-    if (typeof NotaireState !== 'undefined' && total) {
-        NotaireState.presupuestoTotal = parseFloat(total);
-        updateAllMetrics();
+    const total = Number(document.getElementById('cfgPresupuesto')?.value);
+    if (!Number.isFinite(total) || total <= 0) {
+        showToast('⚠️ Ingresa un presupuesto mensual válido.');
+        return;
     }
-    showToast(`✅ Presupuesto mensual actualizado: $${parseInt(total || 0).toLocaleString('es-CO')}`);
+    localStorage.setItem('notaire_presupuesto', String(Math.round(total)));
+    localStorage.removeItem('notaire_budget_alert');
+    persistirPreferencias();
+    if (typeof cargarDatosFinancieros === 'function') cargarDatosFinancieros();
+    showToast(`✅ Presupuesto mensual actualizado: $${Math.round(total).toLocaleString('es-CO')}`);
+}
+
+// Alerta en pantalla al llegar al 80% o superar el 100% del presupuesto (una vez por nivel y mes).
+function evaluarAlertaPresupuesto() {
+    const cfg = notifCfg();
+    const presupuesto = Number(localStorage.getItem('notaire_presupuesto') || 0);
+    if (!cfg.gastos || presupuesto <= 0) return;
+    const gastado = Number(String(document.getElementById('valGastadoEsteMes')?.textContent || '').replace(/\D/g, ''));
+    if (!gastado) return;
+    const pct = (gastado / presupuesto) * 100;
+    const nivel = pct >= 100 ? 100 : pct >= 80 ? 80 : 0;
+    if (!nivel) return;
+    const key = `${new Date().toISOString().slice(0, 7)}:${nivel}`;
+    if (localStorage.getItem('notaire_budget_alert') === key) return;
+    localStorage.setItem('notaire_budget_alert', key);
+    triggerSystemNotif(
+        nivel === 100 ? '🚨 Superaste tu presupuesto mensual' : '⚠️ Estás cerca de tu presupuesto',
+        `Has usado el ${Math.round(pct)}% de tu presupuesto de este mes.`
+    );
+}
+
+if (typeof cargarDatosFinancieros === 'function') {
+    const cargarOriginal = cargarDatosFinancieros;
+    cargarDatosFinancieros = async function (...args) {
+        const result = await cargarOriginal.apply(this, args);
+        evaluarAlertaPresupuesto();
+        return result;
+    };
 }
 
 function confirmLogout() {

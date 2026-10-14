@@ -58,75 +58,21 @@ async function cargarGraficoEvolucion() {
 
         if (!response.ok) throw new Error('Error al obtener transacciones');
         const transacciones = await response.json();
-        const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        const hoy = new Date();
-        const etiquetasMeses = [];
-        const datosMeses = {};
-
-        for (let i = 5; i >= 0; i--) {
-            const fechaMes = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-            const clave = `${fechaMes.getFullYear()}-${String(fechaMes.getMonth() + 1).padStart(2, '0')}`;
-
-            etiquetasMeses.push(mesesNombres[fechaMes.getMonth()]);
-            datosMeses[clave] = 0;
-        }
-
-        transacciones
-            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-            .forEach(transaccion => {
-                const fechaTransaccion = new Date(transaccion.fecha);
-                const clave = `${fechaTransaccion.getFullYear()}-${String(fechaTransaccion.getMonth() + 1).padStart(2, '0')}`;
-                const monto = Number.parseFloat(transaccion.monto) || 0;
-                const cambio = transaccion.tipo === 'ingreso' ? monto : -monto;
-
-                if (Object.prototype.hasOwnProperty.call(datosMeses, clave)) {
-                    datosMeses[clave] += cambio;
-                }
-            });
-
-        let balanceAcumulado = 0;
-        const valoresEvolucion = Object.values(datosMeses).map(balanceMensual => {
-            balanceAcumulado += balanceMensual;
-            return balanceAcumulado;
-        });
-
         const canvas = document.getElementById('graficoEvolucion');
-        if (!canvas || typeof Chart === 'undefined') return;
+        if (!canvas || typeof Chart === 'undefined' || !window.NotaireFinancialChart) return;
 
         graficoEvolucion?.destroy();
 
-        graficoEvolucion = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: etiquetasMeses,
-                datasets: [{
-                    label: 'Patrimonio ($)',
-                    data: valoresEvolucion,
-                    borderColor: '#06b6d4',
-                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#06b6d4',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: {
-                            color: '#aaa',
-                            callback: value => '$' + value.toLocaleString('es-CO')
-                        }
-                    },
-                    x: { grid: { display: false }, ticks: { color: '#aaa' } }
-                }
-            }
-        });
+        const series = window.NotaireFinancialChart.createMonthlySeries(transacciones);
+        const formatValue = value => new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            maximumFractionDigits: 0
+        }).format(Number(value) || 0);
+        graficoEvolucion = new Chart(
+            canvas.getContext('2d'),
+            window.NotaireFinancialChart.createConfig(series.labels, series.values, formatValue)
+        );
     } catch (error) {
         console.error('Error cargando gráfica de evolución:', error);
     }

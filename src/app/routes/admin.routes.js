@@ -34,6 +34,79 @@ function verificarRoles(rolesPermitidos) {
 const verificarAdmin = verificarRoles(['admin']);
 const verificarOperacion = verificarRoles(['admin', 'empleado']);
 
+router.put('/metas/:id', verificarOperacion, async (req, res) => {
+  try {
+    const metaId = Number(req.params.id);
+    if (!Number.isInteger(metaId) || metaId <= 0) {
+      return res.status(400).json({ error: 'ID de meta no válido' });
+    }
+
+    const nombre = String(req.body.nombre || '').trim();
+    const montoObjetivo = Number(req.body.monto_objetivo);
+    const montoActual = Number(req.body.monto_actual);
+    if (!nombre || nombre.length > 150 || !Number.isFinite(montoObjetivo) || montoObjetivo <= 0 || !Number.isFinite(montoActual) || montoActual < 0) {
+      return res.status(400).json({ error: 'Nombre y montos válidos son obligatorios' });
+    }
+
+    let lookup = supabase.from('metas').select('id, usuario_id').eq('id', metaId);
+    if (req.usuario.rol === 'empleado') lookup = lookup.eq('usuario_id', req.usuario.id);
+    const { data: existente, error: lookupError } = await lookup.maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!existente) return res.status(404).json({ error: 'Meta no encontrada o no tienes permiso para modificarla' });
+
+    const { data, error } = await supabase
+      .from('metas')
+      .update({
+        nombre,
+        monto_objetivo: montoObjetivo,
+        monto_actual: montoActual,
+        fecha_limite: req.body.fecha_limite || null,
+        ...(req.body.icono !== undefined ? { icono: req.body.icono } : {})
+      })
+      .eq('id', metaId)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'La meta ya no existe' });
+
+    await registrarAuditoria({
+      req,
+      accion: 'actualizar_meta',
+      recurso: 'meta',
+      recursoId: metaId,
+      detalles: { nombre, monto_objetivo: montoObjetivo, monto_actual: montoActual }
+    });
+    res.json({ mensaje: 'Meta actualizada correctamente', meta: data });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar meta', detalle: error.message });
+  }
+});
+
+router.delete('/metas/:id', verificarOperacion, async (req, res) => {
+  try {
+    const metaId = Number(req.params.id);
+    if (!Number.isInteger(metaId) || metaId <= 0) {
+      return res.status(400).json({ error: 'ID de meta no válido' });
+    }
+
+    let deletion = supabase.from('metas').delete().eq('id', metaId);
+    if (req.usuario.rol === 'empleado') deletion = deletion.eq('usuario_id', req.usuario.id);
+    const { data, error } = await deletion.select('id, usuario_id').maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Meta no encontrada o no tienes permiso para eliminarla' });
+
+    await registrarAuditoria({
+      req,
+      accion: 'eliminar_meta',
+      recurso: 'meta',
+      recursoId: metaId
+    });
+    res.json({ mensaje: 'Meta eliminada correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar meta', detalle: error.message });
+  }
+});
+
 async function consultarFilasSeguro(query, etiqueta) {
   const { data, error } = await query;
   if (error) {
@@ -425,7 +498,7 @@ router.get('/summary', verificarOperacion, async (req, res) => {
   try {
     const employeeSafe = req.usuario.rol === 'empleado';
     const usersQuery = supabase.from('usuarios').select('id, nombre, email, id_rol');
-    const transactionsQuery = supabase.from('transacciones').select('id, usuario_id, tipo, monto, categoria, descripcion, fecha').order('fecha', { ascending: false }).limit(200);
+    const transactionsQuery = supabase.from('transacciones').select('id, usuario_id, tipo, monto, categoria, descripcion, fecha').order('fecha', { ascending: false }).limit(1000);
     const goalsQuery = supabase.from('metas').select('id, usuario_id, nombre, monto_actual, monto_objetivo, fecha_limite').order('id', { ascending: false }).limit(200);
     const contributionsQuery = supabase.from('aportes_meta').select('id, usuario_id, meta_id, monto, fecha').order('fecha', { ascending: false }).limit(100);
     const assetsQuery = supabase.from('patrimonio').select('id, usuario_id, tipo, categoria, monto').limit(300);

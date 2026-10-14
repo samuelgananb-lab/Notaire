@@ -20,6 +20,9 @@ function cambiarSeccion(tipo) {
 
     document.getElementById('seccion-detallada')?.classList.add('active');
     const target = tipo === 'gasto' ? 'view-gastos' : 'view-ingresos';
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        document.getElementById(target)?.classList.add('active');
+    }
     document.querySelector(`#sidebarMenu a[data-target="${target}"]`)?.parentElement.classList.add('active');
     const headerTitle = document.getElementById('headerDynamicTitle');
     if (headerTitle) headerTitle.textContent = tipo === 'gasto' ? 'GASTOS' : 'INGRESOS';

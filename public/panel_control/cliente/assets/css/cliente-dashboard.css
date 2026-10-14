@@ -2780,3 +2780,11 @@ body {
     .form-group-wide { grid-column: auto; }
 }
 
+
+/* Aviso de saldo insuficiente al aportar a una meta */
+.aporte-error { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); color: #fecaca; font-size: 13px; line-height: 1.45; }
+.aporte-error[hidden] { display: none; }
+.aporte-error p { margin: 0 0 10px; }
+.aporte-error-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.aporte-error-actions button { flex: 1 1 auto; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font-weight: 600; cursor: pointer; }
+.aporte-error-actions button:first-child { background: linear-gradient(90deg,#8C00FF,#b266ff); border-color: transparent; }

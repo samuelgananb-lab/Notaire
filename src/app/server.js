@@ -15,6 +15,7 @@ import recordatoriosRouter from './routes/recordatorios.routes.js';
 import eventosRouter from './routes/eventos.routes.js';
 import adminRouter from './routes/admin.routes.js';
 import { startEventNotificationScheduler } from './services/event-notifications.service.js';
+import { startWeeklySummaryScheduler } from './services/finance-alerts.service.js';
 import { JWT_SECRET, verificarToken } from './middlewares/auth.middleware.js';
 
 dotenv.config();
@@ -177,4 +178,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
   startEventNotificationScheduler();
+  startWeeklySummaryScheduler();
 });

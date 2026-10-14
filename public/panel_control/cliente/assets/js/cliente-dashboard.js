@@ -7,6 +7,8 @@ const NotaireState = {
     presupuestoTotal: 0
 };
 
+let chartClienteIngresos = null;
+
 sincronizarEstadoCliente();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -348,6 +350,14 @@ function navigateTo(viewId) {
         const text = activeLink.querySelector('span')?.textContent || 'PANEL PRINCIPAL';
         headerTitle.textContent = text.toUpperCase();
     }
+
+    if (viewId === 'view-ingresos' && chartClienteIngresos) {
+        window.setTimeout(() => chartClienteIngresos.resize(), 100);
+    }
+
+    if (viewId === 'view-ingresos' && chartClienteIngresos) {
+        window.setTimeout(() => chartClienteIngresos.resize(), 100);
+    }
 }
 
 function initSidebar() {
@@ -516,7 +526,12 @@ async function handleGuardarAporteMeta(event) {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ meta_id: metaId, monto })
         });
-        if (!response.ok) throw new Error('No se pudo registrar el aporte');
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 422 && result.codigo === 'SALDO_INSUFICIENTE') {
+            mostrarErrorAporte(result);
+            return;
+        }
+        if (!response.ok) throw new Error(result.error || 'No se pudo registrar el aporte');
 
         closeModal('modalAportarMeta');
         if (typeof cargarMetasYAhorros === 'function') await cargarMetasYAhorros();
@@ -525,8 +540,40 @@ async function handleGuardarAporteMeta(event) {
         showToast('¡Aporte registrado con éxito!');
     } catch (error) {
         console.error('Error al registrar el aporte:', error);
-        showToast('No se pudo registrar el aporte');
+        showToast(error.message || 'No se pudo registrar el aporte');
     }
+}
+
+function mostrarErrorAporte(info) {
+    const box = document.getElementById('aporteError');
+    if (!box) return showToast(info.error);
+    box.textContent = '';
+    const msg = document.createElement('p');
+    msg.textContent = info.error;
+    box.appendChild(msg);
+
+    const actions = document.createElement('div');
+    actions.className = 'aporte-error-actions';
+    if (info.saldoDisponible > 0) {
+        const abonar = document.createElement('button');
+        abonar.type = 'button';
+        abonar.textContent = `Abonar ${formatCOP(info.saldoDisponible)}`;
+        abonar.onclick = () => {
+            document.getElementById('aporteMonto').value = info.saldoDisponible;
+            box.hidden = true;
+        };
+        actions.appendChild(abonar);
+    }
+    const ingreso = document.createElement('button');
+    ingreso.type = 'button';
+    ingreso.textContent = 'Registrar un ingreso';
+    ingreso.onclick = () => {
+        closeModal('modalAportarMeta');
+        if (typeof openModalRegistrarIngreso === 'function') openModalRegistrarIngreso();
+    };
+    actions.appendChild(ingreso);
+    box.appendChild(actions);
+    box.hidden = false;
 }
 
 async function cargarResumenDashboard() {
@@ -559,6 +606,17 @@ async function cargarDatosFinancieros() {
         if (!response.ok) throw new Error('Error al obtener transacciones');
         const respuesta = await response.json();
         const transacciones = Array.isArray(respuesta) ? respuesta : [];
+        const canvasIngresos = document.getElementById('chartEvolucionIngresos');
+        if (canvasIngresos && typeof Chart !== 'undefined' && window.NotaireFinancialChart) {
+            const serieIngresos = window.NotaireFinancialChart.createMonthlyTotals(transacciones);
+            chartClienteIngresos?.destroy();
+            chartClienteIngresos = new Chart(
+                canvasIngresos.getContext('2d'),
+                window.NotaireFinancialChart.createConfig(serieIngresos.labels, serieIngresos.values, formatCOP, 'Ingresos')
+            );
+        } else if (canvasIngresos) {
+            console.error('No se pudo inicializar la gráfica de ingresos: faltan Chart.js o NotaireFinancialChart.');
+        }
         const ahora = new Date();
         const delMes = transacciones.filter(item => {
             const fecha = new Date(item.fecha);

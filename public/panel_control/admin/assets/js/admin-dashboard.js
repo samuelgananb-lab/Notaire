@@ -196,37 +196,12 @@ function initCharts() {
 
     // 2. Gráfico de Línea: Evolución de ingresos (Ingresos)
     const ctxIngEvol = document.getElementById('chartEvolucionIngresos');
-    if (ctxIngEvol) {
-        const gradient = ctxIngEvol.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.4)');
-        gradient.addColorStop(1, 'rgba(124, 58, 237, 0.0)');
-
-        chartEvolucionIngresosInstance = new Chart(ctxIngEvol.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Ingresos ($)',
-                    data: [],
-                    borderColor: '#8b5cf6',
-                    borderWidth: 3,
-                    fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    pointBackgroundColor: '#8b5cf6',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { callback: v => '$' + (v/1000000) + 'M' } }
-                }
-            }
-        });
+    if (ctxIngEvol && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlyTotals([], 'ingreso');
+        chartEvolucionIngresosInstance = new Chart(
+            ctxIngEvol.getContext('2d'),
+            window.NotaireFinancialChart.createConfig(series.labels, series.values, adminCurrency, 'Ingresos')
+        );
     }
 
     // 3. Gráfico Dona: Fuentes de Ingresos (Ingresos)
@@ -254,37 +229,12 @@ function initCharts() {
 
     // 4. Gráfico de Área: Evolución del Patrimonio (Saldo)
     const ctxPatrimonio = document.getElementById('chartPatrimonioEvolucion');
-    if (ctxPatrimonio) {
-        const gradient = ctxPatrimonio.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
-        gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
-
-        chartPatrimonioEvolucionInstance = new Chart(ctxPatrimonio.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Patrimonio Netos ($)',
-                    data: [],
-                    borderColor: '#06b6d4',
-                    borderWidth: 3,
-                    fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    pointBackgroundColor: '#06b6d4',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { callback: v => '$' + (v/1000000) + 'M' } }
-                }
-            }
-        });
+    if (ctxPatrimonio && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlySeries([]);
+        chartPatrimonioEvolucionInstance = new Chart(
+            ctxPatrimonio.getContext('2d'),
+            window.NotaireFinancialChart.createConfig(series.labels, series.values, adminCurrency)
+        );
     }
 
     // 5. Gráfico Dona: Distribución de Activos (Saldo)

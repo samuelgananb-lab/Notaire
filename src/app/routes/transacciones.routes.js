@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
+import { checkBudgetAlert } from '../services/finance-alerts.service.js';
 
 const router = Router();
 
@@ -91,6 +92,7 @@ router.post('/', verificarToken, async (req, res) => {
       subject: `${tipoMovimiento === 'ingreso' ? 'Ingreso' : 'Gasto'} registrado`,
       text: `Hola ${req.usuario.nombre || ''},\n\nSe registró un ${tipoMovimiento} en tu cuenta Notaire.\nMonto: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(data.monto) || 0)}\nCategoría: ${data.categoria}\nDescripción: ${data.descripcion || 'Sin descripción'}\nFecha: ${data.fecha}\n\nSi no reconoces esta operación, revisa tu cuenta.`
     });
+    void checkBudgetAlert(req.usuario, data);
     res.status(201).json({ mensaje: 'Transacción creada exitosamente', transaccion: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear transacción', detalle: error.message });

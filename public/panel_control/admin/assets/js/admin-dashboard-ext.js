@@ -619,6 +619,7 @@ function renderMetasView() {
                     <div class="goal-details-list"><span>Falta: ${formatCOP(falta)}</span><span>Fecha: ${meta.fecha || '2026'}</span></div>
                     <div style="display:flex; gap:8px; margin-top:12px;">
                         <button class="btn-aportar-goal" style="flex:1;" onclick="openModalAportarMeta(${meta.id}, '${escapeHtmlExt(meta.nombre)}')"><i class="fas fa-plus"></i> Aportar</button>
+                        <button class="btn-tx-edit" title="Editar meta" onclick="openModalEditarMeta(${meta.id})"><i class="fas fa-pen"></i></button>
                         <button class="btn-delete-goal" onclick="deleteMeta(${meta.id})" title="Eliminar meta"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -635,17 +636,6 @@ function renderMetasView() {
     if (totalAhorrado) totalAhorrado.textContent = formatCOP(totalAh);
     if (countEl) countEl.textContent = metas.length;
     if (avgPctEl) avgPctEl.textContent = `${avgPct}%`;
-}
-
-function deleteMeta(id) {
-    if (typeof NotaireState === 'undefined') return;
-    const meta = NotaireState.metas.find(m => m.id === id);
-    if (!meta) return;
-    if (!confirm(`¿Eliminar la meta "${meta.nombre}"?`)) return;
-    NotaireState.metas = NotaireState.metas.filter(m => m.id !== id);
-    updateAllMetrics();
-    renderMetasView();
-    showToast(`🗑️ Meta "${meta.nombre}" eliminada.`);
 }
 
 /* ============================================================

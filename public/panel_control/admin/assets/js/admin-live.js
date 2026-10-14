@@ -205,6 +205,12 @@ function updateAdminCharts(summary) {
     renderAdminAssets(summary.activos || []);
     renderAdminFinancialSummary(summary);
 
+    if (typeof chartEvolucionIngresosInstance !== 'undefined' && chartEvolucionIngresosInstance && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlyTotals(summary.transactions || []);
+        chartEvolucionIngresosInstance.data.labels = series.labels;
+        chartEvolucionIngresosInstance.data.datasets[0].data = series.values;
+        chartEvolucionIngresosInstance.update();
+    }
     if (typeof chartGastosDonaInstance !== 'undefined' && chartGastosDonaInstance) {
         chartGastosDonaInstance.data.labels = expenses.map(([label]) => label);
         chartGastosDonaInstance.data.datasets[0].data = expenses.map(([, amount]) => amount);
@@ -219,6 +225,12 @@ function updateAdminCharts(summary) {
         chartDistribucionActivosInstance.data.labels = assets.map(([label]) => label);
         chartDistribucionActivosInstance.data.datasets[0].data = assets.map(([, amount]) => amount);
         chartDistribucionActivosInstance.update();
+    }
+    if (typeof chartPatrimonioEvolucionInstance !== 'undefined' && chartPatrimonioEvolucionInstance && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlySeries(summary.transactions || []);
+        chartPatrimonioEvolucionInstance.data.labels = series.labels;
+        chartPatrimonioEvolucionInstance.data.datasets[0].data = series.values;
+        chartPatrimonioEvolucionInstance.update();
     }
 }
 
@@ -322,7 +334,15 @@ async function adminRequest(url, options = {}) {
         ...options,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) }
     });
-    const result = await response.json().catch(() => ({}));
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+        if (!response.ok) {
+            throw new Error(`El servidor respondió HTTP ${response.status} sin JSON. Comprueba que el backend esté actualizado y reiniciado.`);
+        }
+        throw new Error('El servidor devolvió una respuesta inesperada; no se pudo confirmar la operación.');
+    }
+
+    const result = await response.json();
     if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo completar la operación');
     return result;
 }
@@ -501,7 +521,7 @@ function openModalEditarMeta(id) {
 async function handleGuardarEdicionMeta(event) {
     event.preventDefault();
     try {
-        await adminRequest(`/api/metas/${encodeURIComponent(document.getElementById('editMetaId')?.value)}`, {
+        await adminRequest(`/api/admin/metas/${encodeURIComponent(document.getElementById('editMetaId')?.value)}`, {
             method: 'PUT',
             body: JSON.stringify({
                 nombre: document.getElementById('editMetaNombre')?.value,
@@ -519,7 +539,7 @@ async function handleGuardarEdicionMeta(event) {
 async function eliminarMeta(id) {
     if (!window.confirm('¿Eliminar esta meta?')) return;
     try {
-        await adminRequest(`/api/metas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        await adminRequest(`/api/admin/metas/${encodeURIComponent(id)}`, { method: 'DELETE' });
         await loadAdminSummary();
         showToast('Meta eliminada');
     } catch (error) { showToast(error.message); }

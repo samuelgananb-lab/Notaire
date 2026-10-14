@@ -6,6 +6,7 @@ import { JWT_SECRET, verificarToken } from '../middlewares/auth.middleware.js';
 import { loginRateLimit } from '../middlewares/login-rate-limit.middleware.js';
 import { registrarAuditoria } from '../services/audit.service.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
+import { getPrefs, savePrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 const ID_ROL_CLIENTE = '11111111-1111-1111-1111-111111111111';
@@ -285,9 +286,27 @@ router.put('/me', verificarToken, async (req, res) => {
       .single();
 
     if (error) throw error;
+    const aviso = `Hola ${nombre},\n\nLos datos de tu perfil en Notaire fueron actualizados. Si no reconoces este cambio, contacta de inmediato al equipo de soporte.`;
+    void sendNotificationEmail({ to: email, subject: 'Perfil actualizado', text: aviso });
+    if (req.usuario.email && req.usuario.email.toLowerCase() !== email) {
+      void sendNotificationEmail({ to: req.usuario.email, subject: 'Tu correo fue cambiado', text: `El correo de tu cuenta Notaire cambió a ${email}. Si no fuiste tú, contacta de inmediato al equipo de soporte.` });
+    }
     res.json({ mensaje: 'Perfil actualizado', usuario: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar el perfil', detalle: error.message });
+  }
+});
+
+router.get('/preferencias', verificarToken, async (req, res) => {
+  res.json(await getPrefs(req.usuario.auth_id));
+});
+
+router.put('/preferencias', verificarToken, async (req, res) => {
+  try {
+    if (!req.usuario.auth_id) return res.status(400).json({ error: 'Tu cuenta no admite preferencias remotas' });
+    res.json(await savePrefs(req.usuario.auth_id, req.body));
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudieron guardar las preferencias', detalle: error.message });
   }
 });
 

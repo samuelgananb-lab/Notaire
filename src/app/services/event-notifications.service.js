@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { supabase } from '../database/supabase.js';
+import { getPrefs } from './notification-prefs.service.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 let reminderSchemaWarningShown = false;
@@ -70,10 +71,17 @@ async function processEventNotifications() {
 
     const { data: usuario, error: userError } = await supabase
       .from('usuarios')
-      .select('email, nombre')
+      .select('email, nombre, auth_id')
       .eq('id', evento.usuario_id)
       .single();
     if (userError || !usuario?.email) continue;
+
+    const prefs = await getPrefs(usuario.auth_id);
+    const desactivado = (aviso.flag === 'notif24_sent' && !prefs.h24) || (aviso.flag === 'notif1h_sent' && !prefs.h1);
+    if (desactivado) {
+      await supabase.from('eventos_calendario').update({ [aviso.flag]: true }).eq('id', evento.id);
+      continue;
+    }
 
     const sent = await sendNotificationEmail({
       to: usuario.email,
