@@ -1,0 +1,26 @@
+.cli-sol-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cli-sol-form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+.cli-sol-form .wide { grid-column: 1 / -1; }
+.cli-sol-form input, .cli-sol-form select, .cli-sol-form textarea {
+    padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.35);
+    background: rgba(255, 255, 255, 0.06); color: inherit; font: inherit;
+}
+.cli-sol-list { display: grid; gap: 12px; }
+.cli-sol-item { padding: 14px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.25); background: rgba(255, 255, 255, 0.04); }
+.cli-sol-item header { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.cli-sol-item p { margin: 8px 0 0; }
+.cli-sol-reply { padding: 8px 10px; border-left: 3px solid #8b5cf6; background: rgba(139, 92, 246, 0.12); border-radius: 6px; }
+.cli-sol-badge { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; background: rgba(245, 158, 11, 0.3); }
+.cli-sol-badge.en_proceso { background: rgba(59, 130, 246, 0.3); }
+.cli-sol-badge.resuelta { background: rgba(16, 185, 129, 0.3); }
+.cli-sol-badge.rechazada { background: rgba(239, 68, 68, 0.3); }
+.cli-sol-msg.ok { color: #10b981; }
+.cli-sol-msg.error { color: #ef4444; }
+.cli-sol-list { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.cli-sol-item { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+.cli-sol-item header { flex-wrap: wrap; min-width: 0; }
+.cli-sol-item header > * { min-width: 0; overflow-wrap: anywhere; }
+.cli-sol-item p, .cli-sol-reply { overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+.cli-sol-badge { white-space: nowrap; flex-shrink: 0; }
+.cli-sol-form > *, .cli-sol-form input, .cli-sol-form select, .cli-sol-form textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+@media (max-width: 640px) { .cli-sol-form { grid-template-columns: minmax(0, 1fr); } }
