@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="notaire">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOTAIRE - Panel de Empleado</title>
+    <script src="../../assets/js/auth-guard.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/empleado.css?v=1">
+</head>
+
+<body>
+    <div class="emp-layout">
+        <aside class="emp-sidebar" id="empSidebar">
+            <div class="emp-brand">
+                <svg class="emp-brand-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="#7c3aed" />
+                    <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="#6d28d9" />
+                    <text x="50" y="70" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold" fill="white" text-anchor="middle">N</text>
+                </svg>
+                <span class="emp-brand-title">NOTAIRE</span>
+            </div>
+            <nav class="emp-nav" id="empNav">
+                <a href="#" class="active" data-view="inicio"><i class="fas fa-house"></i><span>Inicio</span></a>
+                <a href="#" data-view="tramites"><i class="fas fa-file-signature"></i><span>Gestión de Trámites</span></a>
+                <a href="#" data-view="verificaciones"><i class="fas fa-shield-halved"></i><span>Verificaciones</span><b class="emp-nav-badge" id="navVerifBadge" hidden>0</b></a>
+                <a href="#" data-view="calendario"><i class="fas fa-calendar-days"></i><span>Calendario Notarial</span></a>
+                <a href="#" data-view="citas"><i class="fas fa-calendar-check"></i><span>Citas</span></a>
+                <a href="#" data-view="solicitudes"><i class="fas fa-paper-plane"></i><span>Solicitudes</span></a>
+                <a href="#" data-view="configuracion"><i class="fas fa-gear"></i><span>Configuración</span></a>
+            </nav>
+            <button class="emp-logout" id="btnLogout" type="button"><i class="fas fa-right-from-bracket"></i><span>Cerrar sesión</span></button>
+        </aside>
+
+        <main class="emp-main">
+            <header class="emp-header">
+                <div class="emp-header-left">
+                    <button class="emp-menu-btn" id="btnMenu" type="button" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+                    <h1 id="empTitle">EMPLEADO</h1>
+                </div>
+                <div class="emp-header-right">
+                    <input type="search" id="empSearch" class="emp-search" placeholder="Buscar trámite o cliente..." autocomplete="off" hidden>
+                    <span class="emp-greeting" id="empGreeting">Cargando...</span>
+                    <div class="emp-avatar" id="empAvatar">E</div>
+                    <div class="emp-bell-wrap">
+                        <button class="emp-icon-btn" id="btnBell" type="button" aria-label="Notificaciones"><i class="fas fa-bell"></i><span class="emp-dot" id="bellDot" hidden></span></button>
+                        <div class="emp-dropdown" id="bellPanel" hidden>
+                            <div class="emp-dropdown-title">Notificaciones</div>
+                            <div id="bellList" class="emp-dropdown-list"></div>
+                        </div>
+                    </div>
+                    <button class="emp-icon-btn" id="btnSearch" type="button" aria-label="Buscar"><i class="fas fa-search"></i></button>
+                </div>
+            </header>
+
+            <div class="emp-alert" id="empAlert" hidden></div>
+
+            <!-- INICIO -->
+            <section class="emp-view active" id="view-inicio">
+                <div class="emp-stats">
+                    <button class="emp-stat" type="button" data-go="tramites" data-scope="mine">
+                        <div><span class="emp-stat-label">Trámites Asignados:</span><strong id="statAsignados">–</strong></div>
+                        <i class="far fa-file-lines"></i>
+                    </button>
+                    <button class="emp-stat highlight" type="button" data-go="tramites" data-scope="sign">
+                        <div><span class="emp-stat-label">Firmas Pendientes:</span><strong id="statFirmas">–</strong></div>
+                        <i class="fas fa-pen-nib"></i>
+                    </button>
+                    <button class="emp-stat" type="button" data-go="citas">
+                        <div><span class="emp-stat-label">Citas de Hoy:</span><strong id="statCitas">–</strong></div>
+                        <i class="far fa-calendar-check"></i>
+                    </button>
+                </div>
+
+                <div class="emp-card">
+                    <h2 class="emp-card-title">Tareas Notariales Pendientes</h2>
+                    <div class="emp-table-wrap">
+                        <table class="emp-table">
+                            <thead><tr><th>ID Trámite</th><th>Tipo</th><th>Cliente</th><th>Fecha Límite</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="homeTasksBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title">Agenda del Día</h2>
+                        <button class="emp-btn" type="button" data-go="calendario">Ver Calendario Completo</button>
+                    </div>
+                    <div class="emp-agenda" id="homeAgenda"></div>
+                </div>
+            </section>
+
+            <!-- GESTIÓN DE TRÁMITES -->
+            <section class="emp-view" id="view-tramites">
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title">Gestión de Trámites <small id="tramitesCount"></small></h2>
+                        <button class="emp-btn primary" type="button" id="btnNuevoTramite"><i class="fas fa-plus"></i> Nuevo trámite</button>
+                    </div>
+                    <div class="emp-filters">
+                        <input type="search" id="tramitesSearch" class="emp-input" placeholder="Buscar por título, tipo o cliente">
+                        <select id="tramitesScope" class="emp-input">
+                            <option value="mine">Asignados a mí</option>
+                            <option value="sign">Pendientes de firma</option>
+                            <option value="all">Todos los trámites</option>
+                        </select>
+                        <select id="tramitesStatus" class="emp-input">
+                            <option value="">Todos los estados</option>
+                            <option value="recibido">Recibido</option>
+                            <option value="en_revision">En revisión</option>
+                            <option value="pendiente">Pendiente firma</option>
+                            <option value="aprobado">Aprobado</option>
+                            <option value="finalizado">Finalizado</option>
+                            <option value="rechazado">Rechazado</option>
+                        </select>
+                    </div>
+                    <div class="emp-table-wrap">
+                        <table class="emp-table">
+                            <thead><tr><th>ID Trámite</th><th>Tipo</th><th>Cliente</th><th>Fecha Límite</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="tramitesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VERIFICACIONES -->
+            <section class="emp-view" id="view-verificaciones">
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title">Verificaciones <small>Trámites por revisar</small></h2>
+                    </div>
+                    <div class="emp-verif-list" id="verifList"></div>
+                </div>
+            </section>
+
+            <!-- CALENDARIO -->
+            <section class="emp-view" id="view-calendario">
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title" id="calTitle">Calendario</h2>
+                        <div class="emp-actions-row">
+                            <button class="emp-btn" type="button" id="calPrev" aria-label="Mes anterior"><i class="fas fa-chevron-left"></i></button>
+                            <button class="emp-btn" type="button" id="calToday">Hoy</button>
+                            <button class="emp-btn" type="button" id="calNext" aria-label="Mes siguiente"><i class="fas fa-chevron-right"></i></button>
+                            <button class="emp-btn primary" type="button" data-new-cita><i class="fas fa-plus"></i> Nueva cita</button>
+                        </div>
+                    </div>
+                    <div class="emp-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+                    <div class="emp-cal-grid" id="calGrid"></div>
+                </div>
+                <div class="emp-card">
+                    <h2 class="emp-card-title" id="calDayTitle">Día seleccionado</h2>
+                    <div class="emp-agenda" id="calDayList"></div>
+                </div>
+            </section>
+
+            <!-- CITAS -->
+            <section class="emp-view" id="view-citas">
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title">Citas <small id="citasCount"></small></h2>
+                        <button class="emp-btn primary" type="button" data-new-cita><i class="fas fa-plus"></i> Nueva cita</button>
+                    </div>
+                    <div class="emp-table-wrap">
+                        <table class="emp-table">
+                            <thead><tr><th>Fecha</th><th>Hora</th><th>Cita</th><th>Nota</th><th>Acciones</th></tr></thead>
+                            <tbody id="citasBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SOLICITUDES -->
+            <section class="emp-view" id="view-solicitudes">
+                <div class="emp-card">
+                    <div class="emp-card-head">
+                        <h2 class="emp-card-title">Solicitudes y reportes <small id="solCount"></small></h2>
+                        <button class="emp-btn primary" type="button" id="btnNuevaSolicitud"><i class="fas fa-plus"></i> Nueva solicitud</button>
+                    </div>
+                    <div class="emp-table-wrap">
+                        <table class="emp-table">
+                            <thead><tr><th>Fecha</th><th>De</th><th>Tipo</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Respuesta</th></tr></thead>
+                            <tbody id="solBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONFIGURACIÓN -->
+            <section class="emp-view" id="view-configuracion">
+                <div class="emp-grid-2">
+                    <form class="emp-card" id="formPerfil">
+                        <h2 class="emp-card-title">Mi perfil</h2>
+                        <label class="emp-label">Nombre<input class="emp-input" id="cfgNombre" required maxlength="150"></label>
+                        <label class="emp-label">Correo electrónico<input class="emp-input" id="cfgEmail" type="email" required></label>
+                        <label class="emp-label">Teléfono<input class="emp-input" id="cfgTelefono" maxlength="50"></label>
+                        <button class="emp-btn primary" type="submit">Guardar perfil</button>
+                    </form>
+                    <div class="emp-stack">
+                        <form class="emp-card" id="formPassword">
+                            <h2 class="emp-card-title">Seguridad</h2>
+                            <label class="emp-label">Nueva contraseña<input class="emp-input" id="cfgPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+                            <label class="emp-label">Confirmar contraseña<input class="emp-input" id="cfgPassword2" type="password" minlength="8" autocomplete="new-password" required></label>
+                            <button class="emp-btn primary" type="submit">Cambiar contraseña</button>
+                        </form>
+                        <div class="emp-card">
+                            <h2 class="emp-card-title">Apariencia</h2>
+                            <div class="emp-actions-row">
+                                <button class="emp-btn" type="button" data-theme-set="notaire">Notaire oscuro</button>
+                                <button class="emp-btn" type="button" data-theme-set="light">Claro</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal detalle de trámite -->
+    <div class="emp-modal" id="modalDetalle" hidden>
+        <div class="emp-modal-box">
+            <div class="emp-modal-head"><h3 id="detalleTitulo">Trámite</h3><button type="button" class="emp-icon-btn" data-close aria-label="Cerrar"><i class="fas fa-xmark"></i></button></div>
+            <dl class="emp-detail" id="detalleBody"></dl>
+            <label class="emp-label">Estado
+                <select class="emp-input" id="detalleEstado">
+                    <option value="recibido">Recibido</option>
+                    <option value="en_revision">En revisión</option>
+                    <option value="pendiente">Pendiente firma</option>
+                    <option value="aprobado">Aprobado</option>
+                    <option value="finalizado">Finalizado</option>
+                    <option value="rechazado">Rechazado</option>
+                </select>
+            </label>
+            <div class="emp-modal-actions">
+                <button type="button" class="emp-btn" id="btnAsignarme">Asignarme</button>
+                <button type="button" class="emp-btn primary" id="btnGuardarEstado">Guardar estado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal nuevo trámite -->
+    <div class="emp-modal" id="modalTramite" hidden>
+        <form class="emp-modal-box" id="formTramite">
+            <div class="emp-modal-head"><h3>Nuevo trámite</h3><button type="button" class="emp-icon-btn" data-close aria-label="Cerrar"><i class="fas fa-xmark"></i></button></div>
+            <label class="emp-label">Título<input class="emp-input" id="tramTitulo" required maxlength="180"></label>
+            <label class="emp-label">Tipo
+                <select class="emp-input" id="tramTipo" required>
+                    <option>Trámite de Notario</option>
+                    <option>Firma de Poder</option>
+                    <option>Firma de Notario</option>
+                    <option>Servicios Trámites</option>
+                    <option>Escritura</option>
+                    <option>Autenticación</option>
+                </select>
+            </label>
+            <label class="emp-label">Cliente<select class="emp-input" id="tramCliente"><option value="">Sin asignar</option></select></label>
+            <label class="emp-label">Fecha límite<input class="emp-input" id="tramFecha" type="date"></label>
+            <label class="emp-label">Descripción<textarea class="emp-input" id="tramDescripcion" rows="3"></textarea></label>
+            <div class="emp-modal-actions"><button type="button" class="emp-btn" data-close>Cancelar</button><button type="submit" class="emp-btn primary">Crear trámite</button></div>
+        </form>
+    </div>
+
+    <!-- Modal cita -->
+    <div class="emp-modal" id="modalCita" hidden>
+        <form class="emp-modal-box" id="formCita">
+            <div class="emp-modal-head"><h3>Nueva cita</h3><button type="button" class="emp-icon-btn" data-close aria-label="Cerrar"><i class="fas fa-xmark"></i></button></div>
+            <label class="emp-label">Título<input class="emp-input" id="citaTitulo" placeholder="Cita con Juan Pérez" required maxlength="150"></label>
+            <div class="emp-grid-2 tight">
+                <label class="emp-label">Fecha<input class="emp-input" id="citaFecha" type="date" required></label>
+                <label class="emp-label">Hora<input class="emp-input" id="citaHora" type="time" value="09:00"></label>
+            </div>
+            <label class="emp-label">Nota<textarea class="emp-input" id="citaNota" rows="3"></textarea></label>
+            <div class="emp-modal-actions"><button type="button" class="emp-btn" data-close>Cancelar</button><button type="submit" class="emp-btn primary">Guardar cita</button></div>
+        </form>
+    </div>
+
+    <!-- Modal solicitud -->
+    <div class="emp-modal" id="modalSolicitud" hidden>
+        <form class="emp-modal-box" id="formSolicitud">
+            <div class="emp-modal-head"><h3>Nueva solicitud</h3><button type="button" class="emp-icon-btn" data-close aria-label="Cerrar"><i class="fas fa-xmark"></i></button></div>
+            <div class="emp-grid-2 tight">
+                <label class="emp-label">Tipo
+                    <select class="emp-input" id="solTipo" required>
+                        <option value="reporte_error">Reporte de error</option>
+                        <option value="solicitud_permiso">Solicitud de permiso</option>
+                        <option value="solicitud_soporte">Soporte / ayuda</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </label>
+                <label class="emp-label">Prioridad
+                    <select class="emp-input" id="solPrioridad">
+                        <option value="baja">Baja</option>
+                        <option value="media" selected>Media</option>
+                        <option value="alta">Alta</option>
+                    </select>
+                </label>
+            </div>
+            <label class="emp-label">Trámite relacionado (opcional)<select class="emp-input" id="solTramite"><option value="">Ninguno</option></select></label>
+            <label class="emp-label">Asunto<input class="emp-input" id="solAsunto" required maxlength="180"></label>
+            <label class="emp-label">Descripción<textarea class="emp-input" id="solDescripcion" rows="4" required></textarea></label>
+            <div class="emp-modal-actions"><button type="button" class="emp-btn" data-close>Cancelar</button><button type="submit" class="emp-btn primary">Enviar al administrador</button></div>
+        </form>
+    </div>
+
+    <script src="assets/js/empleado.js?v=2"></script>
+</body>
+
+</html>

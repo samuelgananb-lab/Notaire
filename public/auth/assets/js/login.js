@@ -74,7 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const assignedRole = resolveUserRole(data.usuario);
                 const dashboardPath = assignedRole === 'cliente'
                     ? '../panel_control/cliente/dashboard.html'
-                    : '../panel_control/admin/dashboard.html';
+                    : assignedRole === 'empleado'
+                        ? '../panel_control/empleado/dashboard.html'
+                        : '../panel_control/admin/dashboard.html';
                 localStorage.setItem('notaire_token', data.token);
                 if (data.refresh_token) localStorage.setItem('notaire_refresh_token', data.refresh_token);
                 if (data.expires_at) localStorage.setItem('notaire_expires_at', String(data.expires_at));

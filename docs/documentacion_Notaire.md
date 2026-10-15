@@ -29,11 +29,9 @@ La persistencia activa del backend usa Supabase. Las tablas canónicas son:
 `usuarios`, `roles`, `metas`, `aportes_meta`, `transacciones`, `recordatorios`,
 `eventos_calendario` y `patrimonio`.
 
-Los archivos `src/database/schema.sql`, `src/database/schema_sqlserver.sql` y
-`src/database/seed.sql` corresponden a modelos legacy de SQLite/SQL Server. Se
-mantienen como referencia para migraciones históricas y no deben ejecutarse
-como parte de una instalación nueva. Para Supabase deben revisarse y ejecutarse
-únicamente las migraciones SQL específicas de Supabase.
+Los modelos legacy de SQLite/SQL Server (`schema.sql`, `schema_sqlserver.sql`,
+`seed.sql`, `db.js`, `db_mssql.js`) fueron eliminados. Para Supabase deben
+revisarse y ejecutarse únicamente las migraciones SQL de `src/database/`.
 
 ## Usuarios de Prueba (Demo)
 

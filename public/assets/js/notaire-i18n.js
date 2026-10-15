@@ -52,8 +52,8 @@
                 subtitle: 'Aquí tienes un resumen de tu situación financiera de hoy. Todo está bajo control.',
                 btnMovement: 'Registrar movimiento',
                 btnCalendar: 'Ver calendario',
-                balanceLabel: 'Patrimonio Neto',
-                balanceTrend: '+9.7% este mes'
+                balanceLabel: 'Liquidez',
+                balanceTrend: 'Disponible después de gastos'
             },
             stats: {
                 income: 'Ingresos del mes',
@@ -112,11 +112,11 @@
             saldo: {
                 title: 'MI SALDO',
                 subtitle: 'Conoce tu situación financiera total.',
-                statNet: 'PATRIMONIO NETO',
+                statNet: 'LIQUIDEZ',
                 statAssets: 'ACTIVOS',
                 statLiabilities: 'PASIVOS',
                 statLiquidity: 'LIQUIDEZ',
-                chartEvolution: 'Evolución de tu patrimonio',
+                chartEvolution: 'Evolución de tu liquidez',
                 chartDist: 'Distribución',
                 yourAccounts: 'Tus cuentas',
                 financialSummary: 'Resumen financiero',
@@ -242,8 +242,8 @@
                 subtitle: 'Here is a summary of your financial status today. Everything is under control.',
                 btnMovement: 'Add transaction',
                 btnCalendar: 'View calendar',
-                balanceLabel: 'Net Worth',
-                balanceTrend: '+9.7% this month'
+                balanceLabel: 'Liquidity',
+                balanceTrend: 'Available after expenses'
             },
             stats: {
                 income: 'Monthly income',
@@ -302,11 +302,11 @@
             saldo: {
                 title: 'MY BALANCE',
                 subtitle: 'Understand your complete financial health.',
-                statNet: 'NET WORTH',
+                statNet: 'LIQUIDITY',
                 statAssets: 'ASSETS',
                 statLiabilities: 'LIABILITIES',
                 statLiquidity: 'LIQUIDITY',
-                chartEvolution: 'Net worth evolution',
+                chartEvolution: 'Liquidity evolution',
                 chartDist: 'Distribution',
                 yourAccounts: 'Your accounts',
                 financialSummary: 'Financial summary',

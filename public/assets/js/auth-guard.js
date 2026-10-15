@@ -55,6 +55,18 @@
         return;
     }
 
+    // El empleado tiene su propio panel operativo
+    if (currentPath.includes('/panel_control/admin/') && userRole === 'empleado') {
+        window.location.replace('../empleado/dashboard.html');
+        return;
+    }
+
+    if (currentPath.includes('/panel_control/empleado/') && userRole !== 'empleado') {
+        console.warn('Intento de acceso al panel de empleado sin rol adecuado');
+        window.location.replace(userRole === 'admin' ? '../admin/dashboard.html' : '../cliente/dashboard.html');
+        return;
+    }
+
     // Si intenta acceder al panel admin sin ser admin
     if (currentPath.includes('/panel_control/admin/') && !['admin', 'empleado'].includes(userRole)) {
         console.warn('Intento de acceso al panel operativo sin rol adecuado');

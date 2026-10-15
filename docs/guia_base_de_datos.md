@@ -48,7 +48,7 @@ Registra los movimientos de dinero del usuario.
 - `categoria` y `descripcion`: clasificación y detalle.
 - `fecha`: día del movimiento.
 
-El saldo se calcula usando los ingresos, los gastos y el dinero guardado en metas. No es necesario guardar un saldo calculado por separado para cada movimiento.
+Los ingresos aumentan y los gastos reducen el saldo. El disponible se calcula con los movimientos acumulados menos el dinero reservado en metas; no se guarda como un saldo independiente.
 
 ### 4. `metas`
 
@@ -112,7 +112,7 @@ Guarda activos y pasivos del usuario para calcular su patrimonio.
 - `categoria`: clasificación, como cuenta o inversión.
 - `monto`: valor registrado.
 
-El patrimonio neto se calcula restando los pasivos a los activos.
+Con registros manuales, el patrimonio neto se calcula restando los pasivos a los activos. Sin ellos, el panel usa el saldo acumulado de movimientos como estimación financiera.
 
 ### 9. `tramites_notariales`
 
@@ -203,8 +203,10 @@ Las claves foráneas de `metas`, `aportes_meta`, `transacciones`, `tramites_nota
 ### Cálculos y reglas de negocio
 
 - `aportes_meta` conserva cada aporte, mientras que `metas.monto_actual` mantiene el acumulado que muestran los paneles. La ruta de metas actualiza ambos registros; no existe una función SQL o trigger versionado que garantice esa sincronización fuera de la API.
-- El saldo disponible se calcula como ingresos menos gastos menos el total ahorrado en metas. No se persiste como un saldo independiente.
-- El patrimonio neto se calcula como activos menos pasivos.
+- Las tarjetas y categorías mensuales incluyen solo movimientos del mes calendario actual en la zona horaria `America/Bogota`; los gráficos de gastos excluyen ingresos. El disponible de presupuesto es presupuesto mensual menos gastos del mes y puede ser negativo si se excede.
+- El saldo disponible se calcula como ingresos acumulados menos gastos acumulados menos el total reservado en metas. El ahorro en metas es una reserva de ese saldo, no un gasto adicional al calcular el patrimonio.
+- Si hay activos o pasivos registrados, el patrimonio neto es activos menos pasivos. Si no hay registros manuales, se estima como ingresos acumulados menos gastos acumulados; los activos y pasivos siguen mostrando solo los valores registrados manualmente.
+- La dona de distribución en los paneles de cliente y empleado comparte la misma fórmula y los mismos valores acumulados: gastos, ahorros y disponible (ingresos menos gastos y ahorros, sin representar un disponible negativo como segmento).
 - Las banderas `email_24h_sent`, `email_due_sent` y las banderas `notif*_sent` evitan repetir avisos en cada ejecución del proceso de notificaciones. Cuando un evento cambia de fecha u hora, la API reinicia sus banderas de envío.
 - Los trámites y los recordatorios tienen estados validados por la API. La restricción SQL de estados solo está definida explícitamente para `tramites_notariales`.
 
@@ -222,11 +224,7 @@ Las claves foráneas de `metas`, `aportes_meta`, `transacciones`, `tramites_nota
 | `eventos_notificaciones_migration.sql` | Añade banderas de envío y estado a `eventos_calendario`; presupone que la tabla existe. |
 | `tramites_migration.sql` | Crea trámites, índices y una política RLS. La política actual permite todas las operaciones a cualquier usuario autenticado; véase la advertencia de seguridad más abajo. |
 | `auditoria_migration.sql` | Crea auditoría, índices y una política para que administradores autenticados lean registros. La comprobación de administrador compara `usuarios.id` con `auth.uid()`, no consulta `auth_id`. |
-| `schema.sql` | Esquema SQLite antiguo con nombres como `metas_financieras` y `registros_financieros`. No corresponde a las tablas que consulta el servidor Supabase. Aunque el encabezado diga cinco tablas, define seis. |
-| `schema_sqlserver.sql` | Esquema y datos de demostración para SQL Server. **No ejecutarlo contra una base con datos que se quieran conservar**: elimina claves foráneas del contexto de base de datos y luego elimina tablas `dbo` conocidas antes de recrearlas. Incluye credenciales de demostración en texto plano. |
-| `seed.sql` | Datos iniciales de la variante SQLite antigua; incluye usuarios demo y contraseñas en texto plano. No ejecutar en Supabase ni en producción. |
-| `db.js` | Persistencia JSON local en `src/database/notaire.db.json` con los mismos datos demo inseguros. Es un adaptador antiguo y no es la persistencia usada por las rutas Supabase actuales. |
-| `db_mssql.js` | Adaptador opcional para SQL Server mediante `mssql`, configurado con variables `DB_*`. No lo usa el cliente Supabase de las rutas actuales. Los valores de conexión por defecto son solo de desarrollo y deben reemplazarse. |
+| `solicitudes_empleado_migration.sql` | Crea `solicitudes_empleado` (solicitudes y reportes de clientes y empleados). Idempotente. |
 
 ### Instalación y migraciones Supabase
 
@@ -249,7 +247,6 @@ Las migraciones con `add column if not exists` pueden repetirse para las columna
 - `supabase_auth_migration.sql` y `supabase_rls.sql` definen políticas distintas para las tablas financieras. En particular, una compara `auth_id` o `id` con el usuario autenticado y la otra compara directamente `usuario_id` con `auth.uid()`. No asumas que ambas son intercambiables.
 - `tramites_migration.sql` crea `tramites_admin_policy` con `using (true)` y `with check (true)` para `authenticated`. Eso no restringe filas por propietario ni rol. Debe revisarse antes de usar RLS como barrera de acceso.
 - `auditoria_admin_read_policy` solo concede lectura a administradores y no define una política de inserción para usuarios normales. El servicio backend con `service_role` puede insertar igualmente porque omite RLS.
-- `schema_sqlserver.sql`, `seed.sql` y `db.js` contienen o generan contraseñas demo en texto plano. No reutilices esas credenciales ni esos seeds fuera de pruebas desechables.
 - Si una credencial real llegó a GitHub, borrar `.env` del último commit no la elimina de commits anteriores. Rótala en el proveedor correspondiente y, si GitHub bloquea un push, elimina el secreto del historial que se va a publicar.
 
 ### Variables de conexión
@@ -259,4 +256,3 @@ El backend Supabase requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el 
 ### Comprobación del esquema remoto
 
 Antes de desplegar cambios, confirma en Supabase que existen todas las tablas y columnas que consultan las rutas. Revisa claves foráneas, índices, políticas RLS y que `usuarios.auth_id` vincule cada perfil al UUID de Auth. Esta revisión es especialmente importante porque los scripts del repositorio no crean todas las tablas activas y las dos variantes de política de propietario no son idénticas.
-

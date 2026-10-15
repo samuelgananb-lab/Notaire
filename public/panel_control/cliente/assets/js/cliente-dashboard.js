@@ -617,13 +617,15 @@ async function cargarDatosFinancieros() {
         } else if (canvasIngresos) {
             console.error('No se pudo inicializar la gráfica de ingresos: faltan Chart.js o NotaireFinancialChart.');
         }
-        const ahora = new Date();
-        const delMes = transacciones.filter(item => {
-            const fecha = new Date(item.fecha);
-            return !Number.isNaN(fecha.getTime()) && fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
-        });
-        const gastos = delMes.filter(item => (item.tipo || item.tipo_registro) === 'gasto');
-        const ingresos = delMes.filter(item => (item.tipo || item.tipo_registro) === 'ingreso');
+        const monthKey = window.NotaireFinancialChart?.currentMonthKey();
+        const delMes = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.filterTransactionsByMonth(transacciones, monthKey)
+            : transacciones.filter(item => String(item.fecha || '').slice(0, 7) === monthKey);
+        const tipoMovimiento = item => window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.getTransactionType(item)
+            : String(item.tipo || item.tipo_registro || '').toLowerCase();
+        const gastos = delMes.filter(item => tipoMovimiento(item) === 'gasto');
+        const ingresos = delMes.filter(item => tipoMovimiento(item) === 'ingreso');
         const totalGastos = gastos.reduce((total, item) => total + Number(item.monto || 0), 0);
         const totalIngresos = ingresos.reduce((total, item) => total + Number(item.monto || 0), 0);
         const mayorIngreso = ingresos.reduce((mayor, item) => Math.max(mayor, Number(item.monto || 0)), 0);
@@ -636,12 +638,16 @@ async function cargarDatosFinancieros() {
         actualizar('valTotalIngresos', formatCOP(totalIngresos));
         actualizar('centerIngresosTotal', formatCOP(totalIngresos));
         actualizar('valMayorIngreso', formatCOP(mayorIngreso));
-        actualizar('valPromedioMensual', formatCOP(totalIngresos));
+        const promedioMensual = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.averageMonthlyTotal(transacciones, 'ingreso')
+            : totalIngresos;
+        actualizar('valPromedioMensual', formatCOP(promedioMensual));
         const presupuesto = Number(localStorage.getItem('notaire_presupuesto') || 0);
-        actualizar('valPresupuestoTotal', formatCOP(presupuesto));
-        actualizar('valDisponibleGastos', formatCOP(Math.max(presupuesto - totalGastos, 0)));
-        const presupuestoPct = presupuesto > 0 ? Math.min(100, Math.round((totalGastos / presupuesto) * 100)) : 0;
-        actualizar('valPresupuestoPct', `${presupuestoPct}% utilizado`);
+        const presupuestoMensual = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.calculateBudgetPosition(presupuesto, totalGastos)
+            : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
+        actualizar('valPresupuestoTotal', presupuestoMensual.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
+        actualizar('valPresupuestoPct', presupuestoMensual.hasBudget ? `${Math.round(presupuestoMensual.percentUsed)}% utilizado` : 'Sin presupuesto');
         renderTransacciones('listUltimosMovimientos', gastos, false);
         renderTransacciones('listUltimosIngresos', ingresos, true);
         renderGastosPorCategoria(gastos, totalGastos);
@@ -687,9 +693,12 @@ function renderGastosPorCategoria(gastos, totalGastos) {
 function renderLeyenda(containerId, transacciones, tipo) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const total = transacciones.reduce((sum, item) => sum + Number(item.monto || 0), 0);
+    const movimientos = transacciones.filter(item => (
+        String(item.tipo || item.tipo_registro || '').toLowerCase() === tipo
+    ));
+    const total = movimientos.reduce((sum, item) => sum + Number(item.monto || 0), 0);
     const grupos = {};
-    transacciones.forEach(item => {
+    movimientos.forEach(item => {
         const clave = item.categoria || 'Otros';
         grupos[clave] = (grupos[clave] || 0) + Number(item.monto || 0);
     });
@@ -704,12 +713,14 @@ function renderLeyenda(containerId, transacciones, tipo) {
 const loadDashboardData = cargarResumenDashboard;
 
 function renderMetrics(data) {
-    if (data.patrimonio !== undefined) {
-        const patrimonio = formatCurrency(data.patrimonio);
+    if (data.liquidez !== undefined) {
+        const patrimonio = formatCurrency(data.liquidez);
         const heroBalance = document.querySelector('.hero-balance-amount');
         const patrimonioMetric = document.getElementById('valPatrimonioNeto');
         if (heroBalance) heroBalance.textContent = patrimonio;
         if (patrimonioMetric) patrimonioMetric.textContent = patrimonio;
+        const disponibleGastos = document.getElementById('valDisponibleGastos');
+        if (disponibleGastos) disponibleGastos.textContent = patrimonio;
     }
     if (data.gastosMes !== undefined) {
         const gastos = document.getElementById('valGastadoEsteMes');
@@ -718,6 +729,10 @@ function renderMetrics(data) {
     if (data.ingresosMes !== undefined) {
         const ingresos = document.getElementById('valTotalIngresos');
         if (ingresos) ingresos.textContent = formatCurrency(data.ingresosMes);
+    }
+    if (data.movimientoTotal !== undefined) {
+        const mov = document.getElementById('valMovimientoTotal');
+        if (mov) mov.textContent = formatCurrency(data.movimientoTotal);
     }
 }
 

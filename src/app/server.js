@@ -14,19 +14,40 @@ import patrimonioRouter from './routes/patrimonio.routes.js';
 import recordatoriosRouter from './routes/recordatorios.routes.js';
 import eventosRouter from './routes/eventos.routes.js';
 import adminRouter from './routes/admin.routes.js';
+import solicitudesRouter from './routes/solicitudes.routes.js';
 import { startEventNotificationScheduler } from './services/event-notifications.service.js';
 import { startWeeklySummaryScheduler } from './services/finance-alerts.service.js';
-import { JWT_SECRET, verificarToken } from './middlewares/auth.middleware.js';
+import { calculateFinancialSummary, monthReferenceDate } from './services/financial-summary.service.js';
+import { loginRateLimit } from './middlewares/login-rate-limit.middleware.js';
+import { JWT_SECRET, bloquearEmpleado, verificarToken } from './middlewares/auth.middleware.js';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
+app.use(cors({ origin: corsOrigins.length ? corsOrigins : false }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '../../public')));
+
+async function consultarTodasLasFilas(crearConsulta, etiqueta, pageSize = 1000) {
+  const filas = [];
+  for (let inicio = 0; ; inicio += pageSize) {
+    const { data, error } = await crearConsulta().range(inicio, inicio + pageSize - 1);
+    if (error) throw new Error(`No se pudieron consultar ${etiqueta}: ${error.message}`);
+    filas.push(...(data || []));
+    if (!data || data.length < pageSize) return filas;
+  }
+}
 
 /* ========================================================================== 
    RUTAS DE AUTENTICACIÓN
@@ -37,6 +58,9 @@ app.post('/api/v1/auth/registro', async (req, res) => {
     const { nombre, email, password } = req.body;
     if (!nombre || !email || !password) {
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
     }
 
     const { data: existingUser, error: lookupError } = await supabase
@@ -81,11 +105,12 @@ app.post('/api/v1/auth/registro', async (req, res) => {
       usuario: { id: user.id, nombre: user.nombre, email: user.email }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error en el servidor', detalle: error.message });
+    console.error('Error en registro:', error.message);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-app.post('/api/v1/auth/login', async (req, res) => {
+app.post('/api/v1/auth/login', loginRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     const { data: usuario, error } = await supabase
@@ -112,7 +137,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
       usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error en el login', detalle: error.message });
+    console.error('Error en login:', error.message);
+    res.status(500).json({ error: 'Error en el login' });
   }
 });
 
@@ -120,23 +146,22 @@ app.post('/api/v1/auth/login', async (req, res) => {
    RUTAS DEL DASHBOARD (PROTEGIDAS)
    ========================================================================== */
 
-app.get('/api/v1/cliente/dashboard-summary', verificarToken, async (req, res) => {
+app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
-    const { data: transacciones, error: transactionError } = await supabase
-      .from('transacciones')
-      .select('monto, tipo')
-      .eq('usuario_id', usuarioId);
-
-    if (transactionError) throw transactionError;
-
-    const ingresosMes = (transacciones || [])
-      .filter(item => item.tipo === 'ingreso')
-      .reduce((total, item) => total + Number(item.monto || 0), 0);
-    const gastosMes = (transacciones || [])
-      .filter(item => item.tipo === 'gasto')
-      .reduce((total, item) => total + Number(item.monto || 0), 0);
-
+    const [transacciones, patrimonio] = await Promise.all([
+      consultarTodasLasFilas(() => supabase
+        .from('transacciones')
+        .select('id, monto, tipo, fecha')
+        .eq('usuario_id', usuarioId)
+        .order('fecha', { ascending: true })
+        .order('id', { ascending: true }), 'transacciones'),
+      consultarTodasLasFilas(() => supabase
+        .from('patrimonio')
+        .select('id, tipo, monto')
+        .eq('usuario_id', usuarioId)
+        .order('id', { ascending: true }), 'patrimonio', 300)
+    ]);
     const { data: metasRaw, error: goalsError } = await supabase
       .from('metas')
       .select('*')
@@ -153,7 +178,14 @@ app.get('/api/v1/cliente/dashboard-summary', verificarToken, async (req, res) =>
         : 0
     }));
 
-    res.json({ patrimonio: ingresosMes - gastosMes, ingresosMes, gastosMes, metas });
+    const totalAhorrado = metas.reduce((total, meta) => total + meta.actual, 0);
+
+    const financialSummary = calculateFinancialSummary(transacciones, patrimonio, monthReferenceDate(req.query.mes), totalAhorrado);
+
+    res.json({
+      ...financialSummary,
+      metas
+    });
   } catch (error) {
     res.status(500).json({ error: 'Error al consultar resumen', detalle: error.message });
   }
@@ -166,13 +198,14 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Enrutadores principales
-app.use('/api/transacciones', transaccionesRouter);
+app.use('/api/transacciones', verificarToken, bloquearEmpleado, transaccionesRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/metas', metasRouter);
-app.use('/api/patrimonio', patrimonioRouter);
+app.use('/api/metas', verificarToken, bloquearEmpleado, metasRouter);
+app.use('/api/patrimonio', verificarToken, bloquearEmpleado, patrimonioRouter);
 app.use('/api/recordatorios', recordatoriosRouter);
 app.use('/api/eventos', eventosRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/solicitudes', solicitudesRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

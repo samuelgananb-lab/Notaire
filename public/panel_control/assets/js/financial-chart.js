@@ -1,7 +1,107 @@
 (function () {
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-    function createMonthlySeries(transactions, monthCount = 6, now = new Date()) {
+    const realCurrentMonthKey = (now = new Date()) => {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Bogota',
+            year: 'numeric',
+            month: '2-digit'
+        }).formatToParts(now);
+        const year = parts.find(part => part.type === 'year')?.value;
+        const month = parts.find(part => part.type === 'month')?.value;
+        return `${year}-${month}`;
+    };
+
+    const SELECTED_MONTH_STORAGE = 'notaire_selected_month';
+
+    function selectedMonthKey() {
+        let stored = null;
+        try { stored = localStorage.getItem(SELECTED_MONTH_STORAGE); } catch (error) { /* sin storage */ }
+        return /^\d{4}-(0[1-9]|1[0-2])$/.test(stored || '') ? stored : null;
+    }
+
+    function setSelectedMonth(monthKey) {
+        try {
+            if (/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey || '') && monthKey !== realCurrentMonthKey()) {
+                localStorage.setItem(SELECTED_MONTH_STORAGE, monthKey);
+            } else {
+                localStorage.removeItem(SELECTED_MONTH_STORAGE);
+            }
+        } catch (error) { /* sin storage */ }
+    }
+
+    function monthQuery(prefix = '?') {
+        const key = selectedMonthKey();
+        return key ? `${prefix}mes=${key}` : '';
+    }
+
+    function currentMonthKey(now) {
+        if (now === undefined) {
+            const selected = selectedMonthKey();
+            if (selected) return selected;
+        }
+        return realCurrentMonthKey(now);
+    }
+
+    function getTransactionType(transaction) {
+        return String(transaction.tipo || transaction.tipo_registro || '').trim().toLowerCase();
+    }
+
+    function getTransactionAmount(transaction) {
+        const amount = Number(transaction.monto);
+        return Number.isFinite(amount) && amount > 0 ? amount : 0;
+    }
+
+    function filterTransactionsByMonth(transactions, monthKey = currentMonthKey()) {
+        return (transactions || []).filter(transaction => (
+            String(transaction.fecha || '').slice(0, 7) === monthKey
+        ));
+    }
+
+    function aggregateByCategory(transactions, type) {
+        const totals = new Map();
+        (transactions || []).forEach(transaction => {
+            if (type && getTransactionType(transaction) !== type) return;
+            const category = String(transaction.categoria || '').trim() || 'Otros';
+            totals.set(category, (totals.get(category) || 0) + getTransactionAmount(transaction));
+        });
+        return [...totals.entries()].sort((a, b) => b[1] - a[1]);
+    }
+
+    function calculateBudgetPosition(budget, expenses) {
+        const budgetAmount = Number(budget);
+        const expenseAmount = Number(expenses);
+        const hasBudget = Number.isFinite(budgetAmount) && budgetAmount > 0;
+        const validExpenses = Number.isFinite(expenseAmount) ? expenseAmount : 0;
+        return {
+            hasBudget,
+            available: hasBudget ? budgetAmount - validExpenses : null,
+            percentUsed: hasBudget ? (validExpenses / budgetAmount) * 100 : null
+        };
+    }
+
+    function calculateFinancialDistribution(income, expenses, savings) {
+        const amount = value => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : 0;
+        };
+        const totalIncome = amount(income);
+        const totalExpenses = amount(expenses);
+        const totalSavings = amount(savings);
+        const available = totalIncome - totalExpenses - totalSavings;
+        return {
+            labels: ['Gastos', 'Ahorros', 'Disponible'],
+            values: [totalExpenses, totalSavings, Math.max(0, available)],
+            available
+        };
+    }
+
+    function referenceDate() {
+        const selected = selectedMonthKey();
+        return selected ? new Date(Number(selected.slice(0, 4)), Number(selected.slice(5, 7)) - 1, 1) : new Date();
+    }
+
+    function createMonthlySeries(transactions, monthCount = 6, now = referenceDate()) {
         const months = [];
         const monthlyChanges = new Map();
 
@@ -12,16 +112,20 @@
             monthlyChanges.set(key, 0);
         }
 
+        const firstMonth = months[0]?.key;
+        let balance = 0;
         transactions.forEach(transaction => {
             const key = String(transaction.fecha || '').slice(0, 7);
-            if (!monthlyChanges.has(key)) return;
-
-            const amount = Number(transaction.monto) || 0;
-            const type = transaction.tipo || transaction.tipo_registro;
-            monthlyChanges.set(key, monthlyChanges.get(key) + (type === 'ingreso' ? amount : -amount));
+            const type = getTransactionType(transaction);
+            if (!['ingreso', 'gasto'].includes(type)) return;
+            const amount = getTransactionAmount(transaction);
+            if (monthlyChanges.has(key)) {
+                monthlyChanges.set(key, monthlyChanges.get(key) + (type === 'ingreso' ? amount : -amount));
+            } else if (firstMonth && key < firstMonth) {
+                balance += type === 'ingreso' ? amount : -amount;
+            }
         });
 
-        let balance = 0;
         return {
             labels: months.map(month => month.label),
             values: months.map(month => {
@@ -31,7 +135,7 @@
         };
     }
 
-    function createMonthlyTotals(transactions, type = 'ingreso', monthCount = 6, now = new Date()) {
+    function createMonthlyTotals(transactions, type = 'ingreso', monthCount = 6, now = referenceDate()) {
         const series = createMonthlySeries([], monthCount, now);
         const totals = new Map(series.labels.map(label => [label, 0]));
         const monthKeys = [];
@@ -42,14 +146,19 @@
         }
 
         transactions.forEach(transaction => {
-            if ((transaction.tipo || transaction.tipo_registro) !== type) return;
+            if (getTransactionType(transaction) !== type) return;
             const index = monthKeys.indexOf(String(transaction.fecha || '').slice(0, 7));
             if (index < 0) return;
             const label = series.labels[index];
-            totals.set(label, totals.get(label) + (Number(transaction.monto) || 0));
+            totals.set(label, totals.get(label) + getTransactionAmount(transaction));
         });
 
         return { labels: series.labels, values: series.labels.map(label => totals.get(label)) };
+    }
+
+    function averageMonthlyTotal(transactions, type = 'ingreso', monthCount = 6, now = referenceDate()) {
+        const { values } = createMonthlyTotals(transactions, type, monthCount, now);
+        return values.reduce((total, value) => total + value, 0) / (values.length || 1);
     }
 
     const backgroundPlugin = {
@@ -161,5 +270,19 @@
         };
     }
 
-    window.NotaireFinancialChart = { createMonthlySeries, createMonthlyTotals, createConfig };
+    window.NotaireFinancialChart = {
+        currentMonthKey,
+        selectedMonthKey,
+        setSelectedMonth,
+        monthQuery,
+        filterTransactionsByMonth,
+        getTransactionType,
+        aggregateByCategory,
+        calculateBudgetPosition,
+        calculateFinancialDistribution,
+        createMonthlySeries,
+        createMonthlyTotals,
+        averageMonthlyTotal,
+        createConfig
+    };
 })();

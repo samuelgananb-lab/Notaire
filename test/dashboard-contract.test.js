@@ -155,18 +155,19 @@ test('los permisos distinguen administrador y empleado operativo', async () => {
     assert.match(adminRoute, /router\.get\('\/tramites', verificarOperacion/);
 });
 
-test('el empleado ve movimientos propios sin acceso a finanzas de otros usuarios', async () => {
+test('el empleado no tiene acceso a registros ni información de dinero', async () => {
     const adminHtml = await read('public/panel_control/admin/dashboard.html');
     const adminScript = await read('public/panel_control/admin/assets/js/admin-live.js');
     const adminRoute = await read('src/app/routes/admin.routes.js');
+    const server = await read('src/app/server.js');
 
-    assert.match(adminHtml, /data-target="view-ingresos"/);
-    assert.match(adminHtml, /data-target="view-gastos"/);
-    assert.match(adminScript, /'view-usuarios', 'view-auditoria', 'view-reportes'/);
-    assert.match(adminScript, /summary\.employeeScope === true/);
-    assert.match(adminRoute, /transactionsQuery\.eq\('usuario_id', req\.usuario\.id\)/);
-    assert.match(adminRoute, /goalsQuery\.eq\('usuario_id', req\.usuario\.id\)/);
-    assert.match(adminRoute, /employeeScope: employeeSafe/);
+    assert.match(adminHtml, /class="has-submenu finance-only"/);
+    assert.match(adminScript, /classList\.add\('employee-mode'\)/);
+    assert.match(adminScript, /isEmployeeSession\(\)\) return;/);
+    assert.match(adminRoute, /if \(employeeSafe\) \{\s*return res\.json\(\{ employeeScope: true/);
+    assert.match(server, /'\/api\/transacciones', verificarToken, bloquearEmpleado/);
+    assert.match(server, /'\/api\/metas', verificarToken, bloquearEmpleado/);
+    assert.match(server, /'\/api\/patrimonio', verificarToken, bloquearEmpleado/);
 });
 
 test('el panel admin incluye centro de notificaciones operativas', async () => {
@@ -239,12 +240,9 @@ test('la administración edita y elimina metas mediante rutas protegidas de admi
     assert.match(adminScript, /method: 'PUT'/);
     assert.match(adminScript, /method: 'DELETE'/);
     assert.match(adminExtension, /openModalEditarMeta\(\$\{meta\.id\}\)/);
-    assert.match(adminRoute, /router\.put\('\/metas\/:id', verificarOperacion/);
-    assert.match(adminRoute, /router\.delete\('\/metas\/:id', verificarOperacion/);
-    assert.match(adminRoute, /req\.usuario\.rol === 'empleado'/);
-    assert.match(adminRoute, /lookup\.eq\('usuario_id', req\.usuario\.id\)/);
-    assert.match(adminRoute, /deletion\.eq\('usuario_id', req\.usuario\.id\)/);
-    assert.match(adminRoute, /Meta no encontrada o no tienes permiso/);
+    assert.match(adminRoute, /router\.put\('\/metas\/:id', verificarAdmin/);
+    assert.match(adminRoute, /router\.delete\('\/metas\/:id', verificarAdmin/);
+    assert.match(adminRoute, /Meta no encontrada/);
     assert.match(adminScript, /HTTP \$\{response\.status\} sin JSON/);
     assert.doesNotMatch(adminScript, /response\.json\(\)\.catch\(\(\) => \(\{\}\)\)/);
 });

@@ -64,7 +64,7 @@
     if (!src || !section) return;
     const hero = document.createElement('div');
     hero.className = 'saldo-hero-mobile';
-    hero.innerHTML = '<small>Patrimonio total disponible</small><strong id="saldoHeroValor">$0</strong>';
+    hero.innerHTML = '<small>Liquidez disponible</small><strong id="saldoHeroValor">$0</strong>';
     section.parentNode.insertBefore(hero, section);
     const sync = () => { hero.querySelector('strong').textContent = src.textContent; };
     new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true });

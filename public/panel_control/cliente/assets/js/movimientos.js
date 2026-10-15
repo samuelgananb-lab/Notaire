@@ -41,7 +41,9 @@ async function cargarTablaMovimientos(tipo) {
         if (!response.ok) throw new Error('Error al obtener transacciones');
 
         const datos = await response.json();
-        transaccionesCargadas = datos.filter(item => (item.tipo || item.tipo_registro) === tipo);
+        const mesElegido = window.NotaireFinancialChart?.selectedMonthKey();
+        transaccionesCargadas = datos.filter(item => (item.tipo || item.tipo_registro) === tipo
+            && (!mesElegido || String(item.fecha || '').slice(0, 7) === mesElegido));
         aplicarFiltros();
         const tbody = document.getElementById('tabla-detallada-body');
         const tituloSeccion = document.getElementById('titulo-seccion-detallada');
@@ -90,14 +92,15 @@ function renderizarTablaFiltrada(lista) {
         return;
     }
 
+    const escHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     tbody.innerHTML = lista.map(item => {
         const id = item.id || item.id_registro;
         const itemJson = JSON.stringify({ ...item, id }).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 12px; color: #aaa;">${item.fecha || 'N/A'}</td>
-                <td style="padding: 12px; color: #fff; font-weight: 500;">${item.categoria || 'General'}</td>
-                <td style="padding: 12px; color: #aaa;">${item.descripcion || '-'}</td>
+                <td style="padding: 12px; color: #aaa;">                ${escHtml(item.fecha || 'N/A')}</td>
+                                <td style="padding: 12px; color: #fff; font-weight: 500;">${escHtml(item.categoria || 'General')}</td>
+                                <td style="padding: 12px; color: #aaa;">${escHtml(item.descripcion || '-')}</td>
                 <td style="padding: 12px; font-weight: bold; color: ${moduloActivo === 'ingreso' ? '#22c55e' : '#ef4444'};">${formatCurrency(item.monto)}</td>
                 <td style="padding: 12px; text-align: center; display: flex; gap: 8px; justify-content: center;">
                     <button type="button" onclick="abrirModalEdicion(${itemJson})" style="background: none; border: none; color: #3b82f6; cursor: pointer;" title="Editar">✏️</button>

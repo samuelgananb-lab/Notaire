@@ -3,6 +3,12 @@ import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { registrarAuditoria } from '../services/audit.service.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
+import {
+  calculateFinancialSummary,
+  currentFinancialMonth,
+  monthReferenceDate,
+  transactionType
+} from '../services/financial-summary.service.js';
 
 const router = Router();
 router.use(verificarToken);
@@ -34,7 +40,7 @@ function verificarRoles(rolesPermitidos) {
 const verificarAdmin = verificarRoles(['admin']);
 const verificarOperacion = verificarRoles(['admin', 'empleado']);
 
-router.put('/metas/:id', verificarOperacion, async (req, res) => {
+router.put('/metas/:id', verificarAdmin, async (req, res) => {
   try {
     const metaId = Number(req.params.id);
     if (!Number.isInteger(metaId) || metaId <= 0) {
@@ -49,10 +55,9 @@ router.put('/metas/:id', verificarOperacion, async (req, res) => {
     }
 
     let lookup = supabase.from('metas').select('id, usuario_id').eq('id', metaId);
-    if (req.usuario.rol === 'empleado') lookup = lookup.eq('usuario_id', req.usuario.id);
     const { data: existente, error: lookupError } = await lookup.maybeSingle();
     if (lookupError) throw lookupError;
-    if (!existente) return res.status(404).json({ error: 'Meta no encontrada o no tienes permiso para modificarla' });
+    if (!existente) return res.status(404).json({ error: 'Meta no encontrada' });
 
     const { data, error } = await supabase
       .from('metas')
@@ -82,18 +87,16 @@ router.put('/metas/:id', verificarOperacion, async (req, res) => {
   }
 });
 
-router.delete('/metas/:id', verificarOperacion, async (req, res) => {
+router.delete('/metas/:id', verificarAdmin, async (req, res) => {
   try {
     const metaId = Number(req.params.id);
     if (!Number.isInteger(metaId) || metaId <= 0) {
       return res.status(400).json({ error: 'ID de meta no válido' });
     }
 
-    let deletion = supabase.from('metas').delete().eq('id', metaId);
-    if (req.usuario.rol === 'empleado') deletion = deletion.eq('usuario_id', req.usuario.id);
-    const { data, error } = await deletion.select('id, usuario_id').maybeSingle();
+    const { data, error } = await supabase.from('metas').delete().eq('id', metaId).select('id, usuario_id').maybeSingle();
     if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Meta no encontrada o no tienes permiso para eliminarla' });
+    if (!data) return res.status(404).json({ error: 'Meta no encontrada' });
 
     await registrarAuditoria({
       req,
@@ -114,6 +117,16 @@ async function consultarFilasSeguro(query, etiqueta) {
     return [];
   }
   return data || [];
+}
+
+async function consultarTodasLasFilas(crearConsulta, etiqueta, pageSize = 1000) {
+  const filas = [];
+  for (let inicio = 0; ; inicio += pageSize) {
+    const { data, error } = await crearConsulta().range(inicio, inicio + pageSize - 1);
+    if (error) throw new Error(`No se pudieron consultar ${etiqueta}: ${error.message}`);
+    filas.push(...(data || []));
+    if (!data || data.length < pageSize) return filas;
+  }
 }
 
 router.get('/audit', verificarAdmin, async (req, res) => {
@@ -145,14 +158,15 @@ router.get('/audit', verificarAdmin, async (req, res) => {
   }
 });
 
-router.get('/notifications', verificarOperacion, async (_req, res) => {
+router.get('/notifications', verificarOperacion, async (req, res) => {
   try {
+    const employeeSafe = req.usuario.rol === 'empleado';
     const [auditRows, reminders, events, tramites] = await Promise.all([
-      consultarFilasSeguro(
+      employeeSafe ? [] : consultarFilasSeguro(
         supabase.from('auditoria_acciones').select('id, actor_id, accion, recurso, recurso_id, detalles, created_at').order('created_at', { ascending: false }).limit(20),
         'auditoría'
       ),
-      consultarFilasSeguro(
+      employeeSafe ? [] : consultarFilasSeguro(
         supabase.from('recordatorios').select('id, usuario_id, titulo, monto, fecha_vencimiento, estado').eq('estado', 'pendiente').order('fecha_vencimiento', { ascending: true }).limit(20),
         'recordatorios'
       ),
@@ -230,21 +244,32 @@ router.get('/reports', verificarAdmin, async (req, res) => {
   try {
     const from = String(req.query.from || '').trim();
     const to = String(req.query.to || '').trim();
-    let transactionQuery = supabase.from('transacciones').select('tipo, monto, categoria, fecha');
-    if (from) transactionQuery = transactionQuery.gte('fecha', from);
-    if (to) transactionQuery = transactionQuery.lte('fecha', to);
+    const createTransactionQuery = () => {
+      let query = supabase
+        .from('transacciones')
+        .select('id, tipo, monto, categoria, fecha')
+        .order('fecha', { ascending: true })
+        .order('id', { ascending: true });
+      if (from) query = query.gte('fecha', from);
+      if (to) query = query.lte('fecha', to);
+      return query;
+    };
 
     const [transactions, tramites] = await Promise.all([
-      consultarFilasSeguro(transactionQuery, 'transacciones para reportes'),
+      consultarTodasLasFilas(createTransactionQuery, 'transacciones para reportes'),
       consultarFilasSeguro(supabase.from('tramites_notariales').select('estado, tipo, created_at, fecha_limite'), 'trámites para reportes')
     ]);
 
-    const ingresos = transactions.filter(item => item.tipo === 'ingreso');
-    const gastos = transactions.filter(item => item.tipo === 'gasto');
-    const sum = items => items.reduce((total, item) => total + Number(item.monto || 0), 0);
+    const ingresos = transactions.filter(item => transactionType(item) === 'ingreso');
+    const gastos = transactions.filter(item => transactionType(item) === 'gasto');
+    const sum = items => items.reduce((total, item) => {
+      const amount = Number(item.monto);
+      return total + (Number.isFinite(amount) && amount > 0 ? amount : 0);
+    }, 0);
     const groupBy = (items, key) => [...items.reduce((groups, item) => {
       const label = item[key] || 'Sin categoría';
-      groups.set(label, (groups.get(label) || 0) + Number(item.monto || 0));
+      const amount = Number(item.monto);
+      groups.set(label, (groups.get(label) || 0) + (Number.isFinite(amount) && amount > 0 ? amount : 0));
       return groups;
     }, new Map())].map(([label, total]) => ({ label, total })).sort((a, b) => b.total - a.total);
     const groupCount = (items, key) => [...items.reduce((groups, item) => {
@@ -255,7 +280,11 @@ router.get('/reports', verificarAdmin, async (req, res) => {
     const monthly = [...transactions.reduce((groups, item) => {
       const month = String(item.fecha || '').slice(0, 7) || 'Sin fecha';
       const current = groups.get(month) || { mes: month, ingresos: 0, gastos: 0 };
-      current[item.tipo === 'ingreso' ? 'ingresos' : 'gastos'] += Number(item.monto || 0);
+      const type = transactionType(item);
+      const amount = Number(item.monto);
+      if (Number.isFinite(amount) && amount > 0 && ['ingreso', 'gasto'].includes(type)) {
+        current[type === 'ingreso' ? 'ingresos' : 'gastos'] += amount;
+      }
       groups.set(month, current);
       return groups;
     }, new Map())].map(([, value]) => value).sort((a, b) => a.mes.localeCompare(b.mes));
@@ -398,8 +427,23 @@ router.get('/tramites', verificarOperacion, async (_req, res) => {
   }
 });
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const esUuidOVacio = v => v === undefined || v === null || v === '' || UUID_RE.test(String(v));
+const esFechaOVacia = v => v === undefined || v === null || v === '' || !Number.isNaN(Date.parse(v));
+
+function validarCamposTramite(body) {
+  if (!esUuidOVacio(body.usuario_id) || !esUuidOVacio(body.responsable_id)) return 'Identificador de usuario no válido';
+  if (!esFechaOVacia(body.fecha_limite)) return 'Fecha límite no válida';
+  if (String(body.titulo || '').length > 200 || String(body.tipo || '').length > 100 || String(body.descripcion || '').length > 2000) {
+    return 'Título, tipo o descripción exceden la longitud permitida';
+  }
+  return null;
+}
+
 router.post('/tramites', verificarOperacion, async (req, res) => {
   try {
+    const errorCampos = validarCamposTramite(req.body);
+    if (errorCampos) return res.status(400).json({ error: errorCampos });
     const titulo = String(req.body.titulo || '').trim();
     const tipo = String(req.body.tipo || '').trim();
     const estado = String(req.body.estado || 'recibido').trim().toLowerCase();
@@ -437,6 +481,8 @@ router.post('/tramites', verificarOperacion, async (req, res) => {
 
 router.put('/tramites/:id', verificarOperacion, async (req, res) => {
   try {
+    const errorCampos = validarCamposTramite(req.body);
+    if (errorCampos) return res.status(400).json({ error: errorCampos });
     const updates = {};
     for (const field of ['titulo', 'tipo', 'usuario_id', 'responsable_id', 'fecha_limite', 'descripcion']) {
       if (req.body[field] !== undefined) updates[field] = req.body[field] || null;
@@ -497,66 +543,60 @@ router.delete('/tramites/:id', verificarOperacion, async (req, res) => {
 router.get('/summary', verificarOperacion, async (req, res) => {
   try {
     const employeeSafe = req.usuario.rol === 'empleado';
+    if (employeeSafe) {
+      return res.json({ employeeScope: true, usuariosTotal: null, clientesTotal: null });
+    }
     const usersQuery = supabase.from('usuarios').select('id, nombre, email, id_rol');
-    const transactionsQuery = supabase.from('transacciones').select('id, usuario_id, tipo, monto, categoria, descripcion, fecha').order('fecha', { ascending: false }).limit(1000);
     const goalsQuery = supabase.from('metas').select('id, usuario_id, nombre, monto_actual, monto_objetivo, fecha_limite').order('id', { ascending: false }).limit(200);
     const contributionsQuery = supabase.from('aportes_meta').select('id, usuario_id, meta_id, monto, fecha').order('fecha', { ascending: false }).limit(100);
-    const assetsQuery = supabase.from('patrimonio').select('id, usuario_id, tipo, categoria, monto').limit(300);
 
-    if (employeeSafe) {
-      usersQuery.eq('id', req.usuario.id);
-      transactionsQuery.eq('usuario_id', req.usuario.id);
-      goalsQuery.eq('usuario_id', req.usuario.id);
-      contributionsQuery.eq('usuario_id', req.usuario.id);
-      assetsQuery.eq('usuario_id', req.usuario.id);
-    }
+    const createTransactionsQuery = () => supabase
+      .from('transacciones')
+      .select('id, usuario_id, tipo, monto, categoria, descripcion, fecha')
+      .order('fecha', { ascending: false })
+      .order('id', { ascending: false });
+    const createAssetsQuery = () => supabase
+      .from('patrimonio')
+      .select('id, usuario_id, tipo, categoria, monto')
+      .order('id', { ascending: true });
 
     const [usuarios, transacciones, metas, roles, aportes, patrimonio] = await Promise.all([
       consultarFilasSeguro(usersQuery, 'usuarios'),
-      consultarFilasSeguro(transactionsQuery, 'transacciones'),
+      consultarTodasLasFilas(createTransactionsQuery, 'transacciones'),
       consultarFilasSeguro(goalsQuery, 'metas'),
       consultarFilasSeguro(supabase.from('roles').select('id_rol, nombre_rol'), 'roles'),
       consultarFilasSeguro(contributionsQuery, 'aportes'),
-      consultarFilasSeguro(assetsQuery, 'patrimonio')
+      consultarTodasLasFilas(createAssetsQuery, 'patrimonio', 300)
     ]);
 
     const roleNames = new Map((roles || []).map(role => [String(role.id_rol), String(role.nombre_rol || '').toLowerCase()]));
     const userNames = new Map((usuarios || []).map(user => [String(user.id), user.nombre || user.email || 'Usuario']));
     const goalNames = new Map((metas || []).map(goal => [String(goal.id), goal.nombre || 'Meta']));
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const now = monthReferenceDate(req.query.mes);
+    const currentMonth = currentFinancialMonth(now);
     const monthTransactions = (transacciones || []).filter(transaction => String(transaction.fecha || '').slice(0, 7) === currentMonth);
-    const sumByType = type => monthTransactions
-      .filter(transaction => transaction.tipo === type)
-      .reduce((total, transaction) => total + Number(transaction.monto || 0), 0);
-
-    const ingresosMes = sumByType('ingreso');
-    const gastosMes = sumByType('gasto');
-    const ingresosAcumulados = (transacciones || [])
-      .filter(transaction => transaction.tipo === 'ingreso')
-      .reduce((total, transaction) => total + Number(transaction.monto || 0), 0);
-    const gastosAcumulados = (transacciones || [])
-      .filter(transaction => transaction.tipo === 'gasto')
-      .reduce((total, transaction) => total + Number(transaction.monto || 0), 0);
     const totalAhorrado = (metas || []).reduce((total, meta) => total + Number(meta.monto_actual || 0), 0);
+    const financialSummary = calculateFinancialSummary(transacciones, patrimonio, now, totalAhorrado);
     const metasActivas = (metas || []).filter(meta => Number(meta.monto_actual || 0) < Number(meta.monto_objetivo || 0)).length;
     const clientes = (usuarios || []).filter(user => roleNames.get(String(user.id_rol)) === 'cliente').length;
     const activos = (patrimonio || []).filter(item => String(item.tipo || '').toLowerCase().startsWith('activo'));
     const pasivos = (patrimonio || []).filter(item => String(item.tipo || '').toLowerCase().startsWith('pasivo'));
-    const totalActivos = activos.reduce((total, item) => total + Number(item.monto || 0), 0);
-    const totalPasivos = pasivos.reduce((total, item) => total + Number(item.monto || 0), 0);
-    const patrimonioCalculado = patrimonio.length
-      ? totalActivos - totalPasivos
-      : ingresosAcumulados - gastosAcumulados;
+    const saldoDisponible = financialSummary.liquidez;
     res.json({
       employeeScope: employeeSafe,
       usuariosTotal: employeeSafe ? null : (usuarios || []).length,
       clientesTotal: employeeSafe ? null : clientes,
-      ingresosMes,
-      gastosMes,
+      ingresosMes: financialSummary.ingresosMes,
+      gastosMes: financialSummary.gastosMes,
+      totalIngresos: financialSummary.ingresosAcumulados,
+      totalGastos: financialSummary.gastosAcumulados,
       totalAhorrado,
-      patrimonio: patrimonioCalculado,
-      totalActivos,
-      totalPasivos,
+      saldoDisponible,
+      liquidez: saldoDisponible,
+      movimientoTotal: financialSummary.movimientoTotal,
+      movimientoMes: financialSummary.movimientoMes,
+      totalActivos: financialSummary.totalActivos,
+      totalPasivos: financialSummary.totalPasivos,
       activos,
       pasivos,
       metasActivas,

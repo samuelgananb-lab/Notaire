@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon"> 
     <title>Notaire - Panel de Administración</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,11 +56,13 @@
                                     <span>Auditoría</span></a></li>
                                 <li><a href="#" data-target="view-notificaciones"><i class="fas fa-bell"></i>
                                     <span>Notificaciones</span><span class="admin-notification-badge" id="adminNotificationBadge">0</span></a></li>
+                                <li><a href="#" data-target="view-solicitudes"><i class="fas fa-inbox"></i>
+                                    <span>Solicitudes</span><span class="admin-notification-badge" id="adminSolicitudesBadge">0</span></a></li>
                                 <li><a href="#" data-target="view-reportes"><i class="fas fa-chart-pie"></i>
                                     <span>Reportes</span></a></li>
                             </ul>
                         </li>
-                        <li class="has-submenu">
+                        <li class="has-submenu finance-only">
                             <a href="#" class="submenu-toggle" data-submenu-toggle="submenuMovimientos"><i class="fas fa-right-left"></i>
                                 <span>Movimientos</span><i class="fas fa-chevron-down submenu-arrow"></i></a>
                             <ul class="submenu" id="submenuMovimientos">
@@ -103,7 +107,7 @@
                 </div>
 
                 <div class="header-right">
-                    <div class="search-box">
+                    <div class="search-box finance-only">
                         <input type="text" id="globalSearchInput" placeholder="Buscar movimientos..."
                             autocomplete="off">
                         <i class="fas fa-search"></i>
@@ -248,6 +252,34 @@
                     <div class="admin-notifications-list" id="adminNotificationsList"><p class="admin-users-state">Cargando notificaciones...</p></div>
                 </div>
 
+                <div class="content-section" id="view-solicitudes">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>SOLICITUDES DE EMPLEADOS</h2>
+                            <p>Reportes de error y solicitudes enviados por el equipo operativo.</p>
+                        </div>
+                        <div class="section-actions-group"><button class="btn-primary-action" id="btnRefreshSolicitudes" type="button"><i class="fas fa-rotate"></i> Actualizar</button></div>
+                    </div>
+                    <div class="admin-users-toolbar">
+                        <select class="admin-role-select" id="adminSolicitudesFilter">
+                            <option value="">Todos los estados</option>
+                            <option value="abierta">Abiertas</option>
+                            <option value="en_proceso">En proceso</option>
+                            <option value="resuelta">Resueltas</option>
+                            <option value="rechazada">Rechazadas</option>
+                        </select>
+                        <span class="admin-users-count" id="adminSolicitudesCount">Cargando...</span>
+                    </div>
+                    <div class="card-box admin-users-card">
+                        <div class="admin-users-table-wrap">
+                            <table class="admin-users-table">
+                                <thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Respuesta</th><th></th></tr></thead>
+                                <tbody id="adminSolicitudesBody"><tr><td colspan="8" class="admin-users-state">Cargando solicitudes...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="content-section" id="view-reportes">
                     <div class="section-header-bar">
                         <div class="section-title-group"><h2>REPORTES</h2><p>Analiza el rendimiento operativo y financiero de Notaire.</p></div>
@@ -282,18 +314,18 @@
                                 Financiero • Admin</div>
                             <h2 class="hero-welcome-title">¡Buenas noches, <span id="heroUserName">Samuel</span>! 👋
                             </h2>
-                            <p class="hero-welcome-subtitle">Aquí tienes un resumen de tu situación financiera de hoy.
-                                Todo está bajo control.</p>
+                            <p class="hero-welcome-subtitle"><span class="finance-only">Aquí tienes un resumen de tu situación financiera de hoy.
+                                Todo está bajo control.</span><span class="employee-only">Gestiona trámites, notificaciones y tu calendario notarial.</span></p>
                             <div class="hero-cta-group">
-                                <button class="btn-hero-action" onclick="navigateTo('view-gastos')"><i
+                                <button class="btn-hero-action finance-only" onclick="navigateTo('view-gastos')"><i
                                         class="fas fa-plus"></i> Registrar movimiento</button>
                                 <button class="btn-hero-secondary" onclick="navigateTo('view-recordatorios')"><i
                                         class="fas fa-calendar-alt"></i> Ver calendario</button>
                             </div>
                         </div>
-                        <div class="hero-welcome-right">
+                        <div class="hero-welcome-right finance-only">
                             <div class="hero-balance-card">
-                                <div class="hero-balance-label">Patrimonio Neto</div>
+                                <div class="hero-balance-label">Liquidez</div>
                                 <div class="hero-balance-amount" id="adminNetWorth">Cargando...</div>
                                 <div class="hero-balance-trend"><i class="fas fa-arrow-trend-up"></i> Datos reales del sistema
                                 </div>
@@ -303,7 +335,7 @@
                     </div>
 
                     <!-- Quick Stats Row -->
-                    <div class="home-stats-row">
+                    <div class="home-stats-row finance-only">
                         <div class="home-stat-card home-stat-income">
                             <div class="home-stat-icon"><i class="fas fa-arrow-down-to-bracket"></i></div>
                             <div class="home-stat-info">
@@ -339,7 +371,7 @@
                     </div>
 
                     <!-- Two Column -->
-                    <div class="two-column-grid">
+                    <div class="two-column-grid finance-only">
                         <!-- Recent Activity -->
                         <div class="card-box">
                             <div class="card-box-header">
@@ -419,11 +451,11 @@
                             <div><span class="progress-pill-red" id="valPresupuestoPct">82.7% utilizado</span></div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-card-header">DISPONIBLE</div>
+                            <div class="metric-card-header">LIQUIDEZ DISPONIBLE</div>
                             <div class="metric-card-body">
-                                <div class="metric-value" id="valDisponibleGastos">Sin presupuesto</div>
+                                <div class="metric-value" id="valDisponibleGastos">Cargando...</div>
                             </div>
-                            <div><span class="metric-trend-badge trend-neutral">restante</span></div>
+                            <div><span class="metric-trend-badge trend-neutral">después de gastos</span></div>
                         </div>
                     </div>
 
@@ -616,39 +648,32 @@
 
                     <div class="metrics-grid-4">
                         <div class="metric-card">
-                            <div class="metric-card-header">PATRIMONIO NETO</div>
+                            <div class="metric-card-header">LIQUIDEZ</div>
                             <div class="metric-card-body">
                                 <div class="metric-value" id="valPatrimonioNeto">Cargando...</div>
                             </div>
-                                <div><span class="metric-trend-badge trend-neutral">Datos reales</span></div>
+                                <div><span class="metric-trend-badge trend-up">Ingresos − gastos − ahorros</span></div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-card-header">ACTIVOS</div>
+                            <div class="metric-card-header">MOVIMIENTO TOTAL</div>
                             <div class="metric-card-body">
-                                <div class="metric-value" id="valActivosTotal">Sin datos</div>
+                                <div class="metric-value" id="valMovimientoTotal">Sin datos</div>
                             </div>
-                            <div><span class="metric-trend-badge trend-neutral">Total</span></div>
+                            <div><span class="metric-trend-badge trend-neutral">Ingresos + gastos</span></div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-card-header">PASIVOS</div>
-                            <div class="metric-card-body">
-                                <div class="metric-value" id="valPasivosTotal">Sin datos</div>
-                            </div>
-                            <div><span class="metric-trend-badge trend-neutral">Total</span></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">LIQUIDEZ</div>
+                            <div class="metric-card-header">AHORRADO EN METAS</div>
                             <div class="metric-card-body">
                                 <div class="metric-value" id="valLiquidezPct">Sin datos</div>
                             </div>
-                            <div><span class="metric-trend-badge trend-up">Salud financiera</span></div>
+                            <div><span class="metric-trend-badge trend-neutral">Apartado de la liquidez</span></div>
                         </div>
                     </div>
 
                     <div class="two-column-grid">
                         <div class="card-box">
                             <div class="card-box-header">
-                                <h3>Evolución de tu patrimonio</h3>
+                                <h3>Evolución de la liquidez (ingresos − gastos)</h3>
                             </div>
                             <div class="financial-chart-canvas" style="height: 220px; position: relative;"><canvas
                                     id="chartPatrimonioEvolucion"></canvas></div>
@@ -660,7 +685,7 @@
                             <div class="donut-container">
                                 <canvas id="chartDistribucionActivos" width="220" height="220"></canvas>
                                 <div class="donut-center-label"><span
-                                        id="centerActivosTotal">Sin datos</span><small>Activos</small></div>
+                                        id="centerActivosTotal">Sin datos</span><small>Disponible</small></div>
                             </div>
                             <div class="legend-list" id="adminAssetsLegend"></div>
                         </div>
@@ -1045,7 +1070,7 @@
                             </div>
 
                             <!-- Presupuesto -->
-                            <div class="config-card">
+                            <div class="config-card finance-only">
                                 <div class="config-card-header">
                                     <div class="config-card-icon"
                                         style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
@@ -1217,14 +1242,14 @@
                     <div class="emoji-picker-row" id="emojiPickerMeta">
                         <span class="emoji-opt selected" data-emoji="🎯">🎯</span>
                         <span class="emoji-opt" data-emoji="✈️">✈️</span>
+                        <span class="emoji-opt" data-emoji="✈️">✈️</span>
                         <span class="emoji-opt" data-emoji="🏠">🏠</span>
                         <span class="emoji-opt" data-emoji="🚗">🚗</span>
                         <span class="emoji-opt" data-emoji="💻">💻</span>
                         <span class="emoji-opt" data-emoji="🛡️">🛡️</span>
                         <span class="emoji-opt" data-emoji="🎓">🎓</span>
                         <span class="emoji-opt" data-emoji="💍">💍</span>
-                        <span class="emoji-opt" data-emoji="🏋️">🏋️</span>
-                        <span class="emoji-opt" data-emoji="🌴">🌴</span>
+                            <span class="emoji-opt" data-emoji="🏋️">🏋️</span>
                     </div>
                     <input type="hidden" id="metaIcono" value="🎯">
                 </div>
@@ -1467,16 +1492,18 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="../assets/js/financial-chart.js?v=20261009"></script>
-    <script src="assets/js/admin-dashboard.js?v=20261009"></script>
-    <script src="assets/js/admin-dashboard-ext.js?v=20261009"></script>
-    <script src="assets/js/admin-live.js?v=20261009"></script>
+    <script src="../assets/js/financial-chart.js?v=20261019"></script>
+    <script src="../assets/js/month-selector.js?v=1"></script>
+    <script src="assets/js/admin-dashboard.js?v=20261016"></script>
+    <script src="assets/js/admin-dashboard-ext.js?v=20261015"></script>
+    <script src="assets/js/admin-live.js?v=20261017"></script>
     <script src="assets/js/admin-users.js"></script>
     <script src="assets/js/admin-tramites.js"></script>
     <script src="assets/js/admin-audit.js"></script>
     <script src="assets/js/admin-notifications.js"></script>
+    <script src="assets/js/admin-solicitudes.js"></script>
     <script src="assets/js/admin-reports.js"></script>
-    <script src="../../assets/js/notaire-i18n.js"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261018"></script>
 </body>
 
 </html>
