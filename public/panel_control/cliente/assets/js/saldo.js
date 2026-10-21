@@ -16,7 +16,7 @@ async function cargarVistaSaldo() {
     if (!token) return;
 
     try {
-        const response = await fetch(SALDO_API_URL, {
+        const response = await fetch(SALDO_API_URL + (window.NotaireFinancialChart?.monthQuery() || ''), {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Error al obtener el resumen de saldo');
@@ -36,14 +36,11 @@ async function cargarVistaSaldo() {
         actualizarTexto('saldo-ingresos', data.totalIngresos || 0);
         actualizarTexto('saldo-gastos', data.totalGastos || 0);
         actualizarTexto('saldo-ahorrado', data.totalAhorrado || 0);
-        actualizarTexto('saldo-disponible', data.saldoDisponible || 0);
+        actualizarTexto('saldo-disponible', data.liquidez ?? data.saldoDisponible ?? 0);
+        actualizarTexto('saldo-movimiento-total', data.movimientoTotal || 0);
 
         cargarGraficoEvolucion();
-        renderizarGraficoDona(
-            data.totalGastos || 0,
-            data.totalAhorrado || 0,
-            Math.max(0, data.saldoDisponible || 0)
-        );
+        renderizarGraficoDona(data);
     } catch (error) {
         console.error('Error al cargar la vista de saldo:', error);
     }
@@ -80,18 +77,32 @@ async function cargarGraficoEvolucion() {
 
 document.addEventListener('DOMContentLoaded', cargarGraficoEvolucion);
 
-function renderizarGraficoDona(gastos, ahorros, disponible) {
+function renderizarGraficoDona(data) {
     const canvas = document.getElementById('graficoSaldoDona');
     if (!canvas || typeof Chart === 'undefined') return;
 
     chartDona?.destroy();
+    const distribution = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.calculateFinancialDistribution(
+            data.totalIngresos,
+            data.totalGastos,
+            data.totalAhorrado
+        )
+        : {
+            labels: ['Gastos', 'Ahorros', 'Disponible'],
+            values: [
+                Number(data.totalGastos) || 0,
+                Number(data.totalAhorrado) || 0,
+                Math.max(0, Number(data.saldoDisponible) || 0)
+            ]
+        };
 
     chartDona = new Chart(canvas.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: ['Gastos', 'Ahorros', 'Disponible'],
+            labels: distribution.labels,
             datasets: [{
-                data: [Number(gastos) || 0, Number(ahorros) || 0, Number(disponible) || 0],
+                data: distribution.values,
                 backgroundColor: ['#ef4444', '#a855f7', '#3b82f6'],
                 borderWidth: 0
             }]

@@ -65,6 +65,8 @@ async function cargarEventosPersistidos() {
    NAVEGACIÓN HELPER
    ============================================================ */
 function navigateTo(viewId) {
+    const financeViews = ['view-gastos', 'view-ingresos', 'view-ahorros', 'view-saldo', 'view-metas'];
+    if (document.body.classList.contains('employee-mode') && financeViews.includes(viewId)) viewId = 'view-inicio';
     document.querySelectorAll('#sidebarMenu li').forEach(li => li.classList.remove('active'));
     document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
 
@@ -717,12 +719,26 @@ function saveRegionConfig() {
 }
 
 function saveBudgetConfig() {
-    const total = document.getElementById('cfgPresupuesto')?.value;
-    if (typeof NotaireState !== 'undefined' && total) {
-        NotaireState.presupuestoTotal = parseFloat(total);
-        updateAllMetrics();
+    const input = document.getElementById('cfgPresupuesto');
+    const rawTotal = input?.value.trim() || '';
+    if (!rawTotal) {
+        localStorage.removeItem('notaire_presupuesto');
+        if (typeof NotaireState !== 'undefined') NotaireState.presupuestoTotal = 0;
+        if (typeof loadAdminSummary === 'function') void loadAdminSummary();
+        showToast('Presupuesto mensual eliminado.');
+        return;
     }
-    showToast(`✅ Presupuesto mensual actualizado: $${parseInt(total || 0).toLocaleString('es-CO')}`);
+
+    const total = Number(rawTotal);
+    if (!Number.isFinite(total) || total <= 0) {
+        showToast('Ingresa un presupuesto mensual mayor que cero.');
+        return;
+    }
+
+    localStorage.setItem('notaire_presupuesto', String(total));
+    if (typeof NotaireState !== 'undefined') NotaireState.presupuestoTotal = total;
+    if (typeof loadAdminSummary === 'function') void loadAdminSummary();
+    showToast(`✅ Presupuesto mensual actualizado: $${Math.round(total).toLocaleString('es-CO')}`);
 }
 
 function confirmLogout() {

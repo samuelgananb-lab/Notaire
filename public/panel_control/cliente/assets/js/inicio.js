@@ -55,22 +55,18 @@ async function cargarPanelInicio() {
         const metasRespuesta = await resMetas.json();
         const transacciones = Array.isArray(transaccionesRespuesta) ? transaccionesRespuesta : [];
         const metas = Array.isArray(metasRespuesta) ? metasRespuesta : [];
-        const ahora = new Date();
-        const mesActual = ahora.getMonth();
-        const anioActual = ahora.getFullYear();
-
-        let ingresosMes = 0;
-        let gastosMes = 0;
-        transacciones.forEach(transaccion => {
-            const fecha = new Date(transaccion.fecha);
-            const monto = Number.parseFloat(transaccion.monto) || 0;
-            const tipo = transaccion.tipo || transaccion.tipo_registro;
-
-            if (fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual) {
-                if (tipo === 'ingreso') ingresosMes += monto;
-                if (tipo === 'gasto') gastosMes += monto;
-            }
-        });
+        const mesActual = window.NotaireFinancialChart?.currentMonthKey();
+        const transaccionesMes = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.filterTransactionsByMonth(transacciones, mesActual)
+            : transacciones.filter(transaccion => String(transaccion.fecha || '').slice(0, 7) === mesActual);
+        const normalizarTipo = transaccion => window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.getTransactionType(transaccion)
+            : String(transaccion.tipo || transaccion.tipo_registro || '').toLowerCase();
+        const sumarTipo = tipo => transaccionesMes
+            .filter(transaccion => normalizarTipo(transaccion) === tipo)
+            .reduce((total, transaccion) => total + (Number(transaccion.monto) || 0), 0);
+        const ingresosMes = sumarTipo('ingreso');
+        const gastosMes = sumarTipo('gasto');
 
         let ahorrosTotales = 0;
         let sumaPorcentajes = 0;
@@ -113,7 +109,7 @@ async function cargarPanelInicio() {
             contActividad.innerHTML = ultimasTransacciones.length === 0
                 ? '<p style="color: #888; padding: 12px 0;">No hay movimientos recientes.</p>'
                 : ultimasTransacciones.map(transaccion => {
-                    const esIngreso = (transaccion.tipo || transaccion.tipo_registro) === 'ingreso';
+                    const esIngreso = normalizarTipo(transaccion) === 'ingreso';
                     const monto = Number.parseFloat(transaccion.monto) || 0;
                     const concepto = transaccion.descripcion || transaccion.categoria || 'Movimiento';
                     const categoria = transaccion.categoria || '';

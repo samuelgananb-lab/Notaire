@@ -265,22 +265,32 @@ function initCharts() {
    3. CÁLCULO DINÁMICO DE MÉTRICAS Y ACTUALIZACIÓN DE INTERFAZ
    ========================================================================== */
 function updateAllMetrics() {
-    // 1. Gastos
-    const totalGastos = NotaireState.gastos.reduce((acc, curr) => acc + curr.monto, 0);
-    const presupuesto = NotaireState.presupuestoTotal;
-    const disponible = Math.max(0, presupuesto - totalGastos);
-    const pctUtilizado = ((totalGastos / presupuesto) * 100).toFixed(1);
+    const monthKey = window.NotaireFinancialChart?.currentMonthKey();
+    const inCurrentMonth = transaction => String(transaction.fecha || '').slice(0, 7) === monthKey;
+    const sumAmounts = transactions => transactions.reduce((total, transaction) => {
+        const amount = Number(transaction.monto);
+        return total + (Number.isFinite(amount) && amount > 0 ? amount : 0);
+    }, 0);
+    const gastosMes = NotaireState.gastos.filter(inCurrentMonth);
+    const ingresosMes = NotaireState.ingresos.filter(inCurrentMonth);
+    const totalGastos = sumAmounts(gastosMes);
+    const totalIngresos = sumAmounts(ingresosMes);
+    const presupuesto = Number(NotaireState.presupuestoTotal) || 0;
+    const budgetPosition = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.calculateBudgetPosition(presupuesto, totalGastos)
+        : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
 
     setElemText('valGastadoEsteMes', formatCOP(totalGastos));
-    setElemText('valPresupuestoTotal', formatCOP(presupuesto));
-    setElemText('valDisponibleGastos', formatCOP(disponible));
-    setElemText('valPresupuestoPct', `${pctUtilizado}% utilizado`);
+    setElemText('valPresupuestoTotal', budgetPosition.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
+    setElemText('valPresupuestoPct', budgetPosition.hasBudget
+        ? `${budgetPosition.percentUsed.toFixed(1)}% utilizado`
+        : 'Sin presupuesto');
     setElemText('centerGastosTotal', formatCOP(totalGastos));
 
-    // 2. Ingresos
-    const totalIngresos = NotaireState.ingresos.reduce((acc, curr) => acc + curr.monto, 0);
-    const promedioIngresos = (totalIngresos / 1.12).toFixed(0);
-    const mayorIngreso = Math.max(...NotaireState.ingresos.map(i => i.monto));
+    const promedioIngresos = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.averageMonthlyTotal(NotaireState.ingresos, 'ingreso')
+        : totalIngresos / 6;
+    const mayorIngreso = ingresosMes.reduce((largest, income) => Math.max(largest, Number(income.monto) || 0), 0);
 
     setElemText('valTotalIngresos', formatCOP(totalIngresos));
     setElemText('valPromedioMensual', formatCOP(promedioIngresos));
@@ -290,20 +300,13 @@ function updateAllMetrics() {
     // 3. Ahorros
     const totalAhorrado = NotaireState.metas.reduce((acc, curr) => acc + curr.actual, 0);
     const totalObjetivoMetas = NotaireState.metas.reduce((acc, curr) => acc + curr.objetivo, 0);
-    const pctTotalMetas = Math.round((totalAhorrado / totalObjetivoMetas) * 100);
+    const pctTotalMetas = totalObjetivoMetas > 0
+        ? Math.min(100, Math.round((totalAhorrado / totalObjetivoMetas) * 100))
+        : 0;
 
     setElemText('valTotalAhorrado', formatCOP(totalAhorrado));
     setElemText('valMetasActivasCount', NotaireState.metas.length);
     setElemText('valPorcentajeTotalMetas', `${pctTotalMetas}%`);
-
-    // 4. Saldo
-    const activosTotal = 0;
-    const pasivosTotal = 0;
-    const patrimonioNeto = activosTotal - pasivosTotal;
-    setElemText('valPatrimonioNeto', formatCOP(patrimonioNeto));
-    setElemText('valActivosTotal', formatCOP(activosTotal));
-    setElemText('valPasivosTotal', formatCOP(pasivosTotal));
-    setElemText('centerActivosTotal', formatCOP(activosTotal));
 
     // Refrescar listas dinámicas
     renderUltimosMovimientos();
@@ -614,7 +617,7 @@ function openModalVerTodos(tipo) {
                     <div class="transaction-icon-box">${g.icono}</div>
                     <div class="transaction-info">
                         <span class="transaction-title">${escapeHtml(g.concepto)}</span>
-                        <span class="transaction-date">${g.categoria} &bull; ${g.fecha}</span>
+                        <span class="transaction-date">${escapeHtml(g.categoria)} &bull; ${escapeHtml(g.fecha)}</span>
                     </div>
                 </div>
                 <span class="transaction-amount-negative">-${formatCOP(g.monto)}</span>

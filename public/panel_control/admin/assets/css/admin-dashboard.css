@@ -2851,3 +2851,20 @@ body {
     .main-content { width: 100%; }
 }
 
+/* Rol empleado: sin información ni registro de dinero */
+.employee-only { display: none; }
+body.employee-mode .employee-only { display: inline; }
+body.employee-mode .finance-only,
+body.employee-mode #view-gastos,
+body.employee-mode #view-ingresos,
+body.employee-mode #view-ahorros,
+body.employee-mode #view-saldo,
+body.employee-mode #view-metas,
+body.employee-mode #modalRegistrarGasto,
+body.employee-mode #modalRegistrarIngreso,
+body.employee-mode #modalAportarMeta,
+body.employee-mode #modalVerTodos,
+body.employee-mode #modalEditarGasto,
+body.employee-mode #modalEditarIngreso,
+body.employee-mode #modalEditarMeta { display: none !important; }
+

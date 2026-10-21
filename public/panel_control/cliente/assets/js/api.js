@@ -41,7 +41,7 @@ async function apiFetch(endpoint, method = 'GET', body = null) {
 
 async function fetchDashboardMetrics() {
     const token = localStorage.getItem('notaire_token');
-    const response = await fetch('/api/v1/cliente/dashboard-summary', {
+    const response = await fetch('/api/v1/cliente/dashboard-summary' + (window.NotaireFinancialChart?.monthQuery() || ''), {
         headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);

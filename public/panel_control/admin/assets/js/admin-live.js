@@ -127,8 +127,10 @@ function renderAdminContributions(items) {
 function adminAggregate(items, key) {
     const totals = new Map();
     items.forEach(item => {
-        const label = item[key] || 'Otros';
-        totals.set(label, (totals.get(label) || 0) + Number(item.monto || 0));
+        const amount = Number(item.monto);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        const label = String(item[key] || '').trim() || 'Otros';
+        totals.set(label, (totals.get(label) || 0) + amount);
     });
     return [...totals.entries()].sort((a, b) => b[1] - a[1]);
 }
@@ -170,14 +172,20 @@ function renderAdminFinancialSummary(summary) {
         <div class="summary-financial-row"><span class="summary-financial-label">Ingresos este mes</span><span class="transaction-amount-positive">+${adminCurrency(summary.ingresosMes)}</span></div>
         <div class="summary-financial-row"><span class="summary-financial-label">Gastos este mes</span><span class="transaction-amount-negative">-${adminCurrency(summary.gastosMes)}</span></div>
         <div class="summary-financial-row"><span class="summary-financial-label">Ahorros acumulados</span><span class="transaction-amount-positive">+${adminCurrency(summary.totalAhorrado)}</span></div>
-        <div class="summary-financial-row"><span class="summary-financial-label" style="font-weight: 700; color: white;">Patrimonio neto</span><span class="summary-net-glow">${adminCurrency(summary.patrimonio)}</span></div>
+        <div class="summary-financial-row"><span class="summary-financial-label" style="font-weight: 700; color: white;">Liquidez</span><span class="summary-net-glow">${adminCurrency(summary.liquidez)}</span></div>
+        <div class="summary-financial-row"><span class="summary-financial-label">Movimiento total</span><span class="summary-financial-label">${adminCurrency(summary.movimientoTotal)}</span></div>
     `;
 }
 
 function renderAdminExpenseCategories(items) {
     const container = document.getElementById('listMayoresGastos');
     if (!container) return;
-    const entries = adminAggregate(items, 'categoria');
+    const monthKey = window.NotaireFinancialChart?.currentMonthKey();
+    const monthExpenses = (items || []).filter(item => (
+        window.NotaireFinancialChart?.getTransactionType(item) === 'gasto'
+        && String(item.fecha || '').slice(0, 7) === monthKey
+    ));
+    const entries = adminAggregate(monthExpenses, 'categoria');
     const total = entries.reduce((sum, [, amount]) => sum + amount, 0);
     const colors = ['#f59e0b', '#8b5cf6', '#06b6d4', '#10b981', '#64748b'];
     container.innerHTML = entries.length
@@ -193,17 +201,37 @@ function renderAdminExpenseCategories(items) {
         : '<p class="data-state data-state-empty">No hay gastos registrados.</p>';
 }
 
-function updateAdminCharts(summary) {
-    const expenses = adminAggregate((summary.transactions || []).filter(item => item.tipo === 'gasto'), 'categoria');
-    const income = adminAggregate((summary.transactions || []).filter(item => item.tipo === 'ingreso'), 'categoria');
-    const assets = adminAggregate(summary.activos || [], 'categoria');
+function updateAdminCharts(summary, monthTransactions) {
+    const getType = item => window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.getTransactionType(item)
+        : String(item.tipo || item.tipo_registro || '').toLowerCase();
+    const expenses = adminAggregate(monthTransactions.filter(item => getType(item) === 'gasto'), 'categoria');
+    const income = adminAggregate(monthTransactions.filter(item => getType(item) === 'ingreso'), 'categoria');
+    const distribution = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.calculateFinancialDistribution(
+            summary.totalIngresos,
+            summary.totalGastos,
+            summary.totalAhorrado
+        )
+        : {
+            labels: ['Gastos', 'Ahorros', 'Disponible'],
+            values: [
+                Number(summary.totalGastos) || 0,
+                Number(summary.totalAhorrado) || 0,
+                Math.max(0, Number(summary.saldoDisponible) || 0)
+            ]
+        };
+    const distributionEntries = distribution.labels
+        .map((label, index) => [label, distribution.values[index]])
+        .filter(([, amount]) => amount > 0);
     const colors = ['#f59e0b', '#8b5cf6', '#06b6d4', '#10b981', '#64748b'];
 
     renderAdminLegend('adminExpenseLegend', expenses, colors);
     renderAdminLegend('adminIncomeLegend', income, colors);
-    renderAdminLegend('adminAssetsLegend', assets, colors);
+    renderAdminLegend('adminAssetsLegend', distributionEntries, ['#ef4444', '#a855f7', '#3b82f6']);
     renderAdminAssets(summary.activos || []);
     renderAdminFinancialSummary(summary);
+    document.getElementById('centerActivosTotal').textContent = adminCurrency(summary.saldoDisponible);
 
     if (typeof chartEvolucionIngresosInstance !== 'undefined' && chartEvolucionIngresosInstance && window.NotaireFinancialChart) {
         const series = window.NotaireFinancialChart.createMonthlyTotals(summary.transactions || []);
@@ -222,8 +250,9 @@ function updateAdminCharts(summary) {
         chartFuentesIngresosInstance.update();
     }
     if (typeof chartDistribucionActivosInstance !== 'undefined' && chartDistribucionActivosInstance) {
-        chartDistribucionActivosInstance.data.labels = assets.map(([label]) => label);
-        chartDistribucionActivosInstance.data.datasets[0].data = assets.map(([, amount]) => amount);
+        chartDistribucionActivosInstance.data.labels = distribution.labels;
+        chartDistribucionActivosInstance.data.datasets[0].data = distribution.values;
+        chartDistribucionActivosInstance.data.datasets[0].backgroundColor = ['#ef4444', '#a855f7', '#3b82f6'];
         chartDistribucionActivosInstance.update();
     }
     if (typeof chartPatrimonioEvolucionInstance !== 'undefined' && chartPatrimonioEvolucionInstance && window.NotaireFinancialChart) {
@@ -249,6 +278,8 @@ function updateAdminProfile() {
         document.querySelector('#sidebarAvatarCircle span')?.replaceChildren(document.createTextNode(initials));
         document.getElementById('sidebarRoleLabel')?.replaceChildren(document.createTextNode(role === 'empleado' ? 'Empleado operativo' : 'Administrador'));
         if (role === 'empleado') {
+            document.body.classList.add('employee-mode');
+            document.getElementById('sidebarMenu')?.querySelectorAll('.finance-only').forEach(item => item.remove());
             ['view-usuarios', 'view-auditoria', 'view-reportes'].forEach(viewId => {
                 document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`)?.closest('li')?.remove();
             });
@@ -258,12 +289,21 @@ function updateAdminProfile() {
     }
 }
 
+function isEmployeeSession() {
+    try {
+        const user = JSON.parse(localStorage.getItem('notaire_user') || '{}');
+        return String(user.rol || localStorage.getItem('user_role') || '').toLowerCase() === 'empleado';
+    } catch {
+        return false;
+    }
+}
+
 async function loadAdminSummary() {
     const token = localStorage.getItem('notaire_token');
-    if (!token) return;
+    if (!token || isEmployeeSession()) return;
 
     try {
-        const response = await fetch(ADMIN_SUMMARY_URL, {
+        const response = await fetch(ADMIN_SUMMARY_URL + (window.NotaireFinancialChart?.monthQuery() || ''), {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('No se pudo cargar el resumen administrativo');
@@ -271,16 +311,21 @@ async function loadAdminSummary() {
         const summary = await response.json();
         const employeeView = summary.employeeScope === true;
         const transactions = summary.transactions || [];
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const monthTransactions = transactions.filter(transaction => String(transaction.fecha || '').slice(0, 7) === currentMonth);
-        const monthExpenses = monthTransactions.filter(transaction => transaction.tipo === 'gasto');
-        const monthIncome = monthTransactions.filter(transaction => transaction.tipo === 'ingreso');
+        const currentMonth = window.NotaireFinancialChart?.currentMonthKey();
+        const monthTransactions = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.filterTransactionsByMonth(transactions, currentMonth)
+            : transactions.filter(transaction => String(transaction.fecha || '').slice(0, 7) === currentMonth);
+        const getType = transaction => window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.getTransactionType(transaction)
+            : String(transaction.tipo || transaction.tipo_registro || '').toLowerCase();
+        const monthExpenses = monthTransactions.filter(transaction => getType(transaction) === 'gasto');
+        const monthIncome = monthTransactions.filter(transaction => getType(transaction) === 'ingreso');
         const goalObjectiveTotal = (summary.goals || []).reduce((total, goal) => total + Number(goal.monto_objetivo || 0), 0);
-        const goalProgress = goalObjectiveTotal ? Math.round((summary.totalAhorrado / goalObjectiveTotal) * 100) : 0;
+        const goalProgress = goalObjectiveTotal ? Math.min(100, Math.round((summary.totalAhorrado / goalObjectiveTotal) * 100)) : 0;
         if (typeof NotaireState !== 'undefined') {
             NotaireState.user = JSON.parse(localStorage.getItem('notaire_user') || '{}');
-            NotaireState.gastos = transactions.filter(transaction => transaction.tipo === 'gasto');
-            NotaireState.ingresos = transactions.filter(transaction => transaction.tipo === 'ingreso');
+            NotaireState.gastos = transactions.filter(transaction => getType(transaction) === 'gasto');
+            NotaireState.ingresos = transactions.filter(transaction => getType(transaction) === 'ingreso');
             NotaireState.metas = (summary.goals || []).map(goal => ({
                 ...goal,
                 actual: Number(goal.monto_actual || 0),
@@ -289,23 +334,38 @@ async function loadAdminSummary() {
                 nombre: goal.nombre || 'Meta'
             }));
         }
-        document.getElementById('adminNetWorth').textContent = adminCurrency(summary.patrimonio);
+        document.getElementById('adminNetWorth').textContent = adminCurrency(summary.liquidez);
         document.getElementById('adminIncomeMonth').textContent = adminCurrency(summary.ingresosMes);
         document.getElementById('adminExpenseMonth').textContent = adminCurrency(summary.gastosMes);
         document.getElementById('adminUsersTotal').textContent = employeeView ? 'Restringido' : (summary.usuariosTotal || 0);
         document.getElementById('adminClientsTotal').textContent = employeeView ? 'Restringido' : (summary.clientesTotal || 0);
         document.getElementById('valGastadoEsteMes').textContent = adminCurrency(monthExpenses.reduce((total, item) => total + Number(item.monto || 0), 0));
         document.getElementById('centerGastosTotal').textContent = adminCurrency(summary.gastosMes);
+        const budget = Number(localStorage.getItem('notaire_presupuesto') || 0);
+        if (typeof NotaireState !== 'undefined') NotaireState.presupuestoTotal = budget;
+        const budgetPosition = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.calculateBudgetPosition(budget, summary.gastosMes)
+            : { hasBudget: budget > 0, available: budget - summary.gastosMes, percentUsed: budget > 0 ? (summary.gastosMes / budget) * 100 : null };
+        const budgetInput = document.getElementById('cfgPresupuesto');
+        if (budgetInput) budgetInput.value = budget > 0 ? String(budget) : '';
+        document.getElementById('valPresupuestoTotal').textContent = budgetPosition.hasBudget ? adminCurrency(budget) : 'Sin presupuesto';
+        document.getElementById('valDisponibleGastos').textContent = adminCurrency(summary.liquidez);
+        document.getElementById('valPresupuestoPct').textContent = budgetPosition.hasBudget
+            ? `${Math.round(budgetPosition.percentUsed)}% utilizado`
+            : 'Sin presupuesto';
         document.getElementById('valTotalIngresos').textContent = adminCurrency(summary.ingresosMes);
         document.getElementById('centerIngresosTotal').textContent = adminCurrency(summary.ingresosMes);
+        const monthlyIncomeAverage = window.NotaireFinancialChart
+            ? window.NotaireFinancialChart.averageMonthlyTotal(transactions, 'ingreso')
+            : monthIncome.reduce((total, item) => total + Number(item.monto || 0), 0);
+        const largestMonthlyIncome = monthIncome.reduce((largest, item) => Math.max(largest, Number(item.monto || 0)), 0);
+        document.getElementById('valPromedioMensual').textContent = adminCurrency(monthlyIncomeAverage);
+        document.getElementById('valMayorIngreso').textContent = adminCurrency(largestMonthlyIncome);
         document.getElementById('valTotalAhorrado').textContent = adminCurrency(summary.totalAhorrado);
         document.getElementById('valMetasActivasCount').textContent = summary.metasActivas || 0;
         document.getElementById('valPorcentajeTotalMetas').textContent = `${goalProgress}%`;
-        document.getElementById('valPatrimonioNeto').textContent = adminCurrency(summary.patrimonio);
-        document.getElementById('valActivosTotal').textContent = adminCurrency(summary.totalActivos);
-        document.getElementById('valPasivosTotal').textContent = adminCurrency(summary.totalPasivos);
-        document.getElementById('centerActivosTotal').textContent = adminCurrency(summary.totalActivos);
-        document.getElementById('valLiquidezPct').textContent = `${summary.totalActivos ? Math.round((summary.totalActivos / (summary.totalActivos + summary.totalPasivos)) * 100) : 0}%`;
+        document.getElementById('valPatrimonioNeto').textContent = adminCurrency(summary.liquidez);
+        document.getElementById('valMovimientoTotal').textContent = adminCurrency(summary.movimientoTotal);        document.getElementById('valLiquidezPct').textContent = adminCurrency(summary.totalAhorrado);
         document.getElementById('valTotalAhorradoMetas').textContent = adminCurrency(summary.totalAhorrado);
         document.getElementById('valMetasCount').textContent = summary.metasActivas || 0;
         document.getElementById('valMetasAvgPct').textContent = `${goalProgress}%`;
@@ -314,9 +374,9 @@ async function loadAdminSummary() {
         renderAdminTransactionList('listUltimosMovimientos', monthExpenses);
         renderAdminTransactionList('listUltimosIngresos', monthIncome);
         renderAdminContributions(summary.recentContributions || []);
-        renderAdminExpenseCategories(summary.transactions || []);
+        renderAdminExpenseCategories(monthExpenses);
         renderAdminAssets(summary.activos || []);
-        updateAdminCharts(summary);
+        updateAdminCharts(summary, monthTransactions);
         if (typeof renderGoalsGrid === 'function') renderGoalsGrid();
         if (typeof renderMetasView === 'function') renderMetasView();
     } catch (error) {
