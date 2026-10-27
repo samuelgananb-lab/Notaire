@@ -17,6 +17,17 @@ export function monthReferenceDate(mes) {
     : new Date();
 }
 
+export function monthDateRange(mes) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(mes || ''))) {
+    throw new TypeError('El mes debe tener el formato AAAA-MM');
+  }
+  const [year, month] = mes.split('-').map(Number);
+  return {
+    start: `${mes}-01`,
+    endExclusive: new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10)
+  };
+}
+
 export function transactionType(transaction) {
   return String(transaction?.tipo || transaction?.tipo_registro || '').trim().toLowerCase();
 }
@@ -35,6 +46,44 @@ export function calculateBalances(ingresos, gastos, fondosAsignados = 0) {
     liquidez,
     totalAhorrado: fondos,
     movimientoTotal: ingresos + gastos
+  };
+}
+
+export function createLiquidityTrend(transactions = [], now = new Date(), monthCount = 6) {
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const months = [];
+  const monthlyChanges = new Map();
+  const [year, financialMonth] = currentFinancialMonth(now).split('-').map(Number);
+  const month = financialMonth - 1;
+
+  for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
+    const date = new Date(Date.UTC(year, month - offset, 1));
+    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    months.push({ key, label: monthNames[date.getUTCMonth()] });
+    monthlyChanges.set(key, 0);
+  }
+
+  const firstMonth = months[0]?.key;
+  let balance = 0;
+  transactions.forEach(transaction => {
+    const key = String(transaction.fecha || '').slice(0, 7);
+    const type = transactionType(transaction);
+    if (!['ingreso', 'gasto'].includes(type)) return;
+
+    const amount = amountOf(transaction);
+    if (monthlyChanges.has(key)) {
+      monthlyChanges.set(key, monthlyChanges.get(key) + (type === 'ingreso' ? amount : -amount));
+    } else if (firstMonth && key < firstMonth) {
+      balance += type === 'ingreso' ? amount : -amount;
+    }
+  });
+
+  return {
+    labels: months.map(({ label }) => label),
+    values: months.map(({ key }) => {
+      balance += monthlyChanges.get(key);
+      return balance;
+    })
   };
 }
 

@@ -41,9 +41,11 @@ export async function sendNotificationEmail({ to, subject, text }) {
   }
 }
 
-function minutesUntil(evento) {
-  const target = new Date(evento.fecha_hora || `${evento.fecha}T${evento.hora || '08:00'}:00`);
-  return (target.getTime() - Date.now()) / 60000;
+function minutesUntil(evento, now = Date.now()) {
+  const target = evento.fecha
+    ? new Date(`${evento.fecha}T${String(evento.hora || '08:00').slice(0, 5)}:00-05:00`)
+    : new Date(evento.fecha_hora);
+  return (target.getTime() - now) / 60000;
 }
 
 async function processEventNotifications() {
@@ -51,7 +53,7 @@ async function processEventNotifications() {
 
   const { data: eventos, error } = await supabase
     .from('eventos_calendario')
-    .select('id, usuario_id, titulo, nota, fecha_hora, notif24h, notif1h, notifonday, notif24_sent, notif1h_sent, notifonday_sent')
+    .select('id, usuario_id, titulo, nota, fecha, hora, fecha_hora, notif24h, notif1h, notifonday, notif24_sent, notif1h_sent, notifonday_sent')
     .eq('estado', 'pendiente')
     .limit(200);
 
@@ -86,7 +88,7 @@ async function processEventNotifications() {
     const sent = await sendNotificationEmail({
       to: usuario.email,
       subject: `Recordatorio: ${evento.titulo}`,
-      text: `Hola ${usuario.nombre || ''},\n\nTienes el evento "${evento.titulo}" ${aviso.label}.\nFecha: ${evento.fecha_hora || evento.fecha || 'No especificada'}\n${evento.nota || ''}\n\nNotaire`
+      text: `Hola ${usuario.nombre || ''},\n\nTienes el evento "${evento.titulo}" ${aviso.label}.\nFecha: ${evento.fecha || 'No especificada'} ${evento.hora || '08:00'}\n${evento.nota || ''}\n\nNotaire`
     });
 
     if (!sent) continue;
@@ -118,7 +120,7 @@ async function processFinancialReminderNotifications() {
   }
 
   for (const reminder of reminders || []) {
-    const dueAt = new Date(`${String(reminder.fecha_vencimiento).slice(0, 10)}T09:00:00`);
+    const dueAt = new Date(`${String(reminder.fecha_vencimiento).slice(0, 10)}T09:00:00-05:00`);
     const remainingMinutes = (dueAt.getTime() - Date.now()) / 60000;
     const aviso = !reminder.email_24h_sent && remainingMinutes > 0 && remainingMinutes <= 24 * 60
       ? { flag: 'email_24h_sent', subject: 'Compromiso próximo a vencer', when: 'vence dentro de las próximas 24 horas' }

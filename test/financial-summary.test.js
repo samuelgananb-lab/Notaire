@@ -6,7 +6,9 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {
     calculateFinancialSummary,
-    currentFinancialMonth
+    currentFinancialMonth,
+    createLiquidityTrend,
+    monthDateRange
 } from '../src/app/services/financial-summary.service.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,6 +46,25 @@ test('liquidez descuenta ahorros y metas', () => {
     assert.equal(summary.movimientoTotal, 3500000);
     assert.equal('patrimonio' in summary, false);
     assert.equal(summary.movimientoMes, 3500000);
+});
+
+test('la evolución de liquidez agrega movimientos por mes y conserva el saldo anterior', () => {
+    const trend = createLiquidityTrend([
+        { tipo: 'ingreso', monto: 1000, fecha: '2026-01-10' },
+        { tipo: 'gasto', monto: 100, fecha: '2026-04-10' },
+        { tipo: 'ingreso', monto: 500, fecha: '2026-05-10' },
+        { tipo: 'gasto', monto: 200, fecha: '2026-10-10' },
+        { tipo: 'transferencia', monto: 900, fecha: '2026-09-10' }
+    ], new Date('2026-10-15T17:00:00.000Z'));
+
+    assert.deepEqual(trend.labels, ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct']);
+    assert.deepEqual(trend.values, [1400, 1400, 1400, 1400, 1400, 1200]);
+
+    const colombianMonthBoundary = createLiquidityTrend(
+        [],
+        new Date('2026-11-01T02:00:00.000Z')
+    );
+    assert.equal(colombianMonthBoundary.labels.at(-1), 'Oct');
 });
 
 test('un gasto baja la liquidez; un ahorro solo la reparte hacia metas', () => {
@@ -90,6 +111,12 @@ test('el mes financiero usa la fecha local de Colombia', () => {
     assert.equal(currentFinancialMonth(new Date('2026-10-01T02:00:00.000Z')), '2026-09');
 });
 
+test('el rango mensual para alertas usa el inicio del mes siguiente como límite exclusivo', () => {
+    assert.deepEqual(monthDateRange('2026-02'), { start: '2026-02-01', endExclusive: '2026-03-01' });
+    assert.deepEqual(monthDateRange('2026-12'), { start: '2026-12-01', endExclusive: '2027-01-01' });
+    assert.throws(() => monthDateRange('2026-13'), /formato AAAA-MM/);
+});
+
 test('las categorías y la evolución del panel usan tipos y periodos coherentes', async () => {
     const source = await readFile(
         path.join(root, 'public/panel_control/assets/js/financial-chart.js'),
@@ -131,6 +158,8 @@ test('las categorías y la evolución del panel usan tipos y periodos coherentes
     assert.deepEqual(Array.from(distribution.labels), ['Gastos', 'Ahorros', 'Disponible']);
     assert.equal(distribution.available, -4070000);
     assert.match(clientSaldo, /calculateFinancialDistribution/);
+    assert.match(clientSaldo, /await getDashboardMetrics\(\)/);
+    assert.match(clientSaldo, /evolucion\?\.labels && evolucion\?\.values/);
     assert.match(employeePanel, /calculateFinancialDistribution/);
     assert.match(adminRoute, /saldoDisponible/);
     assert.doesNotMatch(adminRoute, /Saldo neto de movimientos/);

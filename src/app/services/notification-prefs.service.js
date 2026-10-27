@@ -6,6 +6,8 @@ export const DEFAULT_PREFS = Object.freeze({
   h1: true,
   gastos: true,
   semanal: false,
+  daily: true,
+  monthly: true,
   presupuesto: 0
 });
 
@@ -19,6 +21,8 @@ export function normalizePrefs(raw = {}) {
     h1: bool('h1'),
     gastos: bool('gastos'),
     semanal: bool('semanal'),
+    daily: bool('daily'),
+    monthly: bool('monthly'),
     presupuesto: Number.isFinite(presupuesto) && presupuesto > 0 ? Math.round(presupuesto) : 0
   };
 }

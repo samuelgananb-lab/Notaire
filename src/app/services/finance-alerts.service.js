@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { supabase } from '../database/supabase.js';
 import { sendNotificationEmail } from './event-notifications.service.js';
 import { getPrefs } from './notification-prefs.service.js';
+import { monthDateRange } from './financial-summary.service.js';
 
 export const formatCOP = (value) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value) || 0);
 
@@ -18,13 +19,14 @@ export async function checkBudgetAlert(usuario, transaccion) {
     if (!prefs.gastos || !prefs.presupuesto) return;
 
     const mes = String(transaccion.fecha || new Date().toISOString()).slice(0, 7);
+    const { start, endExclusive } = monthDateRange(mes);
     const { data, error } = await supabase
       .from('transacciones')
       .select('monto')
       .eq('usuario_id', usuario.id)
       .eq('tipo', 'gasto')
-      .gte('fecha', `${mes}-01`)
-      .lte('fecha', `${mes}-31`);
+      .gte('fecha', start)
+      .lt('fecha', endExclusive);
     if (error) throw error;
 
     const despues = (data || []).reduce((sum, item) => sum + Number(item.monto || 0), 0);
@@ -81,5 +83,5 @@ export function startWeeklySummaryScheduler() {
     } catch (error) {
       console.error('Error enviando resumen semanal:', error.message);
     }
-  });
+  }, { timezone: 'America/Bogota' });
 }
