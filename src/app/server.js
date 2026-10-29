@@ -15,9 +15,10 @@ import recordatoriosRouter from './routes/recordatorios.routes.js';
 import eventosRouter from './routes/eventos.routes.js';
 import adminRouter from './routes/admin.routes.js';
 import solicitudesRouter from './routes/solicitudes.routes.js';
+import exchangeRateRouter from './routes/exchange-rate.routes.js';
 import { startEventNotificationScheduler } from './services/event-notifications.service.js';
 import { startWeeklySummaryScheduler } from './services/finance-alerts.service.js';
-import { calculateFinancialSummary, monthReferenceDate } from './services/financial-summary.service.js';
+import { calculateFinancialSummary, createLiquidityTrend, currentFinancialMonth, monthReferenceDate } from './services/financial-summary.service.js';
 import { loginRateLimit } from './middlewares/login-rate-limit.middleware.js';
 import { JWT_SECRET, bloquearEmpleado, verificarToken } from './middlewares/auth.middleware.js';
 
@@ -149,7 +150,7 @@ app.post('/api/v1/auth/login', loginRateLimit, async (req, res) => {
 app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
-    const [transacciones, patrimonio] = await Promise.all([
+    const [transacciones, patrimonio, recentResult, goalsResult] = await Promise.all([
       consultarTodasLasFilas(() => supabase
         .from('transacciones')
         .select('id, monto, tipo, fecha')
@@ -160,16 +161,23 @@ app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, a
         .from('patrimonio')
         .select('id, tipo, monto')
         .eq('usuario_id', usuarioId)
-        .order('id', { ascending: true }), 'patrimonio', 300)
+        .order('id', { ascending: true }), 'patrimonio', 300),
+      supabase
+        .from('transacciones')
+        .select('id, monto, tipo, fecha, categoria, descripcion')
+        .eq('usuario_id', usuarioId)
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(5),
+      supabase
+        .from('metas')
+        .select('*')
+        .eq('usuario_id', usuarioId)
     ]);
-    const { data: metasRaw, error: goalsError } = await supabase
-      .from('metas')
-      .select('*')
-      .eq('usuario_id', usuarioId);
+    if (recentResult.error) throw recentResult.error;
+    if (goalsResult.error) throw goalsResult.error;
 
-    if (goalsError) throw goalsError;
-
-    const metas = (metasRaw || []).map(meta => ({
+    const metas = (goalsResult.data || []).map(meta => ({
       ...meta,
       actual: Number(meta.monto_actual || 0),
       objetivo: Number(meta.monto_objetivo || 0),
@@ -179,12 +187,29 @@ app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, a
     }));
 
     const totalAhorrado = metas.reduce((total, meta) => total + meta.actual, 0);
-
-    const financialSummary = calculateFinancialSummary(transacciones, patrimonio, monthReferenceDate(req.query.mes), totalAhorrado);
+    const referenceDate = monthReferenceDate(req.query.mes);
+    const monthKey = currentFinancialMonth(referenceDate);
+    const financialSummary = calculateFinancialSummary(transacciones, patrimonio, referenceDate, totalAhorrado);
+    const [year, month] = monthKey.split('-').map(Number);
+    const ingresosMensuales = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(Date.UTC(year, month - 1 - (5 - index), 1));
+      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      const total = transacciones.reduce((sum, transaction) =>
+        String(transaction.fecha || '').slice(0, 7) === key &&
+        String(transaction.tipo || '').toLowerCase() === 'ingreso'
+          ? sum + Number(transaction.monto || 0)
+          : sum, 0);
+      return { month: key, total };
+    });
 
     res.json({
       ...financialSummary,
-      metas
+      metas,
+      recentTransactions: recentResult.data || [],
+      ingresosMensuales,
+      totalIngresos: financialSummary.ingresosAcumulados,
+      totalGastos: financialSummary.gastosAcumulados,
+      evolucion: createLiquidityTrend(transacciones, referenceDate)
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al consultar resumen', detalle: error.message });
@@ -206,6 +231,7 @@ app.use('/api/recordatorios', recordatoriosRouter);
 app.use('/api/eventos', eventosRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/solicitudes', solicitudesRouter);
+app.use('/api/exchange-rates', verificarToken, exchangeRateRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

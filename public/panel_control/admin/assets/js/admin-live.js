@@ -347,7 +347,10 @@ async function loadAdminSummary() {
             ? window.NotaireFinancialChart.calculateBudgetPosition(budget, summary.gastosMes)
             : { hasBudget: budget > 0, available: budget - summary.gastosMes, percentUsed: budget > 0 ? (summary.gastosMes / budget) * 100 : null };
         const budgetInput = document.getElementById('cfgPresupuesto');
-        if (budgetInput) budgetInput.value = budget > 0 ? String(budget) : '';
+        if (budgetInput) {
+            budgetInput.value = budget > 0 ? String(budget) : '';
+            window.formatAmountInput?.(budgetInput);
+        }
         document.getElementById('valPresupuestoTotal').textContent = budgetPosition.hasBudget ? adminCurrency(budget) : 'Sin presupuesto';
         document.getElementById('valDisponibleGastos').textContent = adminCurrency(summary.liquidez);
         document.getElementById('valPresupuestoPct').textContent = budgetPosition.hasBudget
@@ -414,7 +417,7 @@ async function handleGuardarGasto(event) {
             method: 'POST',
             body: JSON.stringify({
                 tipo: 'gasto',
-                monto: Number(document.getElementById('gastoMonto')?.value),
+                monto: parseFormattedAmount(document.getElementById('gastoMonto')?.value),
                 categoria: document.getElementById('gastoCategoria')?.value,
                 descripcion: document.getElementById('gastoDescripcion')?.value,
                 fecha: document.getElementById('gastoFecha')?.value
@@ -433,7 +436,7 @@ async function handleGuardarIngreso(event) {
             method: 'POST',
             body: JSON.stringify({
                 tipo: 'ingreso',
-                monto: Number(document.getElementById('ingresoMonto')?.value),
+                monto: parseFormattedAmount(document.getElementById('ingresoMonto')?.value),
                 categoria: document.getElementById('ingresoCategoria')?.value,
                 descripcion: document.getElementById('ingresoDescripcion')?.value,
                 fecha: document.getElementById('ingresoFecha')?.value
@@ -452,8 +455,8 @@ async function handleGuardarNuevaMeta(event) {
             method: 'POST',
             body: JSON.stringify({
                 nombre: document.getElementById('metaNombre')?.value,
-                monto_objetivo: Number(document.getElementById('metaObjetivo')?.value),
-                monto_actual: Number(document.getElementById('metaInicial')?.value || 0),
+                monto_objetivo: parseFormattedAmount(document.getElementById('metaObjetivo')?.value),
+                monto_actual: parseFormattedAmount(document.getElementById('metaInicial')?.value || 0),
                 fecha_limite: document.getElementById('metaFecha')?.value,
                 icono: document.getElementById('metaIcono')?.value
             })
@@ -471,7 +474,7 @@ async function handleGuardarAporteMeta(event) {
             method: 'POST',
             body: JSON.stringify({
                 meta_id: document.getElementById('aporteMetaId')?.value,
-                monto: Number(document.getElementById('aporteMonto')?.value)
+                monto: parseFormattedAmount(document.getElementById('aporteMonto')?.value)
             })
         });
         closeModal('modalAportarMeta');
@@ -489,7 +492,9 @@ function openModalEditarGasto(id) {
     const transaction = findAdminTransaction(id);
     if (!transaction) return;
     document.getElementById('editGastoId').value = transaction.id;
-    document.getElementById('editGastoMonto').value = transaction.monto;
+    const amount = document.getElementById('editGastoMonto');
+    amount.value = transaction.monto;
+    window.formatAmountInput?.(amount);
     document.getElementById('editGastoCategoria').value = transaction.categoria || '';
     document.getElementById('editGastoDescripcion').value = transaction.descripcion || '';
     document.getElementById('editGastoFecha').value = transaction.fecha || '';
@@ -503,7 +508,7 @@ async function handleGuardarEdicionGasto(event) {
             method: 'PUT',
             body: JSON.stringify({
                 tipo: 'gasto',
-                monto: Number(document.getElementById('editGastoMonto')?.value),
+                monto: parseFormattedAmount(document.getElementById('editGastoMonto')?.value),
                 categoria: document.getElementById('editGastoCategoria')?.value,
                 descripcion: document.getElementById('editGastoDescripcion')?.value,
                 fecha: document.getElementById('editGastoFecha')?.value
@@ -528,7 +533,9 @@ function openModalEditarIngreso(id) {
     const transaction = findAdminTransaction(id);
     if (!transaction) return;
     document.getElementById('editIngresoId').value = transaction.id;
-    document.getElementById('editIngresoMonto').value = transaction.monto;
+    const amount = document.getElementById('editIngresoMonto');
+    amount.value = transaction.monto;
+    window.formatAmountInput?.(amount);
     document.getElementById('editIngresoFuente').value = transaction.categoria || '';
     document.getElementById('editIngresoDescripcion').value = transaction.descripcion || '';
     document.getElementById('editIngresoFecha').value = transaction.fecha || '';
@@ -542,7 +549,7 @@ async function handleGuardarEdicionIngreso(event) {
             method: 'PUT',
             body: JSON.stringify({
                 tipo: 'ingreso',
-                monto: Number(document.getElementById('editIngresoMonto')?.value),
+                monto: parseFormattedAmount(document.getElementById('editIngresoMonto')?.value),
                 categoria: document.getElementById('editIngresoFuente')?.value,
                 descripcion: document.getElementById('editIngresoDescripcion')?.value,
                 fecha: document.getElementById('editIngresoFecha')?.value
@@ -572,8 +579,12 @@ function openModalEditarMeta(id) {
     if (!goal) return;
     document.getElementById('editMetaId').value = goal.id;
     document.getElementById('editMetaNombre').value = goal.nombre || '';
-    document.getElementById('editMetaObjetivo').value = goal.objetivo || 0;
-    document.getElementById('editMetaActual').value = goal.actual || 0;
+    const objective = document.getElementById('editMetaObjetivo');
+    const current = document.getElementById('editMetaActual');
+    objective.value = goal.objetivo || 0;
+    current.value = goal.actual || 0;
+    window.formatAmountInput?.(objective);
+    window.formatAmountInput?.(current);
     document.getElementById('editMetaFecha').value = goal.fecha || '';
     openModal('modalEditarMeta');
 }
@@ -585,8 +596,8 @@ async function handleGuardarEdicionMeta(event) {
             method: 'PUT',
             body: JSON.stringify({
                 nombre: document.getElementById('editMetaNombre')?.value,
-                monto_objetivo: Number(document.getElementById('editMetaObjetivo')?.value),
-                monto_actual: Number(document.getElementById('editMetaActual')?.value),
+                monto_objetivo: parseFormattedAmount(document.getElementById('editMetaObjetivo')?.value),
+                monto_actual: parseFormattedAmount(document.getElementById('editMetaActual')?.value),
                 fecha_limite: document.getElementById('editMetaFecha')?.value
             })
         });

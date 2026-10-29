@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
-                const data = await response.json();
+                const data = await parseLoginResponse(response);
 
                 if (!response.ok) {
                     throw new Error(data.error || data.detalle || 'Credenciales incorrectas');
@@ -110,6 +110,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
+
+async function parseLoginResponse(response) {
+    const body = await response.text();
+    if (!body.trim()) {
+        throw new Error(`El servidor respondió sin contenido (HTTP ${response.status}). Verifica que /api/auth/login esté disponible.`);
+    }
+
+    try {
+        return JSON.parse(body);
+    } catch {
+        throw new Error(`El servidor devolvió una respuesta no válida (HTTP ${response.status}). Verifica que /api/auth/login esté disponible.`);
+    }
+}
 
 function resolveUserRole(user = {}) {
     const roleName = String(user.rol || user.nombre_rol || '').trim().toLowerCase();

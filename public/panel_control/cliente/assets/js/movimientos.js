@@ -18,11 +18,11 @@ function cambiarSeccion(tipo) {
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.querySelectorAll('#sidebarMenu li').forEach(item => item.classList.remove('active'));
 
-    document.getElementById('seccion-detallada')?.classList.add('active');
     const target = tipo === 'gasto' ? 'view-gastos' : 'view-ingresos';
     if (window.matchMedia('(max-width: 768px)').matches) {
         document.getElementById(target)?.classList.add('active');
     }
+    document.getElementById('seccion-detallada')?.classList.add('active');
     document.querySelector(`#sidebarMenu a[data-target="${target}"]`)?.parentElement.classList.add('active');
     const headerTitle = document.getElementById('headerDynamicTitle');
     if (headerTitle) headerTitle.textContent = tipo === 'gasto' ? 'GASTOS' : 'INGRESOS';
@@ -35,15 +35,11 @@ async function cargarTablaMovimientos(tipo) {
     if (!token) return;
 
     try {
-        const response = await fetch(MOVIMIENTOS_API_URL, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Error al obtener transacciones');
-
-        const datos = await response.json();
-        const mesElegido = window.NotaireFinancialChart?.selectedMonthKey();
+        const mesElegido = window.NotaireFinancialChart?.selectedMonthKey() ||
+            window.NotaireFinancialChart?.currentMonthKey();
+        const datos = await fetchTransacciones(mesElegido);
         transaccionesCargadas = datos.filter(item => (item.tipo || item.tipo_registro) === tipo
-            && (!mesElegido || String(item.fecha || '').slice(0, 7) === mesElegido));
+            && String(item.fecha || '').slice(0, 7) === mesElegido);
         aplicarFiltros();
         const tbody = document.getElementById('tabla-detallada-body');
         const tituloSeccion = document.getElementById('titulo-seccion-detallada');
@@ -61,6 +57,8 @@ async function cargarTablaMovimientos(tipo) {
         }
         const totalElement = document.getElementById('total-seccion-detallada');
         if (totalElement) totalElement.textContent = '$0';
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
@@ -98,9 +96,9 @@ function renderizarTablaFiltrada(lista) {
         const itemJson = JSON.stringify({ ...item, id }).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 12px; color: #aaa;">                ${escHtml(item.fecha || 'N/A')}</td>
-                                <td style="padding: 12px; color: #fff; font-weight: 500;">${escHtml(item.categoria || 'General')}</td>
-                                <td style="padding: 12px; color: #aaa;">${escHtml(item.descripcion || '-')}</td>
+                <td style="padding: 12px; color: var(--color-text-muted);">${escHtml(item.fecha || 'N/A')}</td>
+                <td data-user-content="true" style="padding: 12px; color: var(--color-text-main); font-weight: 500;">${escHtml(item.categoria || 'General')}</td>
+                <td data-user-content="true" style="padding: 12px; color: var(--color-text-muted);">${escHtml(item.descripcion || '-')}</td>
                 <td style="padding: 12px; font-weight: bold; color: ${moduloActivo === 'ingreso' ? '#22c55e' : '#ef4444'};">${formatCurrency(item.monto)}</td>
                 <td style="padding: 12px; text-align: center; display: flex; gap: 8px; justify-content: center;">
                     <button type="button" onclick="abrirModalEdicion(${itemJson})" style="background: none; border: none; color: #3b82f6; cursor: pointer;" title="Editar">✏️</button>
@@ -147,7 +145,7 @@ function configurarFormulario() {
 
         const body = {
             tipo: document.getElementById('tipoMovimiento')?.value || 'ingreso',
-            monto: Number(document.getElementById('montoMovimiento')?.value || 0),
+            monto: parseFormattedAmount(document.getElementById('montoMovimiento')?.value || 0),
             categoria: document.getElementById('categoriaMovimiento')?.value || 'General',
             descripcion: document.getElementById('descripcionMovimiento')?.value || '',
             fecha: new Date().toISOString().split('T')[0]
@@ -175,15 +173,17 @@ function configurarFormulario() {
                 throw new Error(data.detalle || data.error || 'Error al procesar la transacción');
             }
 
+            invalidateApiCache();
             form.reset();
             idEdicionActual = null;
             const tituloModal = document.querySelector('#modalMovimiento h3');
             if (tituloModal) tituloModal.textContent = 'Registrar Movimiento';
             document.getElementById('modalMovimiento')?.style.setProperty('display', 'none');
 
-            if (typeof cargarTablaMovimientos === 'function') cargarTablaMovimientos(moduloActivo);
-            if (typeof cargarResumenDashboard === 'function') cargarResumenDashboard();
-            if (typeof cargarVistaSaldo === 'function') cargarVistaSaldo();
+            if (typeof cargarTablaMovimientos === 'function') await cargarTablaMovimientos(moduloActivo);
+            if (typeof cargarResumenDashboard === 'function') await cargarResumenDashboard();
+            if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
+            if (typeof cargarVistaSaldo === 'function') await cargarVistaSaldo();
         } catch (error) {
             alert('Error: ' + error.message);
         }
@@ -201,11 +201,12 @@ async function eliminarMovimiento(id, tipo) {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Error al eliminar transacción');
+        invalidateApiCache();
         await cargarTablaMovimientos(tipo);
         if (typeof cargarResumenDashboard === 'function') await cargarResumenDashboard();
+        if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
         if (typeof cargarUltimosMovimientos === 'function') await cargarUltimosMovimientos();
     } catch (error) {
         console.error('Error al eliminar:', error);
     }
 }
-

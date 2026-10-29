@@ -57,12 +57,7 @@ test('rechaza códigos y respuestas de tasa no válidos', async () => {
         ok: true,
         json: async () => ({ date: '2026-10-26', base: 'EUR', quote: 'COP', rate: 3900 })
     })), /cotización no válida/);
-
-    await assert.rejects(
-    () => getExchangeRate('USD', 'COP', async () => ({}), '2026-10-28'),
-    /fecha de cotización no es válida/
-    );
-    
+    await assert.rejects(() => getExchangeRate('USD', 'COP', async () => ({}), '2026-10-27'), /fecha de cotización no es válida/);
     assert.equal(currentExchangeRateDate(new Date('2026-10-27T02:00:00.000Z')), '2026-10-26');
     assert.equal(isValidExchangeRateDate('2026-10-26'), true);
     assert.equal(isValidExchangeRateDate('2026-02-31'), false);

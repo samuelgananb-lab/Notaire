@@ -2,15 +2,15 @@
 .cli-sol-form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
 .cli-sol-form .wide { grid-column: 1 / -1; }
 .cli-sol-form input, .cli-sol-form select, .cli-sol-form textarea {
-    padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.35);
+    padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(var(--color-primary-rgb), 0.35);
     background: rgba(255, 255, 255, 0.06); color: inherit; font: inherit;
 }
 .cli-sol-list { display: grid; gap: 12px; }
-.cli-sol-item { padding: 14px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.25); background: rgba(255, 255, 255, 0.04); }
+.cli-sol-item { padding: 14px; border-radius: 12px; border: 1px solid rgba(var(--color-primary-rgb), 0.25); background: rgba(255, 255, 255, 0.04); }
 .cli-sol-item header { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
 .cli-sol-item p { margin: 8px 0 0; }
-.cli-sol-reply { padding: 8px 10px; border-left: 3px solid #8b5cf6; background: rgba(139, 92, 246, 0.12); border-radius: 6px; }
-.cli-sol-badge { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; background: rgba(245, 158, 11, 0.3); }
+.cli-sol-reply { padding: 8px 10px; border-left: 3px solid var(--color-primary); background: rgba(var(--color-primary-rgb), 0.12); border-radius: 6px; }
+.cli-sol-badge { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; background: rgba(var(--color-accent-orange-rgb), 0.18); }
 .cli-sol-badge.en_proceso { background: rgba(59, 130, 246, 0.3); }
 .cli-sol-badge.resuelta { background: rgba(16, 185, 129, 0.3); }
 .cli-sol-badge.rechazada { background: rgba(239, 68, 68, 0.3); }

@@ -11,7 +11,7 @@
 
 body { background: var(--color-bg); color: #fff; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
 
-.background-shapes { position: absolute; width:100%; height:100%; top:0; left:0; z-index:0; pointer-events:none; }
+.background-shapes { position: absolute; width:100%; height:100%; top:0; left:0; z-index:0; pointer-events:none; overflow: clip; }
 .shape { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; animation: float 25s infinite alternate ease-in-out; }
 .shape-1 { width: 500px; height: 500px; background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%); top:-10%; left:-10%; }
 .shape-2 { width: 600px; height: 600px; background: radial-gradient(circle, var(--color-secondary) 0%, transparent 70%); bottom:-15%; right:-10%; }
@@ -220,4 +220,24 @@ p { font-size: 14px; opacity: 0.6; }
 
 @keyframes spin {
     to { transform: translateY(-50%) rotate(360deg); }
+}
+
+@media (max-width: 520px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-x: clip;
+        overflow-y: auto;
+        padding: 16px 0;
+    }
+
+    .background-shapes,
+    #windParticles {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+    }
 }

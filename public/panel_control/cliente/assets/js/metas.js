@@ -1,12 +1,7 @@
 async function cargarMetasYAhorros() {
     try {
         const token = localStorage.getItem('notaire_token');
-        const res = await fetch('/api/metas', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!res.ok) throw new Error('Error al cargar metas');
-        const respuesta = await res.json();
+        const respuesta = await fetchMetas();
         const metas = Array.isArray(respuesta) ? respuesta : [];
 
         const totalMetasActivas = metas.length;
@@ -31,6 +26,13 @@ async function cargarMetasYAhorros() {
         document.querySelectorAll('.metas-activas-val').forEach(el => {
             el.textContent = totalMetasActivas;
         });
+        const metasCountLabel = document.getElementById('metasCountLabel');
+        if (metasCountLabel) {
+            const english = window.getCurrentLang?.() === 'en';
+            metasCountLabel.textContent = english
+                ? `${totalMetasActivas} ${totalMetasActivas === 1 ? 'goal' : 'goals'}`
+                : `${totalMetasActivas} ${totalMetasActivas === 1 ? 'meta' : 'metas'}`;
+        }
         document.querySelectorAll('.porcentaje-total-val').forEach(el => {
             el.textContent = `${progresoPromedio}%`;
         });
@@ -97,7 +99,7 @@ async function cargarMetasYAhorros() {
                             <div class="progress-ring-container">
                                 <svg class="progress-ring-svg">
                                     <circle class="progress-ring-bg" stroke-width="5" fill="transparent" r="27" cx="30" cy="30"/>
-                                    <circle class="progress-ring-fill" stroke-width="5" stroke="#10b981" fill="transparent" r="27" cx="30" cy="30" style="stroke-dashoffset: ${strokeOffset};"/>
+                                    <circle class="progress-ring-fill" stroke-width="5" stroke="var(--color-primary)" fill="transparent" r="27" cx="30" cy="30" style="stroke-dashoffset: ${strokeOffset};"/>
                                 </svg>
                                 <span class="progress-ring-text">${porcentaje}%</span>
                             </div>
@@ -107,10 +109,10 @@ async function cargarMetasYAhorros() {
                             <span>Falta: ${moneda(falta)}</span>
                             <span>Fecha: ${escaparTextoMeta(meta.fecha_limite || 'Sin fecha')}</span>
                         </div>
-                        <div style="display:flex; gap:8px; margin-top:12px;">
+                        <div class="goal-card-actions">
                             <button type="button" class="btn-aportar-goal" style="flex:1;" onclick="openModalAportarMeta('${id}', '${nombreSeguro}')"><i class="fas fa-plus"></i> Aportar</button>
-                            <button type="button" class="btn-config-action" onclick="openModalEditarMeta('${id}', '${nombreSeguro}', ${objetivo}, ${actual}, '${fechaSegura}')" title="Editar meta"><i class="fas fa-pen"></i></button>
-                            <button type="button" class="btn-delete-goal" onclick="eliminarMetaReal('${id}', '${nombreSeguro}')" title="Eliminar meta"><i class="fas fa-trash"></i></button>
+                            <button type="button" class="goal-card-icon-action" onclick="openModalEditarMeta('${id}', '${nombreSeguro}', ${objetivo}, ${actual}, '${fechaSegura}')" title="Editar meta" aria-label="Editar meta"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="goal-card-icon-action is-danger" onclick="eliminarMetaReal('${id}', '${nombreSeguro}')" title="Eliminar meta" aria-label="Eliminar meta"><i class="fas fa-trash-can"></i></button>
                         </div>
                     </div>
                 `;
@@ -121,6 +123,8 @@ async function cargarMetasYAhorros() {
         document.querySelectorAll('#containerGoalsGrid, #metasGoalsGrid').forEach(contenedor => {
             contenedor.innerHTML = '<p class="data-state data-state-error">No se pudieron cargar las metas.</p>';
         });
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
@@ -129,5 +133,3 @@ function escaparTextoMeta(valor) {
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[caracter]));
 }
-
-document.addEventListener('DOMContentLoaded', cargarMetasYAhorros);

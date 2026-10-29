@@ -29,14 +29,14 @@ async function cargarRecordatorios() {
             const pagado = recordatorio.estado === 'pagado';
             const estado = pagado ? 'pendiente' : 'pagado';
             return `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:14px 18px; border-radius:8px; border-left:4px solid ${pagado ? '#22c55e' : '#eab308'};">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:14px 18px; border-radius:8px; border-left:4px solid ${pagado ? '#22c55e' : 'var(--color-accent-orange)'};">
                     <div>
-                        <strong style="color:${pagado ? '#888' : '#fff'}; display:block; ${pagado ? 'text-decoration:line-through;' : ''}">${escapeRecordatorio(recordatorio.titulo)}</strong>
-                        <small style="color:#aaa;">Vence: ${escapeRecordatorio(recordatorio.fecha_vencimiento || 'N/A')}</small>
+                        <strong data-user-content="true" style="color:${pagado ? '#888' : '#fff'}; display:block; ${pagado ? 'text-decoration:line-through;' : ''}">${escapeRecordatorio(recordatorio.titulo)}</strong>
+                        <small style="color:#aaa;">Vence: <time data-user-content="true">${escapeRecordatorio(recordatorio.fecha_vencimiento || 'N/A')}</time></small>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-weight:bold; color:${pagado ? '#22c55e' : '#fff'};">${formatRecordatorioCurrency(recordatorio.monto)}</span>
-                        <button type="button" onclick="cambiarEstadoRecordatorio('${recordatorio.id}', '${estado}')" style="background:${pagado ? '#22c55e22' : '#eab30822'}; color:${pagado ? '#22c55e' : '#eab308'}; border:1px solid currentColor; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:.8em;">${pagado ? 'Pagado' : 'Pendiente'}</button>
+                        <button type="button" onclick="cambiarEstadoRecordatorio('${recordatorio.id}', '${estado}')" style="background:${pagado ? 'rgba(34,197,94,.13)' : 'rgba(var(--color-accent-orange-rgb),.13)'}; color:${pagado ? '#22c55e' : 'var(--color-accent-orange)'}; border:1px solid currentColor; padding:6px 12px; border-radius:999px; cursor:pointer; font-size:.8em; font-weight:700;">${pagado ? 'Pagado' : 'Pendiente'}</button>
                         <button type="button" onclick="eliminarRecordatorio('${recordatorio.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;">🗑️</button>
                     </div>
                 </div>
@@ -44,6 +44,8 @@ async function cargarRecordatorios() {
         }).join('');
     } catch (error) {
         console.error('Error al cargar recordatorios:', error);
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
@@ -66,7 +68,7 @@ function configurarFormularioRecordatorios() {
                 },
                 body: JSON.stringify({
                     titulo: document.getElementById('tituloRecordatorio').value,
-                    monto: Number(document.getElementById('montoRecordatorio').value),
+                    monto: parseFormattedAmount(document.getElementById('montoRecordatorio').value),
                     fecha_vencimiento: fecha
                 })
             });
