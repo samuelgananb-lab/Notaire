@@ -1197,6 +1197,29 @@ test('el calendario guarda categorías compatibles y muestra los días en su pro
     assert.match(mobileStyles, /\.calendar-weekday-grid \{ grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
 });
 
+test('el calendario muestra y administra pagos y compromisos con el flujo persistente existente', async () => {
+    const [html, reminders, styles, mobileStyles, i18n] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/recordatorios.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/assets/js/notaire-i18n.js')
+    ]);
+
+    assert.match(html, /id="lista-recordatorios"/);
+    assert.match(html, /id="calendarPaymentAdd"/);
+    assert.match(html, /id="modalRecordatorio"/);
+    assert.match(reminders, /calendarPaymentAdd'\)\?\.addEventListener\('click', abrirModalRecordatorio\)/);
+    assert.match(reminders, /void cargarRecordatorios\(\)/);
+    assert.match(reminders, /RECORDATORIOS_API_URL/);
+    assert.match(reminders, /cambiarEstadoRecordatorio/);
+    assert.match(reminders, /eliminarRecordatorio/);
+    assert.match(styles, /\.calendar-payment-row \{/);
+    assert.match(mobileStyles, /\.calendar-payment-row \{/);
+    assert.match(i18n, /'Controla tus vencimientos y marca los pagos realizados\.'/);
+    assert.match(i18n, /'Eliminar compromiso': 'Delete commitment'/);
+});
+
 test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
     const [goals, dashboard, home, styles] = await Promise.all([
         read('public/panel_control/cliente/assets/js/metas.js'),

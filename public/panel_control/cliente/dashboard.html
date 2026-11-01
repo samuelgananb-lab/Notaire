@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-goals-palette-polish">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-goals-palette-polish">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-calendar-payments">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-calendar-payments">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -512,6 +512,21 @@
                             </button>
                         </div>
                     </div>
+
+                    <section class="calendar-payments-card" aria-labelledby="calendarPaymentsTitle">
+                        <div class="calendar-payments-header">
+                            <div>
+                                <h3 id="calendarPaymentsTitle">Calendario de Pagos y Compromisos</h3>
+                                <p>Controla tus vencimientos y marca los pagos realizados.</p>
+                            </div>
+                            <button type="button" class="calendar-payment-add" id="calendarPaymentAdd">
+                                + Nuevo Recordatorio
+                            </button>
+                        </div>
+                        <div class="calendar-payments-list" id="lista-recordatorios" aria-live="polite">
+                            <div class="calendar-payments-empty">Cargando pagos y compromisos...</div>
+                        </div>
+                    </section>
 
                     <div class="calendar-layout-grid">
                         <!-- Calendario principal -->
@@ -1255,13 +1270,13 @@
     <script src="assets/js/movimientos.js?v=20261105-financial-history-tables"></script>
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
-    <script src="assets/js/recordatorios.js?v=20261027"></script>
+    <script src="assets/js/recordatorios.js?v=20261105-calendar-payments"></script>
     <script src="assets/js/scientific-calculator.js?v=20261031-9"></script>
     <script src="assets/js/saldo.js?v=20261102-dashboard-fixes1"></script>
     <script src="assets/js/inicio.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
     <script src="assets/js/cliente-solicitudes.js?v=20261031-2"></script>
-    <script src="../../assets/js/notaire-i18n.js?v=20261101-goals3"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261105-calendar-payments"></script>
 </body>
 
 </html>

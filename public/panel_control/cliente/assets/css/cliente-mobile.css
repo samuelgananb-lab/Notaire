@@ -258,6 +258,14 @@
     .calendar-top-controls .month-title-select { grid-column: 1 / -1; order: -1; font-size: 20px; text-align: center; }
     .calendar-top-controls .nav-btn-group { display: flex; gap: 6px; }
     .calendar-top-controls .view-toggle-pill { justify-self: end; }
+    .calendar-payments-card { margin-bottom: 12px; padding: 14px; }
+    .calendar-payments-header { align-items: stretch; flex-direction: column; gap: 10px; }
+    .calendar-payment-add { width: 100%; min-height: 44px; }
+    .calendar-payment-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 12px; }
+    .calendar-payment-details { grid-column: 1; grid-row: 1; }
+    .calendar-payment-amount { grid-column: 1; grid-row: 2; }
+    .calendar-payment-status { grid-column: 2; grid-row: 2; justify-self: end; }
+    .calendar-payment-delete { grid-column: 2; grid-row: 1; justify-self: end; }
     .calendar-month-picker { grid-template-columns: minmax(0, 1fr) 76px; width: min(320px, calc(100vw - 48px)); gap: 8px; }
     .calendar-month-picker > button { grid-column: 1 / -1; width: 100%; }
     .calendar-weekday-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
