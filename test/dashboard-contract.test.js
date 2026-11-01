@@ -1119,6 +1119,10 @@ test('el calendario guarda categorías compatibles y muestra los días en su pro
     assert.match(databaseGuide, /eventos_calendario_tipo_migration\.sql/);
     assert.match(html, /id="calendarWeekdays"[\s\S]*Dom[\s\S]*Lun[\s\S]*Sáb/);
     assert.equal((html.match(/<option value="(?:purple|green|orange|blue)">/g) || []).length, 4);
+    for (const [type, emoji] of [['purple', '📅'], ['green', '💳'], ['orange', '🔔'], ['blue', '👤']]) {
+        assert.match(html, new RegExp(`<option value="${type}">${emoji}`));
+        assert.match(calendar, new RegExp(`icon: '${emoji}'`));
+    }
     assert.doesNotMatch(html, /value="pink"|Cumpleaños|tog2FA|Autenticación 2FA/);
     assert.doesNotMatch(html, /calendar-legend-tags|calendarMonthPicker"[^>]*type="month"/);
     assert.match(calendar, /WEEKDAY_NAMES\[window\.getCurrentLang/);
