@@ -1833,15 +1833,15 @@ body {
 .financial-history-header h3 {
     margin: 0;
     color: var(--color-text-main);
-    font-size: 17px;
+    font-size: 19px;
 }
 .financial-history-header > div {
     color: var(--color-text-muted);
-    font-size: 12px;
+    font-size: 13px;
 }
 .financial-history-header strong {
     color: var(--color-primary);
-    font-size: 16px;
+    font-size: 18px;
 }
 .financial-history-panel[data-financial-type="gasto"] .financial-history-total,
 .financial-history-panel[data-financial-type="gasto"] .financial-history-amount { color: var(--color-accent-red); }
@@ -1859,7 +1859,7 @@ body {
     gap: 6px;
     min-width: 0;
     color: var(--color-text-muted);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
 }
 .financial-history-filters input {
@@ -1894,19 +1894,19 @@ body {
     width: 100%;
     border-collapse: collapse;
     color: var(--color-text-main);
-    font-size: 13px;
+    font-size: 14px;
 }
 .financial-history-table thead {
     color: var(--color-text-muted);
     background: rgba(var(--color-primary-rgb), .07);
     text-align: left;
 }
-.financial-history-table th { padding: 11px 10px; white-space: nowrap; }
+.financial-history-table th { padding: 12px 10px; white-space: nowrap; font-size: 14px; }
 .financial-history-table td { border-bottom: 1px solid var(--color-card-border); padding: 10px; }
 .financial-history-table tbody tr:last-child td { border-bottom: 0; }
-.financial-history-date, .financial-history-description { color: var(--color-text-muted); }
-.financial-history-category { color: var(--color-text-main); font-weight: 600; }
-.financial-history-amount { font-weight: 700; white-space: nowrap; }
+.financial-history-date, .financial-history-description { color: var(--color-text-muted); font-size: 14px; }
+.financial-history-category { color: var(--color-text-main); font-size: 14px; font-weight: 600; }
+.financial-history-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .financial-history-actions {
     display: flex;
     justify-content: center;

@@ -206,10 +206,10 @@
         background: linear-gradient(160deg, rgba(var(--color-card-rgb), .85), rgba(var(--color-sidebar-rgb), .9));
     }
     .financial-history-table td { display: block; padding: 0; border: 0; }
-    .financial-history-table td:nth-child(1) { grid-area: date; font-size: 12px; }
-    .financial-history-table td:nth-child(2) { grid-area: category; font-size: 15px; }
-    .financial-history-table td:nth-child(3) { grid-area: description; font-size: 13px; overflow-wrap: anywhere; }
-    .financial-history-table td:nth-child(4) { grid-area: amount; font-size: 16px; text-align: right; }
+    .financial-history-table td:nth-child(1) { grid-area: date; font-size: 13px; }
+    .financial-history-table td:nth-child(2) { grid-area: category; font-size: 16px; }
+    .financial-history-table td:nth-child(3) { grid-area: description; font-size: 14px; overflow-wrap: anywhere; }
+    .financial-history-table td:nth-child(4) { grid-area: amount; font-size: 17px; text-align: right; }
     .financial-history-table td:nth-child(5) { grid-area: actions; }
     .financial-history-actions .btn-tx-edit,
     .financial-history-actions .btn-tx-delete { width: 34px; height: 34px; }
