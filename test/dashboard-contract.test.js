@@ -1027,6 +1027,34 @@ test('el calendario cambia de vista y el error de aporte solo muestra el límite
     assert.match(register, /assets\/css\/login\.css/);
 });
 
+test('el calendario guarda categorías compatibles y muestra los días en su propia franja', async () => {
+    const [html, calendar, route, migration, databaseGuide, styles, mobileStyles] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('src/app/routes/eventos.routes.js'),
+        read('src/database/eventos_calendario_tipo_migration.sql'),
+        read('docs/guia_base_de_datos.md'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css')
+    ]);
+
+    assert.match(route, /const EVENT_TYPES = new Set\(\['notarial', 'financiero', 'recordatorio', 'personal', 'cumpleanos'\]\)/);
+    assert.match(route, /EVENT_TYPE_ALIASES\[tipo\] \|\| tipo \|\| 'notarial'/);
+    assert.match(route, /normalizeEventType\(tipo\)/);
+    assert.match(route, /eventos_calendario_tipo_check/);
+    assert.match(migration, /drop constraint if exists eventos_calendario_tipo_check/);
+    assert.match(migration, /check \(tipo in \('notarial', 'financiero', 'recordatorio', 'personal', 'cumpleanos'\)\)\s+not valid/);
+    assert.match(databaseGuide, /eventos_calendario_tipo_migration\.sql/);
+    assert.match(html, /id="calendarWeekdays"[\s\S]*Dom[\s\S]*Lun[\s\S]*Sáb/);
+    assert.doesNotMatch(html, /calendar-legend-tags|calendarMonthPicker"[^>]*type="month"/);
+    assert.match(calendar, /WEEKDAY_NAMES\[window\.getCurrentLang/);
+    assert.match(calendar, /calendarMonthApply/);
+    assert.match(calendar, /calendarEventError/);
+    assert.match(styles, /\.calendar-month-picker\[hidden\] \{ display: none; \}/);
+    assert.match(styles, /\.calendar-event-modal \{/);
+    assert.match(mobileStyles, /\.calendar-weekday-grid \{ grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+});
+
 test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
     const [goals, dashboard] = await Promise.all([
         read('public/panel_control/cliente/assets/js/metas.js'),

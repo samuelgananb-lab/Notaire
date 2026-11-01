@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261102-dashboard-fixes1">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261102-dashboard-fixes1">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261103-calendar-event1">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261103-calendar-event1">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -570,14 +570,6 @@
                         </div>
                     </div>
 
-                    <div id="seccion-calendario" style="background: var(--color-card-bg); padding: 20px; border-radius: 12px; margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 style="color: var(--color-text-main); margin: 0;">Calendario de Pagos y Compromisos</h3>
-                            <button type="button" onclick="document.getElementById('modalRecordatorio').style.display='flex'" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: #fff; border: none; padding: 9px 16px; border-radius: 999px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 14px var(--color-primary-glow);">+ Nuevo Recordatorio</button>
-                        </div>
-                        <div id="lista-recordatorios" style="display: grid; gap: 12px;"></div>
-                    </div>
-
                     <div class="calendar-layout-grid">
                         <!-- Calendario principal -->
                         <div class="calendar-main-card">
@@ -587,8 +579,12 @@
                                     <button class="btn-cal-nav" id="btnCalPrev"><i class="fas fa-chevron-left"></i></button>
                                     <button class="btn-cal-nav" id="btnCalNext"><i class="fas fa-chevron-right"></i></button>
                                 </div>
-                                <button type="button" class="month-title-select" id="calMonthTitle" aria-label="Seleccionar mes y año"></button>
-                                <input type="month" id="calendarMonthPicker" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                                <button type="button" class="month-title-select" id="calMonthTitle" aria-label="Seleccionar mes y año" aria-expanded="false" aria-controls="calendarMonthPicker"></button>
+                                <div class="calendar-month-picker" id="calendarMonthPicker" hidden>
+                                    <label><span>Mes</span><select id="calendarMonthSelect"></select></label>
+                                    <label><span>Año</span><input id="calendarYearInput" type="text" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+                                    <button type="button" id="calendarMonthApply">Ir al mes</button>
+                                </div>
                                 <div class="view-toggle-pill">
                                     <button class="view-toggle-btn active" id="calViewMonth">Mes</button>
                                     <button class="view-toggle-btn" id="calViewWeek">Semana</button>
@@ -596,26 +592,18 @@
                                 </div>
                             </div>
 
-                            <div class="calendar-legend-tags">
-                                <div class="tag-item"><span class="legend-dot" style="background: var(--color-primary);"></span> Notarial</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: var(--color-accent-green);"></span> Pago / Financiero</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: var(--color-accent-orange);"></span> Recordatorio</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #06b6d4;"></span> Personal</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #ec4899;"></span> Cumpleaños</div>
+                            <div class="calendar-weekday-grid" id="calendarWeekdays" role="row" aria-label="Días de la semana">
+                                <div class="cal-day-header" role="columnheader">Dom</div>
+                                <div class="cal-day-header" role="columnheader">Lun</div>
+                                <div class="cal-day-header" role="columnheader">Mar</div>
+                                <div class="cal-day-header" role="columnheader">Mié</div>
+                                <div class="cal-day-header" role="columnheader">Jue</div>
+                                <div class="cal-day-header" role="columnheader">Vie</div>
+                                <div class="cal-day-header" role="columnheader">Sáb</div>
                             </div>
 
                             <!-- Grid del calendario (días) -->
-                            <div class="calendar-month-grid" id="calendarMonthGrid">
-                                <!-- Encabezados días -->
-                                <div class="cal-day-header">Dom</div>
-                                <div class="cal-day-header">Lun</div>
-                                <div class="cal-day-header">Mar</div>
-                                <div class="cal-day-header">Mié</div>
-                                <div class="cal-day-header">Jue</div>
-                                <div class="cal-day-header">Vie</div>
-                                <div class="cal-day-header">Sáb</div>
-                                <!-- Las celdas se generan dinámicamente -->
-                            </div>
+                            <div class="calendar-month-grid" id="calendarMonthGrid"></div>
 
                             <!-- Barra inferior de notificaciones -->
                             <div class="cal-notif-bar">
@@ -1193,9 +1181,10 @@
 
     <!-- Modal: Nuevo Evento (Calendario) -->
     <div class="modal-overlay" id="modalNuevoEvento">
-        <div class="modal-container-box">
+        <div class="modal-container-box calendar-event-modal">
             <div class="modal-header-box"><h3><i class="fas fa-calendar-plus" style="color: var(--color-secondary-light); margin-right: 10px;"></i>Nuevo Evento</h3><button class="modal-close-btn" onclick="closeModal('modalNuevoEvento')">&times;</button></div>
             <form id="formNuevoEvento" onsubmit="handleGuardarEvento(event)">
+                <div class="calendar-event-error" id="calendarEventError" role="alert" hidden></div>
                 <div class="form-group"><label>Título del evento</label><input type="text" class="form-control" id="eventoTitulo" placeholder="Ej: Pago de hipoteca" required></div>
                 <div class="form-group"><label>Tipo</label>
                     <select class="form-control" id="eventoTipo">
@@ -1326,7 +1315,7 @@
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
     <script src="assets/js/cliente-dashboard.js?v=20261102-dashboard-fixes1"></script>
-    <script src="assets/js/cliente-dashboard-ext.js?v=20261102-dashboard-fixes1"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261103-calendar-event1"></script>
     <script src="assets/js/movimientos.js?v=20261102-dashboard-fixes1"></script>
     <script src="assets/js/metas.js?v=20261101-goals3"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>

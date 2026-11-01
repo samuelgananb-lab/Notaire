@@ -23,6 +23,10 @@ const typeColorMap = {
 };
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const WEEKDAY_NAMES = {
+    es: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+};
 const DEFAULT_BUDGET_CATEGORY_ORDER = ['services', 'food', 'transport', 'savings', 'entertainment'];
 const DEFAULT_BUDGET_CATEGORY_ORDER_VERSION = 2;
 
@@ -117,15 +121,66 @@ function initCalendar() {
 
     const monthTitle = document.getElementById('calMonthTitle');
     const monthPicker = document.getElementById('calendarMonthPicker');
-    monthTitle?.addEventListener('click', () => {
-        if (typeof monthPicker?.showPicker === 'function') monthPicker.showPicker();
-        else monthPicker?.click();
-    });
-    monthPicker?.addEventListener('change', () => {
-        if (!monthPicker.value) return;
-        const [year, month] = monthPicker.value.split('-').map(Number);
-        CalendarState.currentDate = new Date(year, month - 1, 1);
+    const monthSelect = document.getElementById('calendarMonthSelect');
+    const yearInput = document.getElementById('calendarYearInput');
+    const applyMonthButton = document.getElementById('calendarMonthApply');
+    const populateMonthSelect = () => {
+        if (!monthSelect) return;
+        const english = window.getCurrentLang?.() === 'en';
+        const monthNames = english
+            ? Array.from({ length: 12 }, (_, index) =>
+                new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2026, index, 1)))
+            : MONTH_NAMES;
+        monthSelect.replaceChildren(...monthNames.map((name, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = name;
+            return option;
+        }));
+    };
+    populateMonthSelect();
+    document.addEventListener('notaire:languagechange', () => {
+        populateMonthSelect();
         renderCalendar();
+    });
+    monthTitle?.addEventListener('click', () => {
+        if (!monthPicker) return;
+        monthPicker.hidden = !monthPicker.hidden;
+        monthTitle.setAttribute('aria-expanded', String(!monthPicker.hidden));
+        if (!monthPicker.hidden) monthSelect?.focus();
+    });
+    const applyMonth = () => {
+        const year = Number(yearInput?.value);
+        const month = Number(monthSelect?.value);
+        if (!Number.isInteger(year) || year < 1900 || year > 2100 || !Number.isInteger(month) || month < 0 || month > 11) {
+            yearInput?.setAttribute('aria-invalid', 'true');
+            return;
+        }
+        yearInput?.removeAttribute('aria-invalid');
+        CalendarState.currentDate = new Date(year, month, 1);
+        if (monthPicker) monthPicker.hidden = true;
+        monthTitle?.setAttribute('aria-expanded', 'false');
+        renderCalendar();
+    };
+    applyMonthButton?.addEventListener('click', applyMonth);
+    yearInput?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            applyMonth();
+        }
+    });
+    document.addEventListener('click', event => {
+        if (monthPicker && !monthPicker.hidden && !monthPicker.contains(event.target) && !monthTitle?.contains(event.target)) {
+            monthPicker.hidden = true;
+            monthTitle?.setAttribute('aria-expanded', 'false');
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && monthPicker && !monthPicker.hidden) {
+            monthPicker.hidden = true;
+            monthTitle?.setAttribute('aria-expanded', 'false');
+            monthTitle?.focus();
+        }
     });
     document.getElementById('btnUpcomingAll')?.addEventListener('click', event => {
         CalendarState.upcomingExpanded = !CalendarState.upcomingExpanded;
@@ -152,8 +207,10 @@ function renderCalendar() {
         titleEl.textContent = title;
         titleEl.setAttribute('aria-label', `${english ? 'Select month and year' : 'Seleccionar mes y año'}: ${title}`);
     }
-    const monthPicker = document.getElementById('calendarMonthPicker');
-    if (monthPicker) monthPicker.value = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const monthSelect = document.getElementById('calendarMonthSelect');
+    const yearInput = document.getElementById('calendarYearInput');
+    if (monthSelect) monthSelect.value = String(month);
+    if (yearInput) yearInput.value = String(year);
 
     renderCalendarGrid(year, month, today);
     renderUpcomingEvents();
@@ -161,6 +218,19 @@ function renderCalendar() {
 }
 
 function renderCalendarGrid(year, month, today) {
+    const weekdayRow = document.getElementById('calendarWeekdays');
+    const weekdayNames = WEEKDAY_NAMES[window.getCurrentLang?.() === 'en' ? 'en' : 'es'];
+    const weekdayIndexes = CalendarState.viewMode === 'day'
+        ? [CalendarState.currentDate.getDay()]
+        : [0, 1, 2, 3, 4, 5, 6];
+    weekdayRow?.replaceChildren(...weekdayIndexes.map(index => {
+        const header = document.createElement('div');
+        header.className = 'cal-day-header';
+        header.setAttribute('role', 'columnheader');
+        header.textContent = weekdayNames[index];
+        return header;
+    }));
+
     if (CalendarState.viewMode === 'month') {
         renderMonthGrid(year, month, today);
         return;
@@ -168,14 +238,12 @@ function renderCalendarGrid(year, month, today) {
 
     const grid = document.getElementById('calendarMonthGrid');
     if (!grid) return;
-    const headers = Array.from(grid.querySelectorAll('.cal-day-header'));
     grid.classList.toggle('is-day-view', CalendarState.viewMode === 'day');
     grid.classList.toggle('is-week-view', CalendarState.viewMode === 'week');
     const start = new Date(CalendarState.currentDate);
     if (CalendarState.viewMode === 'week') start.setDate(start.getDate() - start.getDay());
     const days = CalendarState.viewMode === 'week' ? 7 : 1;
-    const visibleHeaders = CalendarState.viewMode === 'day' ? [headers[start.getDay()]] : headers;
-    grid.replaceChildren(...visibleHeaders.filter(Boolean).map(header => header.cloneNode(true)));
+    grid.replaceChildren();
     for (let offset = 0; offset < days; offset += 1) {
         const date = new Date(start);
         date.setDate(start.getDate() + offset);
@@ -188,10 +256,7 @@ function renderMonthGrid(year, month, today) {
     if (!grid) return;
     grid.classList.remove('is-day-view', 'is-week-view');
 
-    // Mantener encabezados
-    const headers = Array.from(grid.querySelectorAll('.cal-day-header'));
-    grid.innerHTML = '';
-    headers.forEach(h => grid.appendChild(h.cloneNode(true)));
+    grid.replaceChildren();
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -389,13 +454,21 @@ function openModalNuevoEvento() {
     document.getElementById('notifDiaBefore').checked = true;
     document.getElementById('notifHourBefore').checked = true;
     document.getElementById('notifOnDay').checked = false;
+    const error = document.getElementById('calendarEventError');
+    if (error) {
+        error.hidden = true;
+        error.textContent = '';
+    }
 
     openModal('modalNuevoEvento');
 }
 
 async function handleGuardarEvento(event) {
     event.preventDefault();
-    const titulo = document.getElementById('eventoTitulo').value;
+    const form = document.getElementById('formNuevoEvento');
+    const submitButton = form?.querySelector('button[type="submit"]');
+    const errorBox = document.getElementById('calendarEventError');
+    const titulo = document.getElementById('eventoTitulo').value.trim();
     const tipo = document.getElementById('eventoTipo').value;
     const fecha = document.getElementById('eventoFecha').value;
     const hora = document.getElementById('eventoHora').value;
@@ -405,14 +478,29 @@ async function handleGuardarEvento(event) {
     const notifOnDay = document.getElementById('notifOnDay').checked;
 
     const token = localStorage.getItem('notaire_token');
+    if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+    }
+    if (!titulo || !fecha) {
+        if (errorBox) {
+            errorBox.textContent = 'Completa el título y la fecha del evento.';
+            errorBox.hidden = false;
+        }
+        return;
+    }
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.setAttribute('aria-busy', 'true');
+    }
     try {
         const response = await fetch('/api/eventos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ titulo, tipo, fecha, hora, nota, notif24h, notif1h, notifOnDay })
         });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo guardar el evento');
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || result.detalle || 'No se pudo guardar el evento');
         const newEvt = normalizeCalendarEvent(result.evento);
         CalendarState.events.push(newEvt);
         closeModal('modalNuevoEvento');
@@ -420,7 +508,17 @@ async function handleGuardarEvento(event) {
         showToast(`✅ Evento "${titulo}" guardado.`);
         scheduleEventNotifications(newEvt);
     } catch (error) {
-        showToast(error.message);
+        if (errorBox) {
+            errorBox.textContent = error.message || 'No se pudo guardar el evento.';
+            errorBox.hidden = false;
+        } else {
+            showToast(error.message || 'No se pudo guardar el evento.');
+        }
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.removeAttribute('aria-busy');
+        }
     }
 }
 

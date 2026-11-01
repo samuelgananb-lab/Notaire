@@ -296,8 +296,11 @@
     .calendar-top-controls .month-title-select { grid-column: 1 / -1; order: -1; font-size: 20px; text-align: center; }
     .calendar-top-controls .nav-btn-group { display: flex; gap: 6px; }
     .calendar-top-controls .view-toggle-pill { justify-self: end; }
-    .calendar-legend-tags { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px 10px; overflow: visible !important; font-size: 11px; margin: 10px 0; }
-    .calendar-legend-tags .tag-item { white-space: normal; min-width: 0; }
+    .calendar-month-picker { grid-template-columns: minmax(0, 1fr) 76px; width: min(320px, calc(100vw - 48px)); gap: 8px; }
+    .calendar-month-picker > button { grid-column: 1 / -1; width: 100%; }
+    .calendar-weekday-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .calendar-weekday-grid.is-day-view { grid-template-columns: minmax(0, 1fr); }
+    .calendar-weekday-grid .cal-day-header { padding: 0 1px 2px; font-size: 9px; letter-spacing: 0; }
     .calendar-month-grid { display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 4px !important; width: 100%; min-width: 0 !important; }
     .calendar-month-grid.is-day-view { grid-template-columns: minmax(0, 1fr) !important; }
     .calendar-month-grid.is-week-view { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
