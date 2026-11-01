@@ -17,7 +17,7 @@ test('el dashboard cliente no carga el script administrativo', async () => {
     assert.match(html, /assets\/js\/cliente-dashboard\.js/);
 });
 
-test('gastos e ingresos muestran un solo panel con su lista completa del mes', async () => {
+test('gastos e ingresos muestran su historial completo con fecha y acciones', async () => {
     const [html, dashboard, movements] = await Promise.all([
         read('public/panel_control/cliente/dashboard.html'),
         read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
@@ -94,7 +94,11 @@ test('gastos e ingresos muestran un solo panel con su lista completa del mes', a
     }
     assert.match(dashboard, /renderTransacciones\('listUltimosMovimientos', 'totalGastosLista', gastos, false\)/);
     assert.match(dashboard, /renderTransacciones\('listUltimosIngresos', 'totalIngresosLista', ingresos, true\)/);
-    assert.match(dashboard, /const monthTransactions = monthKey[\s\S]*transacciones\.filter/);
+    assert.match(dashboard, /const transactionsResponse = await fetchTransacciones\(\)/);
+    assert.match(dashboard, /const movimientosOrdenados = transacciones\.sort/);
+    assert.doesNotMatch(dashboard, /monthTransactions|fetchTransacciones\(monthKey\)/);
+    assert.match(expenseList.innerHTML, /btn-tx-edit/);
+    assert.match(expenseList.innerHTML, /btn-tx-delete/);
     assert.match(dashboard, /abrirModalEdicion\(JSON\.parse\(this\.closest\('\.transaction-row'\)\.dataset\.transaction\)\)/);
     assert.match(dashboard, /eliminarMovimiento\(this\.dataset\.id, this\.dataset\.type\)/);
     assert.match(html, /<input type="date" id="fechaMovimiento"[^>]*required>/);
@@ -141,6 +145,8 @@ test('el dashboard conserva Soporte y Configuración dentro del contenedor de vi
     assert.match(dashboard, /const validSavedView = Array\.from\(navLinks\)\.some\(link => link\.getAttribute\('data-target'\) === savedView\)/);
     assert.doesNotMatch(dashboardExt, /function navigateTo\(/);
     assert.doesNotMatch(movements, /financial-history-panel|cargarTablaMovimientos/);
+    assert.match(html, /<div><span>Total acumulado<\/span><strong id="totalGastosLista">/);
+    assert.match(html, /<div><span>Total acumulado<\/span><strong id="totalIngresosLista">/);
     assert.match(dashboard, /renderTransacciones\('listUltimosMovimientos', 'totalGastosLista', gastos, false\)/);
     assert.match(dashboard, /renderTransacciones\('listUltimosIngresos', 'totalIngresosLista', ingresos, true\)/);
     assert.doesNotMatch(movements, /btnGastos|btnIngresos|addEventListener\('click',\s*\(\)\s*=>\s*cambiarSeccion/);

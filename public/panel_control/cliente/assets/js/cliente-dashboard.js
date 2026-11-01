@@ -653,17 +653,12 @@ async function cargarDatosFinancieros(viewId = document.querySelector('.content-
     try {
         setDataState(document.getElementById('listUltimosMovimientos'), 'Cargando gastos...', 'loading');
         setDataState(document.getElementById('listUltimosIngresos'), 'Cargando ingresos...', 'loading');
-        const monthKey = window.NotaireFinancialChart?.selectedMonthKey() ||
-            window.NotaireFinancialChart?.currentMonthKey();
-        const transactionsResponse = await fetchTransacciones(monthKey);
+        const transactionsResponse = await fetchTransacciones();
         const transacciones = Array.isArray(transactionsResponse) ? transactionsResponse : [];
         const tipoMovimiento = item => window.NotaireFinancialChart
             ? window.NotaireFinancialChart.getTransactionType(item)
             : String(item.tipo || item.tipo_registro || '').toLowerCase();
-        const monthTransactions = monthKey
-            ? transacciones.filter(item => String(item.fecha || '').slice(0, 7) === monthKey)
-            : transacciones;
-        const movimientosOrdenados = monthTransactions.sort((a, b) =>
+        const movimientosOrdenados = transacciones.sort((a, b) =>
             new Date(b.fecha || 0) - new Date(a.fecha || 0) || Number(b.id) - Number(a.id)
         );
         const gastos = movimientosOrdenados.filter(item => tipoMovimiento(item) === 'gasto');
@@ -704,7 +699,7 @@ function renderTransacciones(containerId, totalId, transacciones, sonIngresos) {
                 <button type="button" class="btn-tx-edit" aria-label="Editar movimiento" title="Editar" onclick="abrirModalEdicion(JSON.parse(this.closest('.transaction-row').dataset.transaction))"><i class="fas fa-pen"></i></button>
                 <button type="button" class="btn-tx-delete" aria-label="Eliminar movimiento" title="Eliminar" data-id="${escHtml(item.id || item.id_registro)}" data-type="${sonIngresos ? 'ingreso' : 'gasto'}" onclick="eliminarMovimiento(this.dataset.id, this.dataset.type)"><i class="fas fa-trash"></i></button>
             </div>
-        </div>`).join('') : '<p class="data-state data-state-empty">No hay registros este mes.</p>';
+        </div>`).join('') : '<p class="data-state data-state-empty">No hay registros.</p>';
 }
 
 function formatearFechaMovimiento(fecha) {
