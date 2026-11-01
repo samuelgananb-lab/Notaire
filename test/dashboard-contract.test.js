@@ -960,6 +960,78 @@ test('las opciones de notificación reflejan permisos del navegador y errores de
     assert.ok(loggedErrors.length > 0);
 });
 
+test('el presupuesto se sincroniza por cuenta y las cuentas nuevas empiezan en cero', async () => {
+    const [preferences, dashboard, dashboardExt, registration] = await Promise.all([
+        read('src/app/services/notification-prefs.service.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/auth/assets/js/register.js')
+    ]);
+
+    const normalizerSource = preferences.match(/function normalizeBudgetCategories\(value\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(normalizerSource, 'Debe existir normalización de categorías del presupuesto');
+    const normalizeBudgetCategories = vm.runInNewContext(`(${normalizerSource})`, { Array, Number, String });
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(normalizeBudgetCategories([
+            { id: ' food ', name: 'Alimentación', emoji: '🍽️', value: 123000, priority: 2 },
+            { id: '', name: 'Inválida', value: 10 }
+        ]))),
+        [{ id: 'food', name: 'Alimentación', emoji: '🍽️', value: 123000, priority: 2 }]
+    );
+    assert.match(preferences, /presupuesto_categorias: normalizeBudgetCategories\(source\.presupuesto_categorias\)/);
+    assert.match(dashboardExt, /async function saveBudgetConfig\(\)/);
+    assert.match(dashboardExt, /await persistirPreferencias\(\{ presupuesto_categorias: categories \}\)/);
+    assert.match(dashboardExt, /presupuesto_categorias: legacyCategories/);
+    assert.match(dashboardExt, /hasSavedCategories && !saved && row\.dataset\.budgetCategory !== 'savings'/);
+    assert.match(dashboard, /id="cfgPresupuesto" value="0"/);
+    assert.equal((dashboard.match(/class="budget-cat-input" value="0"/g) || []).length, 5);
+    const categories = [...dashboard.matchAll(/data-budget-category="([^"]+)"/g)].map(match => match[1]);
+    assert.deepEqual(categories, ['services', 'food', 'transport', 'savings', 'entertainment']);
+    assert.match(registration, /localStorage\.removeItem\('notaire_presupuesto_categorias'\)/);
+});
+
+test('el dashboard restaura la vista activa después de recargar', async () => {
+    const [dashboard, registration] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/auth/assets/js/register.js')
+    ]);
+
+    assert.match(dashboard, /sessionStorage\.getItem\('notaire_cliente_active_view'\)/);
+    assert.match(dashboard, /sessionStorage\.setItem\('notaire_cliente_active_view', viewId\)/);
+    assert.match(dashboard, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
+    assert.match(await read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'), /sessionStorage\.setItem\('notaire_cliente_active_view', viewId\)/);
+    assert.match(registration, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
+});
+
+test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
+    const [goals, dashboard] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/metas.js'),
+        read('public/panel_control/cliente/dashboard.html')
+    ]);
+    const statsSource = goals.match(/function resumirMetas\(metas\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(statsSource);
+    const metaSource = goals.match(/function resumirMeta\(meta\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(metaSource);
+    const resumen = vm.runInNewContext(`${metaSource}\n${statsSource}\nresumirMetas`, { String, Number, Math });
+    const resumirMeta = vm.runInNewContext(`${metaSource}\nresumirMeta`, { String, Number, Math });
+    const results = resumen([
+        { id: 1, monto_actual: 90, monto_objetivo: 100, fecha_limite: '2027-01-01' },
+        { id: 2, monto_actual: 80, monto_objetivo: 100, fecha_limite: '2027-02-01' },
+        { id: 3, monto_actual: 70, monto_objetivo: 100, fecha_limite: '2027-03-01' },
+        { id: 4, monto_actual: 50, monto_objetivo: 100, fecha_limite: '2027-04-01' },
+        { id: 5, monto_actual: 100, monto_objetivo: 100, fecha_limite: '2027-05-01' }
+    ]);
+
+    assert.equal(results.activas.length, 4);
+    assert.equal(results.completadas.length, 1);
+    assert.equal(results.progresoPromedio, 78);
+    assert.deepEqual(Array.from(results.proximas, goal => goal.meta.id), [1, 2, 3]);
+    assert.equal(resumirMeta({ monto_actual: 25, monto_objetivo: 25 }).completada, true);
+    assert.match(dashboard, /id="valMetasCompletadas"/);
+    assert.match(dashboard, /id="metasProximasGrid"/);
+    assert.match(goals, /class="goal-card\$\{goal\.completada \? ' is-completed' : ''\}"/);
+});
+
 test('las acciones de metas usan controles coherentes y accesibles sin iconos emoji', async () => {
     const [goals, styles] = await Promise.all([
         read('public/panel_control/cliente/assets/js/metas.js'),

@@ -359,6 +359,7 @@ async function openModalVerTodos(tipo) {
 function confirmLogout() {
     localStorage.removeItem('notaire_token');
     localStorage.removeItem('notaire_user');
+    sessionStorage.removeItem('notaire_cliente_active_view');
     window.location.href = '../../auth/login.html';
 }
 
@@ -393,14 +394,22 @@ function initNavigation() {
             navigateTo(link.getAttribute('data-target'));
         });
     });
+
+    const savedView = sessionStorage.getItem('notaire_cliente_active_view');
+    if (Array.from(navLinks).some(link => link.getAttribute('data-target') === savedView)) {
+        navigateTo(savedView);
+    }
 }
 
 function navigateTo(viewId) {
+    const targetSection = document.getElementById(viewId);
+    if (!targetSection) return;
+
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.querySelectorAll('#sidebarMenu li').forEach(item => item.classList.remove('active'));
 
-    const targetSection = document.getElementById(viewId);
-    if (targetSection) targetSection.classList.add('active');
+    targetSection.classList.add('active');
+    sessionStorage.setItem('notaire_cliente_active_view', viewId);
 
     const activeLink = document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`);
     if (activeLink) activeLink.parentElement.classList.add('active');

@@ -28,10 +28,9 @@ const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
     initCalendar();
-    initConfigView();
+    void initConfigView();
     initEmojiPicker();
     initNotificationCenter();
-    initBudgetPriorities();
     setupNavigateTo();
     scheduleNotificationChecks();
     cargarEventosPersistidos();
@@ -72,11 +71,13 @@ function normalizeCalendarEvent(evento) {
    NAVEGACIÓN HELPER
    ============================================================ */
 function navigateTo(viewId) {
+    const targetSection = document.getElementById(viewId);
+    if (!targetSection) return;
+
     document.querySelectorAll('#sidebarMenu li').forEach(li => li.classList.remove('active'));
     document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
-
-    const targetSection = document.getElementById(viewId);
-    if (targetSection) targetSection.classList.add('active');
+    targetSection.classList.add('active');
+    sessionStorage.setItem('notaire_cliente_active_view', viewId);
 
     const link = document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`);
     if (link) link.parentElement.classList.add('active');
@@ -820,10 +821,11 @@ function initEmojiPicker() {
 /* ============================================================
    CONFIGURACIÓN
    ============================================================ */
-function initConfigView() {
+async function initConfigView() {
     refreshConfigDisplay();
     initThemePalette();
-    cargarPreferenciasNotificacion();
+    await cargarPreferenciasNotificacion();
+    initBudgetPriorities();
 }
 
 function refreshConfigDisplay() {
@@ -939,32 +941,61 @@ async function cargarPreferenciasNotificacion() {
             console.warn(`No se pudieron sincronizar las preferencias de notificación (HTTP ${response.status}).`);
             return;
         }
-        const { presupuesto, ...remoteCfg } = await response.json();
+        const { presupuesto, presupuesto_categorias: remoteCategories, ...remoteCfg } = await response.json();
         const cfg = { ...notifCfg(), ...remoteCfg };
         localStorage.setItem('notaire_notif_cfg', JSON.stringify(cfg));
-        if (presupuesto > 0) localStorage.setItem('notaire_presupuesto', String(presupuesto));
-        applyNotifConfigToUI(cfg, presupuesto);
+        const user = JSON.parse(localStorage.getItem('notaire_user') || '{}');
+        const accountId = String(user.id || user.auth_id || user.email || '').trim().toLowerCase();
+        const previousAccountId = localStorage.getItem('notaire_budget_account_id');
+        const accountChanged = Boolean(previousAccountId && accountId && previousAccountId !== accountId);
+        if (accountChanged && !Array.isArray(remoteCategories)) {
+            localStorage.removeItem('notaire_presupuesto');
+            localStorage.removeItem('notaire_presupuesto_categorias');
+        }
+        const localBudget = accountChanged ? 0 : Number(localStorage.getItem('notaire_presupuesto') || 0);
+        const budget = presupuesto > 0 ? presupuesto : localBudget;
+        if (budget > 0) localStorage.setItem('notaire_presupuesto', String(budget));
+        if (Array.isArray(remoteCategories)) {
+            localStorage.setItem('notaire_presupuesto_categorias', JSON.stringify(remoteCategories));
+        }
+        if (accountId) localStorage.setItem('notaire_budget_account_id', accountId);
+        applyNotifConfigToUI(cfg, budget);
+        if (!Array.isArray(remoteCategories)) {
+            const legacyCategories = JSON.parse(localStorage.getItem('notaire_presupuesto_categorias') || '[]');
+            if (legacyCategories.length || (presupuesto <= 0 && localBudget > 0)) {
+                await persistirPreferencias({
+                    presupuesto: budget,
+                    presupuesto_categorias: legacyCategories.length ? legacyCategories : null
+                });
+            }
+        }
         evaluarAlertaPresupuesto();
     } catch (error) {
         console.error('No se pudieron cargar las preferencias de notificación:', error);
     }
 }
 
-async function persistirPreferencias() {
-    if (!localStorage.getItem('notaire_token')) return;
+async function persistirPreferencias(extra = {}) {
+    if (!localStorage.getItem('notaire_token')) return false;
     try {
         const response = await fetch('/api/auth/preferencias', {
             method: 'PUT',
             headers: authHeadersExt(),
-            body: JSON.stringify({ ...notifCfg(), presupuesto: Number(localStorage.getItem('notaire_presupuesto') || 0) })
+            body: JSON.stringify({
+                ...notifCfg(),
+                presupuesto: Number(localStorage.getItem('notaire_presupuesto') || 0),
+                ...extra
+            })
         });
         if (!response.ok) throw new Error(`El servidor respondió HTTP ${response.status}`);
+        return true;
     } catch (error) {
         console.error('No se pudieron guardar las preferencias de notificación:', error);
         const english = window.getCurrentLang?.() === 'en';
         showToast(english
             ? 'Preferences are saved on this device but could not be synced to your account.'
             : 'Las preferencias quedaron guardadas en este dispositivo, pero no se sincronizaron con tu cuenta.');
+        return false;
     }
 }
 
@@ -989,9 +1020,9 @@ function saveRegionConfig() {
     showToast(`✅ Preferencias de región guardadas.`);
 }
 
-function saveBudgetConfig() {
+async function saveBudgetConfig() {
     const total = parseFormattedAmount(document.getElementById('cfgPresupuesto')?.value);
-    if (!Number.isFinite(total) || total <= 0) {
+    if (!Number.isFinite(total) || total < 0) {
         showToast('⚠️ Ingresa un presupuesto mensual válido.');
         return;
     }
@@ -1016,7 +1047,7 @@ function saveBudgetConfig() {
     localStorage.setItem('notaire_presupuesto_categorias', JSON.stringify(categories));
     localStorage.removeItem('notaire_budget_alert');
     updateBudgetPriorities();
-    persistirPreferencias();
+    if (!await persistirPreferencias({ presupuesto_categorias: categories })) return;
     if (typeof cargarDatosFinancieros === 'function') cargarDatosFinancieros();
     showToast(`✅ Presupuesto mensual actualizado: $${Math.round(total).toLocaleString('es-CO')}`);
 }
@@ -1063,7 +1094,7 @@ function initBudgetPriorities() {
     document.querySelectorAll('#budgetCategoriesList .budget-cat-row').forEach(row => {
         const categoryName = row.querySelector('.budget-cat-name');
         const saved = savedById.get(row.dataset.budgetCategory) || savedByName.get(categoryName?.value.trim());
-        if (hasSavedCategories && !saved) row.remove();
+        if (hasSavedCategories && !saved && row.dataset.budgetCategory !== 'savings') row.remove();
     });
     savedCategories.filter(item => item && /^custom-[a-z0-9-]+$/i.test(item.id || '') && item.name)
         .forEach(item => document.getElementById('budgetCategoriesList')?.append(createBudgetCategoryRow(item)));
@@ -1258,6 +1289,7 @@ function translateBudgetCategoryNames() {
         services: ['Servicios', 'Services'],
         food: ['Alimentación', 'Food'],
         transport: ['Transporte', 'Transport'],
+        savings: ['Ahorros', 'Savings'],
         entertainment: ['Entretenimiento', 'Entertainment']
     };
     document.querySelectorAll('.budget-cat-row').forEach(row => {

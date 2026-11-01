@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261026-light-contrast2">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261026-light-contrast2">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261101-goals2">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261101-goals2">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -463,7 +463,10 @@
                         <div class="metric-card">
                             <div class="metric-card-header">METAS ACTIVAS</div>
                             <div class="metric-card-body"><div class="metric-value" id="valMetasCount">0</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">en progreso</span></div>
+                            <div class="goal-count-breakdown">
+                                <span class="metric-trend-badge trend-neutral">en progreso</span>
+                                <span><strong id="valMetasCompletadas">0</strong> terminadas</span>
+                            </div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-card-header">PROGRESO PROMEDIO</div>
@@ -472,10 +475,24 @@
                         </div>
                     </div>
 
-                    <!-- Grilla de metas -->
+                    <section class="goals-next-section" aria-labelledby="metasProximasTitle">
+                        <div class="goals-section-heading">
+                            <div>
+                                <h3 id="metasProximasTitle">Más cerca de cumplir</h3>
+                                <p>Tus tres metas activas con mayor avance.</p>
+                            </div>
+                            <span class="goals-section-icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
+                        </div>
+                        <div class="goals-next-grid" id="metasProximasGrid"></div>
+                    </section>
+
+                    <!-- Grilla completa de metas -->
                     <div class="card-box" style="background: transparent; border: none; padding: 0; box-shadow: none;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                            <h3 style="font-size: 18px; color: var(--color-text-main);">Mis metas activas</h3>
+                        <div class="goals-section-heading goals-all-heading">
+                            <div>
+                                <h3>Mis metas</h3>
+                                <p>Consulta tus objetivos en progreso y los que ya completaste.</p>
+                            </div>
                             <span style="font-size: 13px; color: var(--color-text-muted);" id="metasCountLabel">0 metas</span>
                         </div>
                         <div class="goals-grid" id="metasGoalsGrid"></div>
@@ -516,14 +533,14 @@
                         <div class="config-fields">
                             <div class="form-group">
                                 <label class="config-field-label" for="cfgPresupuesto">Presupuesto total mensual ($)</label>
-                                <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="cfgPresupuesto" value="1500000">
+                                <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="cfgPresupuesto" value="0">
                             </div>
                             <div class="budget-categories-list" id="budgetCategoriesList">
                                 <div class="budget-cat-row" data-budget-category="services">
                                     <button type="button" class="budget-cat-icon" data-emoji="🏠" aria-label="Elegir emoji para Servicios" title="Elegir emoji">🏠</button>
                                     <input type="text" class="budget-cat-name" value="Servicios" aria-label="Nombre de categoría" readonly>
-                                    <select class="budget-cat-priority" aria-label="Prioridad de Servicios"><option value="1">Prioridad 1</option><option value="2" selected>Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option></select>
-                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="300000" placeholder="$" aria-label="Presupuesto de Servicios" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Servicios"><option value="1" selected>Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Servicios" readonly>
                                     <button type="button" class="budget-cat-edit" aria-label="Editar categoría Servicios" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
                                     <div class="budget-cat-emoji-picker" hidden></div>
                                     <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
@@ -531,8 +548,8 @@
                                 <div class="budget-cat-row" data-budget-category="food">
                                     <button type="button" class="budget-cat-icon" data-emoji="🍽️" aria-label="Elegir emoji para Alimentación" title="Elegir emoji">🍽️</button>
                                     <input type="text" class="budget-cat-name" value="Alimentación" aria-label="Nombre de categoría" readonly>
-                                    <select class="budget-cat-priority" aria-label="Prioridad de Alimentación"><option value="1" selected>Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option></select>
-                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="450000" placeholder="$" aria-label="Presupuesto de Alimentación" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Alimentación"><option value="1">Prioridad 1</option><option value="2" selected>Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Alimentación" readonly>
                                     <button type="button" class="budget-cat-edit" aria-label="Editar categoría Alimentación" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
                                     <div class="budget-cat-emoji-picker" hidden></div>
                                     <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
@@ -541,16 +558,25 @@
                                     <button type="button" class="budget-cat-icon" data-emoji="🚌" aria-label="Elegir emoji para Transporte" title="Elegir emoji">🚌</button>
                                     <input type="text" class="budget-cat-name" value="Transporte" aria-label="Nombre de categoría" readonly>
                                     <select class="budget-cat-priority" aria-label="Prioridad de Transporte"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3" selected>Prioridad 3</option><option value="4">Prioridad 4</option></select>
-                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="300000" placeholder="$" aria-label="Presupuesto de Transporte" readonly>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Transporte" readonly>
                                     <button type="button" class="budget-cat-edit" aria-label="Editar categoría Transporte" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                                <div class="budget-cat-row" data-budget-category="savings">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🐷" aria-label="Elegir emoji para Ahorros" title="Elegir emoji">🐷</button>
+                                    <input type="text" class="budget-cat-name" value="Ahorros" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Ahorros"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4" selected>Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Ahorros" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Ahorros" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
                                     <div class="budget-cat-emoji-picker" hidden></div>
                                     <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
                                 </div>
                                 <div class="budget-cat-row" data-budget-category="entertainment">
                                     <button type="button" class="budget-cat-icon" data-emoji="🎮" aria-label="Elegir emoji para Entretenimiento" title="Elegir emoji">🎮</button>
                                     <input type="text" class="budget-cat-name" value="Entretenimiento" aria-label="Nombre de categoría" readonly>
-                                    <select class="budget-cat-priority" aria-label="Prioridad de Entretenimiento"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4" selected>Prioridad 4</option></select>
-                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="250000" placeholder="$" aria-label="Presupuesto de Entretenimiento" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Entretenimiento"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5" selected>Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Entretenimiento" readonly>
                                     <button type="button" class="budget-cat-edit" aria-label="Editar categoría Entretenimiento" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
                                     <div class="budget-cat-emoji-picker" hidden></div>
                                     <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
@@ -1321,10 +1347,10 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261031-6"></script>
-    <script src="assets/js/cliente-dashboard-ext.js?v=20261026-light-contrast2"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261101-view2"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261101-goals3"></script>
     <script src="assets/js/movimientos.js?v=20261026-light-contrast2"></script>
-    <script src="assets/js/metas.js?v=20261029"></script>
+    <script src="assets/js/metas.js?v=20261101-goals3"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>
     <script src="assets/js/scientific-calculator.js?v=20261031-9"></script>
@@ -1332,7 +1358,7 @@
     <script src="assets/js/inicio.js?v=20261031-5"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
     <script src="assets/js/cliente-solicitudes.js?v=20261031-2"></script>
-    <script src="../../assets/js/notaire-i18n.js?v=20261031"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261101-goals3"></script>
 </body>
 
 </html>

@@ -63,6 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.refresh_token) localStorage.setItem('notaire_refresh_token', data.refresh_token);
             if (data.expires_at) localStorage.setItem('notaire_expires_at', String(data.expires_at));
             localStorage.setItem('notaire_user', JSON.stringify(data.usuario));
+            localStorage.removeItem('notaire_presupuesto');
+            localStorage.removeItem('notaire_presupuesto_categorias');
+            localStorage.removeItem('notaire_budget_account_id');
+            localStorage.removeItem('notaire_budget_alert');
+            sessionStorage.removeItem('notaire_cliente_active_view');
             localStorage.setItem('user_role', data.usuario.rol || 'cliente');
             localStorage.setItem('user_email', data.usuario.email);
             document.cookie = `user_role=${data.usuario.rol || 'cliente'}; path=/; max-age=86400`;
