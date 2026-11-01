@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-single-list-panels">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-single-list-panels">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-single-list-date-edit">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-single-list-date-edit">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -216,11 +216,6 @@
                             <h2>MIS GASTOS</h2>
                             <p>Controla y analiza en qué estás utilizando tu dinero.</p>
                         </div>
-                        <div class="section-actions-group">
-                            <button class="btn-primary-action" onclick="openModalRegistrarGasto()">
-                                <i class="fas fa-plus"></i> Registrar gasto
-                            </button>
-                        </div>
                     </div>
 
                     <div class="card-box transaction-history-panel">
@@ -240,11 +235,6 @@
                         <div class="section-title-group">
                             <h2>MIS INGRESOS</h2>
                             <p>Visualiza tus fuentes de dinero y su evolución.</p>
-                        </div>
-                        <div class="section-actions-group">
-                            <button class="btn-primary-action" onclick="openModalRegistrarIngreso()">
-                                <i class="fas fa-plus"></i> Registrar ingreso
-                            </button>
                         </div>
                     </div>
 
@@ -1178,6 +1168,11 @@
                     <input type="text" id="categoriaMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required placeholder="Ej: Honorarios, Oficina...">
                 </div>
 
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px;" for="fechaMovimiento">Fecha:</label>
+                    <input type="date" id="fechaMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required>
+                </div>
+
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 5px;">Descripción:</label>
                     <input type="text" id="descripcionMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" placeholder="Ej: Pago de servicios">
@@ -1226,9 +1221,9 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261105-single-list-panels"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261105-single-list-date-edit"></script>
     <script src="assets/js/cliente-dashboard-ext.js?v=20261104-panel-polish2"></script>
-    <script src="assets/js/movimientos.js?v=20261101-single-list-panels"></script>
+    <script src="assets/js/movimientos.js?v=20261105-single-list-date-edit"></script>
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>

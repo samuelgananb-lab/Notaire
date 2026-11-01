@@ -696,7 +696,7 @@ function renderTransacciones(containerId, totalId, transacciones, sonIngresos) {
             <div class="transaction-left"><div class="transaction-icon-box">${sonIngresos ? '💼' : '🧾'}</div>
                 <div class="transaction-info">
                     <span class="transaction-title" data-user-content="true">${escHtml(item.descripcion || item.categoria || 'Movimiento')}</span>
-                    <span class="transaction-date" data-user-content="true">${escHtml(item.fecha || '')} · ${escHtml(item.categoria || '')}</span>
+                    <time class="transaction-date" datetime="${escHtml(String(item.fecha || '').slice(0, 10))}" data-user-content="true">${escHtml(formatearFechaMovimiento(item.fecha))} · ${escHtml(item.categoria || '')}</time>
                 </div>
             </div>
             <span class="${sonIngresos ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${sonIngresos ? '+' : '-'}${formatCOP(item.monto)}</span>
@@ -705,6 +705,12 @@ function renderTransacciones(containerId, totalId, transacciones, sonIngresos) {
                 <button type="button" class="btn-tx-delete" aria-label="Eliminar movimiento" title="Eliminar" data-id="${escHtml(item.id || item.id_registro)}" data-type="${sonIngresos ? 'ingreso' : 'gasto'}" onclick="eliminarMovimiento(this.dataset.id, this.dataset.type)"><i class="fas fa-trash"></i></button>
             </div>
         </div>`).join('') : '<p class="data-state data-state-empty">No hay registros este mes.</p>';
+}
+
+function formatearFechaMovimiento(fecha) {
+    const valor = String(fecha || '').slice(0, 10);
+    const coincidencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+    return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha || '');
 }
 
 const loadDashboardData = cargarResumenDashboard;

@@ -17,6 +17,7 @@ function abrirModalEdicion(item) {
     document.getElementById('montoMovimiento').value = item.monto;
     document.getElementById('categoriaMovimiento').value = item.categoria || '';
     document.getElementById('descripcionMovimiento').value = item.descripcion || '';
+    document.getElementById('fechaMovimiento').value = String(item.fecha || '').slice(0, 10);
 
     const tituloModal = document.querySelector('#modalMovimiento h3');
     if (tituloModal) tituloModal.textContent = 'Editar Movimiento';
@@ -30,13 +31,14 @@ function configurarFormulario() {
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const token = localStorage.getItem('notaire_token');
+        const fechaInput = document.getElementById('fechaMovimiento');
 
         const body = {
             tipo: document.getElementById('tipoMovimiento')?.value || 'ingreso',
             monto: parseFormattedAmount(document.getElementById('montoMovimiento')?.value || 0),
             categoria: document.getElementById('categoriaMovimiento')?.value || 'General',
             descripcion: document.getElementById('descripcionMovimiento')?.value || '',
-            fecha: new Date().toISOString().split('T')[0]
+            fecha: fechaInput?.value
         };
 
         const esEdicion = idEdicionActual !== null && idEdicionActual !== undefined;

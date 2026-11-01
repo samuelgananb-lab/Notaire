@@ -41,6 +41,7 @@ test('gastos e ingresos muestran un solo panel con su lista completa del mes', a
         escaparTextoCliente: value => String(value ?? '').replace(/[&<>"']/g, character => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[character])),
+        formatearFechaMovimiento: value => String(value || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1'),
         formatCOP: value => `$${value}`
     };
     vm.runInNewContext(renderer, context);
@@ -69,6 +70,7 @@ test('gastos e ingresos muestran un solo panel con su lista completa del mes', a
     assert.match(expenseList.innerHTML, /Gasto 7/);
     assert.doesNotMatch(expenseList.innerHTML, /Ingreso/);
     assert.match(expenseList.innerHTML, /transaction-amount-negative/);
+    assert.match(expenseList.innerHTML, /<time class="transaction-date" datetime="2026-11-01"[^>]*>01\/11\/2026/);
     assert.match(incomeList.innerHTML, /Ingreso 1/);
     assert.match(incomeList.innerHTML, /Ingreso 7/);
     assert.doesNotMatch(incomeList.innerHTML, /Gasto/);
@@ -88,12 +90,35 @@ test('gastos e ingresos muestran un solo panel con su lista completa del mes', a
         assert.match(view, new RegExp(`id="${listId}"`));
         assert.match(view, new RegExp(`id="${totalId}"`));
         assert.doesNotMatch(view, /metrics-grid|two-column-grid|<canvas|listMayoresGastos|legend-list/);
+        assert.doesNotMatch(view, /section-actions-group|openModalRegistrar(?:Gasto|Ingreso)/);
     }
     assert.match(dashboard, /renderTransacciones\('listUltimosMovimientos', 'totalGastosLista', gastos, false\)/);
     assert.match(dashboard, /renderTransacciones\('listUltimosIngresos', 'totalIngresosLista', ingresos, true\)/);
     assert.match(dashboard, /const monthTransactions = monthKey[\s\S]*transacciones\.filter/);
     assert.match(dashboard, /abrirModalEdicion\(JSON\.parse\(this\.closest\('\.transaction-row'\)\.dataset\.transaction\)\)/);
     assert.match(dashboard, /eliminarMovimiento\(this\.dataset\.id, this\.dataset\.type\)/);
+    assert.match(html, /<input type="date" id="fechaMovimiento"[^>]*required>/);
+    assert.match(movements, /document\.getElementById\('fechaMovimiento'\)\.value = String\(item\.fecha \|\| ''\)\.slice\(0, 10\)/);
+    assert.match(movements, /fecha: fechaInput\?\.value/);
+    const editFunction = movements.match(/function abrirModalEdicion\(item\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(editFunction, 'Debe existir la edición de movimientos');
+    const fields = Object.fromEntries(['tipoMovimiento', 'montoMovimiento', 'categoriaMovimiento', 'descripcionMovimiento', 'fechaMovimiento']
+        .map(id => [id, { value: '' }]));
+    fields.modalMovimiento = { style: { setProperty() {} } };
+    const title = { textContent: '' };
+    const editContext = {
+        document: {
+            getElementById: id => fields[id],
+            querySelector: () => title
+        }
+    };
+    vm.runInNewContext(editFunction, editContext);
+    editContext.abrirModalEdicion({
+        id: 21, tipo: 'gasto', monto: 2500, categoria: 'Servicios',
+        descripcion: 'Factura', fecha: '2026-10-28T00:00:00.000Z'
+    });
+    assert.equal(fields.fechaMovimiento.value, '2026-10-28');
+    assert.equal(title.textContent, 'Editar Movimiento');
     assert.doesNotMatch(html + movements, /financial-history-panel|data-history-filter|tabla-detallada-body|cargarTablaMovimientos|modalVerTodos/);
 });
 
