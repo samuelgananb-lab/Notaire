@@ -724,8 +724,8 @@ function handleGuardarEdicionGasto(event) {
     showToast('¡Gasto actualizado correctamente!');
 }
 
-function eliminarGasto(id) {
-    if (!confirm('¿Eliminar este gasto?')) return;
+async function eliminarGasto(id) {
+    if (!await window.notaireConfirm('¿Eliminar este gasto?', { title: 'Eliminar gasto', confirmText: 'Eliminar' })) return;
     NotaireState.gastos = NotaireState.gastos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Gasto eliminado.');
@@ -760,8 +760,8 @@ function handleGuardarEdicionIngreso(event) {
     showToast('¡Ingreso actualizado correctamente!');
 }
 
-function eliminarIngreso(id) {
-    if (!confirm('¿Eliminar este ingreso?')) return;
+async function eliminarIngreso(id) {
+    if (!await window.notaireConfirm('¿Eliminar este ingreso?', { title: 'Eliminar ingreso', confirmText: 'Eliminar' })) return;
     NotaireState.ingresos = NotaireState.ingresos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Ingreso eliminado.');
@@ -795,8 +795,8 @@ function handleGuardarEdicionMeta(event) {
     showToast('¡Meta actualizada correctamente!');
 }
 
-function eliminarMeta(id) {
-    if (!confirm('¿Eliminar esta meta de ahorro?')) return;
+async function eliminarMeta(id) {
+    if (!await window.notaireConfirm('¿Eliminar esta meta de ahorro?', { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     NotaireState.metas = NotaireState.metas.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Meta eliminada.');

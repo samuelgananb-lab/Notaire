@@ -16,7 +16,7 @@ export async function checkBudgetAlert(usuario, transaccion) {
   try {
     if (String(transaccion.tipo).toLowerCase() !== 'gasto') return;
     const prefs = await getPrefs(usuario.auth_id);
-    if (!prefs.gastos || !prefs.presupuesto) return;
+    if (!prefs.email || !prefs.gastos || !prefs.presupuesto) return;
 
     const mes = String(transaccion.fecha || new Date().toISOString()).slice(0, 7);
     const { start, endExclusive } = monthDateRange(mes);
@@ -59,7 +59,7 @@ async function enviarResumenSemanal() {
   for (const usuario of usuarios || []) {
     if (!usuario.email) continue;
     const prefs = await getPrefs(usuario.auth_id);
-    if (!prefs.semanal) continue;
+    if (!prefs.email || !prefs.semanal) continue;
 
     const [{ data: movimientos }, { data: metas }] = await Promise.all([
       supabase.from('transacciones').select('tipo, monto').eq('usuario_id', usuario.id).gte('fecha', desde),

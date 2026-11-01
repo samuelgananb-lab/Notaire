@@ -661,7 +661,7 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     assert.match(clientHtml + adminHtml + employeeHtml, /auth-guard\.js\?v=20261026-password-dialog1/);
     assert.match(authGuard, /window\.openPasswordChangeDialog = function\(\)/);
     assert.match(authGuard, /fetch\('\/api\/auth\/password'/);
-    assert.match(authGuard, /id = 'notaireLogoutDialog'/);
+    assert.match(authGuard, /id = 'notaireAppDialog'/);
     assert.match(authGuard, /dialog\.showModal\(\)/);
     assert.match(clientLogout, /window\.logout\(\)/);
     assert.match(adminLogout, /window\.logout\(\)/);
@@ -980,7 +980,7 @@ test('el presupuesto se sincroniza por cuenta y las cuentas nuevas empiezan en c
     );
     assert.match(preferences, /presupuesto_categorias: normalizeBudgetCategories\(source\.presupuesto_categorias\)/);
     assert.match(dashboardExt, /async function saveBudgetConfig\(\)/);
-    assert.match(dashboardExt, /await persistirPreferencias\(\{ presupuesto_categorias: categories \}\)/);
+    assert.match(dashboardExt, /await persistirPreferencias\(\{[\s\S]*presupuesto_categorias: categories,[\s\S]*presupuesto_categorias_version: DEFAULT_BUDGET_CATEGORY_ORDER_VERSION/);
     assert.match(dashboardExt, /presupuesto_categorias: legacyCategories/);
     assert.match(dashboardExt, /hasSavedCategories && !saved && row\.dataset\.budgetCategory !== 'savings'/);
     assert.match(dashboard, /id="cfgPresupuesto" value="0"/);
@@ -1038,8 +1038,8 @@ test('las acciones de metas usan controles coherentes y accesibles sin iconos em
         read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
     ]);
     assert.match(goals, /class="goal-card-actions"/);
-    assert.match(goals, /class="goal-card-icon-action"[^>]*aria-label="Editar meta"/);
-    assert.match(goals, /class="goal-card-icon-action is-danger"[^>]*aria-label="Eliminar meta"/);
+    assert.match(goals, /class="goal-card-icon-action"[^>]*aria-label="\$\{english \? 'Edit goal' : 'Editar meta'\}"/);
+    assert.match(goals, /class="goal-card-icon-action is-danger"[^>]*aria-label="\$\{english \? 'Delete goal' : 'Eliminar meta'\}"/);
     assert.doesNotMatch(goals, /class="btn-delete-goal"/);
     assert.match(styles, /\.goal-card-icon-action \{[\s\S]*?border-radius: 12px/);
 });

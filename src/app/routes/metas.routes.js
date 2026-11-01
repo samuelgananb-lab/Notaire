@@ -3,12 +3,15 @@ import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
 import { formatCOP } from '../services/finance-alerts.service.js';
+import { getPrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 router.use(verificarToken);
 
-function avisarMeta(req, subject, detalle) {
-  void sendNotificationEmail({
+async function avisarMeta(req, subject, detalle) {
+  const prefs = await getPrefs(req.usuario.auth_id);
+  if (!prefs.email) return false;
+  return sendNotificationEmail({
     to: req.usuario.email,
     subject,
     text: `Hola ${req.usuario.nombre || ''},\n\n${detalle}\n\nNotaire`
@@ -59,9 +62,9 @@ router.post('/', async (req, res) => {
     const { nombre, monto_objetivo, monto_actual, fecha_limite, icono } = req.body;
     const nombreMeta = String(nombre || '').trim();
     const montoObjetivo = Number(monto_objetivo);
-    const montoActual = Number(monto_actual || 0);
+    const montoActual = Math.round(Number(monto_actual || 0) * 100) / 100;
 
-    if (!nombreMeta || !Number.isFinite(montoObjetivo) || montoObjetivo <= 0 || !Number.isFinite(montoActual) || montoActual < 0) {
+    if (!nombreMeta || !Number.isFinite(montoObjetivo) || montoObjetivo <= 0 || !Number.isFinite(montoActual) || montoActual < 0 || montoActual > montoObjetivo) {
       return res.status(400).json({ error: 'Nombre y monto objetivo son obligatorios' });
     }
 
@@ -89,7 +92,7 @@ router.post('/', async (req, res) => {
 async function registrarAporte(req, res, metaId) {
   try {
     const { monto } = req.body;
-    const montoNumerico = Number(monto);
+    const montoNumerico = Math.round(Number(monto) * 100) / 100;
     if (!metaId || !Number.isInteger(Number(metaId)) || !Number.isFinite(montoNumerico) || montoNumerico <= 0) {
       return res.status(400).json({ error: 'ID de la meta y monto válido son obligatorios' });
     }
@@ -103,43 +106,56 @@ async function registrarAporte(req, res, metaId) {
 
     if (metaError || !meta) return res.status(404).json({ error: 'Meta no encontrada' });
 
+    const montoRestanteMeta = Math.max(0, Number(meta.monto_objetivo || 0) - Number(meta.monto_actual || 0));
+    if (montoNumerico > montoRestanteMeta) {
+      return res.status(422).json({
+        codigo: 'META_LIMITE',
+        montoMaximo: montoRestanteMeta,
+        error: montoRestanteMeta > 0
+          ? `Solo puedes aportar ${formatCOP(montoRestanteMeta)} para completar esta meta.`
+          : 'Esta meta ya alcanzó su monto objetivo.'
+      });
+    }
+
     const saldo = await calcularSaldoDisponible(req.usuario.id);
     if (montoNumerico > saldo) return respuestaSaldoInsuficiente(res, saldo, montoNumerico);
 
-    const { error: aporteError } = await supabase
-      .from('aportes_meta')
-      .insert([{
-        meta_id: Number(metaId),
-        usuario_id: req.usuario.id,
-        monto: montoNumerico
-      }]);
-
-    if (aporteError) {
-      console.error('Error al insertar aporte:', aporteError);
-      return res.status(400).json({ error: 'Error al guardar el aporte', detalle: aporteError.message });
+    const { data: aporte, error: aporteError } = await supabase.rpc('registrar_aporte_meta', {
+      p_usuario_id: req.usuario.id,
+      p_meta_id: Number(metaId),
+      p_monto: montoNumerico
+    });
+    if (aporteError) throw aporteError;
+    if (aporte?.codigo === 'META_NO_ENCONTRADA') {
+      return res.status(404).json({ error: 'Meta no encontrada' });
+    }
+    if (aporte?.codigo === 'META_LIMITE') {
+      return res.status(422).json({
+        codigo: 'META_LIMITE',
+        montoMaximo: Number(aporte.montoMaximo) || 0,
+        error: Number(aporte.montoMaximo) > 0
+          ? `Solo puedes aportar ${formatCOP(aporte.montoMaximo)} para completar esta meta.`
+          : 'Esta meta ya alcanzó su monto objetivo.'
+      });
+    }
+    if (aporte?.codigo !== 'OK' || !aporte.meta) {
+      throw new Error('La base de datos no confirmó el aporte a la meta.');
     }
 
-    const nuevoMontoActual = Math.max(0, Number(meta.monto_actual || 0) + montoNumerico);
+    const nuevoMontoActual = Number(aporte.nuevo_monto_actual);
     const objetivo = Number(meta.monto_objetivo || 0);
-    const { data, error } = await supabase
-      .from('metas')
-      .update({ monto_actual: nuevoMontoActual })
-      .eq('id', Number(metaId))
-      .eq('usuario_id', req.usuario.id)
-      .select('*')
-      .single();
-
-    if (error) throw error;
     const completada = objetivo > 0 && Number(meta.monto_actual || 0) < objetivo && nuevoMontoActual >= objetivo;
-    avisarMeta(req,
-      completada ? '¡Meta alcanzada!' : 'Aporte registrado en tu meta',
-      completada
-        ? `¡Felicitaciones! Alcanzaste tu meta "${meta.nombre}" (${formatCOP(objetivo)}).`
-        : `Abonaste ${formatCOP(montoNumerico)} a la meta "${meta.nombre}".\nLlevas ${formatCOP(nuevoMontoActual)} de ${formatCOP(objetivo)}.`);
+    const progresoAnterior = objetivo > 0 ? Number(meta.monto_actual || 0) / objetivo : 0;
+    const progresoNuevo = objetivo > 0 ? nuevoMontoActual / objetivo : 0;
+    if (completada) {
+      void avisarMeta(req, '¡Meta alcanzada!', `¡Felicitaciones! Alcanzaste tu meta "${meta.nombre}" (${formatCOP(objetivo)}).`);
+    } else if (progresoAnterior < 0.9 && progresoNuevo >= 0.9) {
+      void avisarMeta(req, 'Te falta poco para tu meta', `Te falta menos del 10% para completar "${meta.nombre}".\nLlevas ${formatCOP(nuevoMontoActual)} de ${formatCOP(objetivo)}.`);
+    }
     res.status(201).json({
       mensaje: 'Aporte realizado con éxito',
       nuevo_monto_actual: nuevoMontoActual,
-      meta: data
+      meta: aporte.meta
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al realizar el abono', detalle: error.message });
@@ -190,7 +206,7 @@ router.put('/:id', async (req, res) => {
 
     const nombre = String(req.body.nombre || '').trim();
     const montoObjetivo = Number(req.body.monto_objetivo);
-    const montoActual = Number(req.body.monto_actual);
+    const montoActual = Math.round(Number(req.body.monto_actual) * 100) / 100;
     const { fecha_limite, icono } = req.body;
 
     if (!nombre || nombre.length > 150 || !Number.isFinite(montoObjetivo) || montoObjetivo <= 0 || !Number.isFinite(montoActual) || montoActual < 0) {
@@ -199,12 +215,15 @@ router.put('/:id', async (req, res) => {
 
     const { data: existente, error: lookupError } = await supabase
       .from('metas')
-      .select('id, nombre, monto_actual')
+      .select('id, nombre, monto_actual, monto_objetivo, fecha_limite')
       .eq('id', metaId)
       .eq('usuario_id', req.usuario.id)
       .maybeSingle();
     if (lookupError) throw lookupError;
     if (!existente) return res.status(404).json({ error: 'Meta no encontrada para este usuario' });
+    if (montoActual > montoObjetivo && montoActual !== Number(existente.monto_actual || 0)) {
+      return res.status(400).json({ error: 'El monto ahorrado no puede superar el objetivo de la meta.' });
+    }
 
     const incremento = montoActual - Number(existente.monto_actual || 0);
     if (incremento > 0) {
@@ -212,13 +231,21 @@ router.put('/:id', async (req, res) => {
       if (incremento > saldo) return respuestaSaldoInsuficiente(res, saldo, incremento);
     }
 
+    const fechaActualizada = fecha_limite || null;
+    const cambioFecha = String(existente.fecha_limite || '') !== String(fechaActualizada || '');
     const { data, error } = await supabase
       .from('metas')
       .update({
         nombre,
         monto_objetivo: montoObjetivo,
         monto_actual: montoActual,
-        fecha_limite: fecha_limite || null,
+        fecha_limite: fechaActualizada,
+        ...(cambioFecha ? {
+          email_vencimiento_7d_sent: false,
+          email_vencimiento_3d_sent: false,
+          email_vencimiento_1d_sent: false,
+          email_vencimiento_hoy_sent: false
+        } : {}),
         ...(icono !== undefined ? { icono } : {})
       })
       .eq('id', metaId)

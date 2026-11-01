@@ -521,7 +521,7 @@ async function handleGuardarEdicionGasto(event) {
 }
 
 async function eliminarGasto(id) {
-    if (!window.confirm('¿Eliminar este gasto?')) return;
+    if (!await window.notaireConfirm('¿Eliminar este gasto?', { title: 'Eliminar gasto', confirmText: 'Eliminar' })) return;
     try {
         await adminRequest(`/api/transacciones/${encodeURIComponent(id)}`, { method: 'DELETE' });
         await loadAdminSummary();
@@ -562,7 +562,7 @@ async function handleGuardarEdicionIngreso(event) {
 }
 
 async function eliminarIngreso(id) {
-    if (!window.confirm('¿Eliminar este ingreso?')) return;
+    if (!await window.notaireConfirm('¿Eliminar este ingreso?', { title: 'Eliminar ingreso', confirmText: 'Eliminar' })) return;
     try {
         await adminRequest(`/api/transacciones/${encodeURIComponent(id)}`, { method: 'DELETE' });
         await loadAdminSummary();
@@ -608,7 +608,7 @@ async function handleGuardarEdicionMeta(event) {
 }
 
 async function eliminarMeta(id) {
-    if (!window.confirm('¿Eliminar esta meta?')) return;
+    if (!await window.notaireConfirm('¿Eliminar esta meta?', { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     try {
         await adminRequest(`/api/admin/metas/${encodeURIComponent(id)}`, { method: 'DELETE' });
         await loadAdminSummary();

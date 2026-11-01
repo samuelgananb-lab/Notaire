@@ -941,6 +941,16 @@
                                 <div class="config-fields">
                                     <div class="config-toggle-row-single">
                                         <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Avisos por correo</span>
+                                            <span class="config-toggle-sub">Recibir recordatorios en el correo de tu cuenta</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifEmail" checked onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
                                             <span class="config-toggle-title">Notificaciones del navegador</span>
                                             <span class="config-toggle-sub">Recibir alertas en el navegador</span>
                                         </div>
@@ -1025,11 +1035,11 @@
                                 </div>
                                 <div class="config-fields">
                                     <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-key"></i>
-                                            <span>Cambiar contraseña</span>
-                                        </div>
-                                        <button class="btn-config-action" type="button" aria-label="Cambiar contraseña" onclick="openPasswordChangeDialog()"><i class="fas fa-arrow-right"></i></button>
+                                        <button class="config-security-button" type="button" onclick="openPasswordChangeDialog()">
+                                            <i class="fas fa-key" aria-hidden="true"></i>
+                                            <span><strong>Cambiar contraseña</strong><small>Actualiza la clave de acceso a tu cuenta</small></span>
+                                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                     <div class="config-security-row">
                                         <div class="config-security-info">
@@ -1042,11 +1052,11 @@
                                         </label>
                                     </div>
                                     <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-right-from-bracket" style="color: #ef4444;"></i>
-                                            <span style="color: #ef4444;">Cerrar sesión</span>
-                                        </div>
-                                        <button class="btn-config-danger" onclick="confirmLogout()"><i class="fas fa-arrow-right"></i></button>
+                                        <button class="config-security-button is-logout" type="button" onclick="confirmLogout()">
+                                            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                                            <span><strong>Cerrar sesión</strong><small>Salir de Notaire en este dispositivo</small></span>
+                                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1138,8 +1148,10 @@
             <div class="modal-header-box"><h3><i class="fas fa-piggy-bank" style="color: var(--color-primary); margin-right: 10px;"></i>Aportar a Meta</h3><button class="modal-close-btn" onclick="closeModal('modalAportarMeta')">&times;</button></div>
             <form onsubmit="handleGuardarAporteMeta(event)">
                 <input type="hidden" id="aporteMetaId">
+                <input type="hidden" id="aporteMetaObjetivo">
+                <input type="hidden" id="aporteMetaActual">
                 <div class="form-group"><label>Meta</label><input type="text" class="form-control" id="aporteMetaNombre" readonly></div>
-                <div class="form-group"><label>Monto a Aportar ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="aporteMonto" placeholder="Ej: 200000" required></div>
+                <div class="form-group"><label for="aporteMonto">Monto a Aportar ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="aporteMonto" placeholder="Ej: 200000" required><small id="aporteDisponible" class="form-help-text"></small></div>
                 <div id="aporteError" class="aporte-error" role="alert" hidden></div>
                 <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Confirmar Aporte</button>
             </form>

@@ -22,6 +22,8 @@ const typeColorMap = {
 };
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DEFAULT_BUDGET_CATEGORY_ORDER = ['services', 'food', 'transport', 'savings', 'entertainment'];
+const DEFAULT_BUDGET_CATEGORY_ORDER_VERSION = 2;
 
 /* ============================================================
    INICIALIZACIÓN
@@ -451,14 +453,31 @@ async function deleteCurrentEvent() {
     }
 }
 
-function toggleEventNotif(e, id) {
+async function toggleEventNotif(e, id) {
     e.stopPropagation();
-    const evt = CalendarState.events.find(ev => ev.id === id);
+    const evt = CalendarState.events.find(ev => String(ev.id) === String(id));
     if (!evt) return;
-    evt.notif24h = !evt.notif24h;
-    evt.notif1h = !evt.notif1h;
-    renderUpcomingEvents();
-    showToast(evt.notif24h ? '🔔 Notificaciones activadas para el evento.' : '🔕 Notificaciones desactivadas.');
+    const enabled = !(evt.notif24h || evt.notif1h);
+    try {
+        const response = await fetch(`/api/eventos/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('notaire_token') || ''}` },
+            body: JSON.stringify({ notif24h: enabled, notif1h: enabled })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudieron actualizar los recordatorios.');
+        const updated = normalizeCalendarEvent(result.evento);
+        Object.assign(evt, updated);
+        scheduleEventNotifications(updated);
+        renderCalendar();
+        const english = window.getCurrentLang?.() === 'en';
+        showToast(enabled
+            ? (english ? 'Event reminders enabled.' : '🔔 Notificaciones activadas para el evento.')
+            : (english ? 'Event reminders disabled.' : '🔕 Notificaciones desactivadas.'));
+    } catch (error) {
+        console.error('Error al guardar las notificaciones del evento:', error);
+        showToast(error.message);
+    }
 }
 
 /* ============================================================
@@ -592,6 +611,7 @@ function renderNotificationCenter() {
         const iconElement = document.createElement('i');
         const notificationIcons = {
             calendar: 'fas fa-calendar-check',
+            goal: 'fas fa-bullseye',
             budget: 'fas fa-wallet',
             daily: 'fas fa-sun',
             weekly: 'fas fa-chart-line',
@@ -696,8 +716,8 @@ function triggerSystemNotif(title, body, options = {}) {
     if (notifCfg().browser && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(title, {
             body: body,
-            icon: '/public/assets/image/notaire-icon.png',
-            badge: '/public/assets/image/notaire-icon.png'
+            icon: '/favicon.svg',
+            badge: '/favicon.svg'
         });
     }
 
@@ -904,7 +924,7 @@ async function toggleNotifBrowser(input) {
 }
 
 function notifCfg() {
-    const defaults = { browser: true, h24: true, h1: true, gastos: true, semanal: false, daily: true, monthly: true };
+    const defaults = { browser: true, email: true, h24: true, h1: true, gastos: true, semanal: false, daily: true, monthly: true };
     try {
         return { ...defaults, ...JSON.parse(localStorage.getItem('notaire_notif_cfg') || '{}') };
     } catch {
@@ -919,6 +939,7 @@ function authHeadersExt() {
 function applyNotifConfigToUI(cfg, presupuesto) {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.checked = Boolean(value); };
     set('togNotifBrowser', cfg.browser);
+    set('togNotifEmail', cfg.email);
     set('togNotif24h', cfg.h24);
     set('togNotif1h', cfg.h1);
     set('togNotifGastos', cfg.gastos);
@@ -941,7 +962,12 @@ async function cargarPreferenciasNotificacion() {
             console.warn(`No se pudieron sincronizar las preferencias de notificación (HTTP ${response.status}).`);
             return;
         }
-        const { presupuesto, presupuesto_categorias: remoteCategories, ...remoteCfg } = await response.json();
+        const {
+            presupuesto,
+            presupuesto_categorias: remoteCategories,
+            presupuesto_categorias_version: remoteCategoriesVersion = DEFAULT_BUDGET_CATEGORY_ORDER_VERSION,
+            ...remoteCfg
+        } = await response.json();
         const cfg = { ...notifCfg(), ...remoteCfg };
         localStorage.setItem('notaire_notif_cfg', JSON.stringify(cfg));
         const user = JSON.parse(localStorage.getItem('notaire_user') || '{}');
@@ -951,6 +977,7 @@ async function cargarPreferenciasNotificacion() {
         if (accountChanged && !Array.isArray(remoteCategories)) {
             localStorage.removeItem('notaire_presupuesto');
             localStorage.removeItem('notaire_presupuesto_categorias');
+            localStorage.removeItem('notaire_presupuesto_categorias_version');
         }
         const localBudget = accountChanged ? 0 : Number(localStorage.getItem('notaire_presupuesto') || 0);
         const budget = presupuesto > 0 ? presupuesto : localBudget;
@@ -958,6 +985,7 @@ async function cargarPreferenciasNotificacion() {
         if (Array.isArray(remoteCategories)) {
             localStorage.setItem('notaire_presupuesto_categorias', JSON.stringify(remoteCategories));
         }
+        localStorage.setItem('notaire_presupuesto_categorias_version', String(remoteCategoriesVersion));
         if (accountId) localStorage.setItem('notaire_budget_account_id', accountId);
         applyNotifConfigToUI(cfg, budget);
         if (!Array.isArray(remoteCategories)) {
@@ -1002,6 +1030,7 @@ async function persistirPreferencias(extra = {}) {
 function saveNotifConfig() {
     const cfg = {
         browser: document.getElementById('togNotifBrowser')?.checked,
+        email: document.getElementById('togNotifEmail')?.checked,
         h24: document.getElementById('togNotif24h')?.checked,
         h1: document.getElementById('togNotif1h')?.checked,
         gastos: document.getElementById('togNotifGastos')?.checked,
@@ -1045,9 +1074,13 @@ async function saveBudgetConfig() {
     }
     localStorage.setItem('notaire_presupuesto', String(Math.round(total)));
     localStorage.setItem('notaire_presupuesto_categorias', JSON.stringify(categories));
+    localStorage.setItem('notaire_presupuesto_categorias_version', String(DEFAULT_BUDGET_CATEGORY_ORDER_VERSION));
     localStorage.removeItem('notaire_budget_alert');
     updateBudgetPriorities();
-    if (!await persistirPreferencias({ presupuesto_categorias: categories })) return;
+    if (!await persistirPreferencias({
+        presupuesto_categorias: categories,
+        presupuesto_categorias_version: DEFAULT_BUDGET_CATEGORY_ORDER_VERSION
+    })) return;
     if (typeof cargarDatosFinancieros === 'function') cargarDatosFinancieros();
     showToast(`✅ Presupuesto mensual actualizado: $${Math.round(total).toLocaleString('es-CO')}`);
 }
@@ -1088,6 +1121,24 @@ function initBudgetPriorities() {
     } catch (error) {
         hasSavedCategories = false;
         console.error('No se pudieron cargar las categorías del presupuesto:', error);
+    }
+    let orderVersion = Number(localStorage.getItem('notaire_presupuesto_categorias_version') || 0);
+    if (hasSavedCategories && orderVersion < DEFAULT_BUDGET_CATEGORY_ORDER_VERSION) {
+        const byId = new Map(savedCategories.filter(item => item && item.id).map(item => [item.id, item]));
+        const orderedDefaults = DEFAULT_BUDGET_CATEGORY_ORDER
+            .map(id => byId.get(id))
+            .filter(Boolean);
+        const defaultIds = new Set(DEFAULT_BUDGET_CATEGORY_ORDER);
+        const customAndOther = savedCategories.filter(item => item && !defaultIds.has(item.id));
+        savedCategories = [...orderedDefaults, ...customAndOther]
+            .map((category, index) => ({ ...category, priority: index + 1 }));
+        localStorage.setItem('notaire_presupuesto_categorias', JSON.stringify(savedCategories));
+        localStorage.setItem('notaire_presupuesto_categorias_version', String(DEFAULT_BUDGET_CATEGORY_ORDER_VERSION));
+        orderVersion = DEFAULT_BUDGET_CATEGORY_ORDER_VERSION;
+        void persistirPreferencias({
+            presupuesto_categorias: savedCategories,
+            presupuesto_categorias_version: orderVersion
+        });
     }
     const savedById = new Map(savedCategories.filter(item => item && item.id).map(item => [item.id, item]));
     const savedByName = new Map(savedCategories.filter(item => item && item.name).map(item => [item.name, item]));

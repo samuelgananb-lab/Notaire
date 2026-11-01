@@ -63,7 +63,7 @@
             if (!response.ok) throw new Error(result.error || result.detalle || 'No se pudo guardar');
             await load();
         } catch (error) {
-            window.alert(error.message);
+            void window.notaireAlert(error.message, { title: 'No se pudo guardar' });
         } finally {
             button.disabled = false;
         }

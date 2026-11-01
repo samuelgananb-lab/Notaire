@@ -1,9 +1,11 @@
 import cron from 'node-cron';
 import { supabase } from '../database/supabase.js';
 import { getPrefs } from './notification-prefs.service.js';
+import { getGoalDeadlineNotice } from './goal-notification-rules.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 let reminderSchemaWarningShown = false;
+let goalSchemaWarningShown = false;
 
 function configured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
@@ -61,11 +63,11 @@ async function processEventNotifications() {
 
   for (const evento of eventos || []) {
     const remaining = minutesUntil(evento);
-    const aviso = evento.notif24h && !evento.notif24_sent && remaining > 1439 && remaining <= 1441
+    const aviso = evento.notif24h && !evento.notif24_sent && remaining > 0 && remaining <= 24 * 60
       ? { flag: 'notif24_sent', label: 'mañana' }
-      : evento.notif1h && !evento.notif1h_sent && remaining > 59 && remaining <= 61
+      : evento.notif1h && !evento.notif1h_sent && remaining > 0 && remaining <= 60
         ? { flag: 'notif1h_sent', label: 'en una hora' }
-        : evento.notifonday && !evento.notifonday_sent && remaining > -1 && remaining <= 1
+        : evento.notifonday && !evento.notifonday_sent && remaining > -5 && remaining <= 1
           ? { flag: 'notifonday_sent', label: 'ahora' }
           : null;
 
@@ -79,11 +81,13 @@ async function processEventNotifications() {
     if (userError || !usuario?.email) continue;
 
     const prefs = await getPrefs(usuario.auth_id);
-    const desactivado = (aviso.flag === 'notif24_sent' && !prefs.h24) || (aviso.flag === 'notif1h_sent' && !prefs.h1);
-    if (desactivado) {
+    const avisoDesactivado = (aviso.flag === 'notif24_sent' && !prefs.h24) ||
+      (aviso.flag === 'notif1h_sent' && !prefs.h1);
+    if (avisoDesactivado) {
       await supabase.from('eventos_calendario').update({ [aviso.flag]: true }).eq('id', evento.id);
       continue;
     }
+    if (!prefs.email) continue;
 
     const sent = await sendNotificationEmail({
       to: usuario.email,
@@ -132,10 +136,13 @@ async function processFinancialReminderNotifications() {
 
     const { data: usuario, error: userError } = await supabase
       .from('usuarios')
-      .select('email, nombre')
+      .select('email, nombre, auth_id')
       .eq('id', reminder.usuario_id)
       .single();
     if (userError || !usuario?.email) continue;
+
+    const prefs = await getPrefs(usuario.auth_id);
+    if (!prefs.email) continue;
 
     const sent = await sendNotificationEmail({
       to: usuario.email,
@@ -153,11 +160,63 @@ async function processFinancialReminderNotifications() {
   }
 }
 
+async function processGoalDeadlineNotifications() {
+  if (!configured()) return;
+
+  const { data: metas, error } = await supabase
+    .from('metas')
+    .select('id, usuario_id, nombre, monto_objetivo, monto_actual, fecha_limite, email_vencimiento_7d_sent, email_vencimiento_3d_sent, email_vencimiento_1d_sent, email_vencimiento_hoy_sent')
+    .not('fecha_limite', 'is', null)
+    .limit(500);
+
+  if (error) {
+    if (!goalSchemaWarningShown && (error.code === '42703' || error.message.includes('email_vencimiento_'))) {
+      goalSchemaWarningShown = true;
+      console.warn('Aplica src/database/metas_notificaciones_migration.sql para activar avisos de plazo de metas.');
+      return;
+    }
+    throw error;
+  }
+
+  for (const meta of metas || []) {
+    if (Number(meta.monto_actual || 0) >= Number(meta.monto_objetivo || 0)) continue;
+    const aviso = getGoalDeadlineNotice(meta.fecha_limite);
+    if (!aviso || meta[aviso.flag]) continue;
+
+    const { data: usuario, error: userError } = await supabase
+      .from('usuarios')
+      .select('email, nombre, auth_id')
+      .eq('id', meta.usuario_id)
+      .single();
+    if (userError || !usuario?.email) continue;
+
+    const prefs = await getPrefs(usuario.auth_id);
+    if (!prefs.email) continue;
+
+    const cuando = aviso.daysRemaining === 0
+      ? 'hoy'
+      : `en ${aviso.daysRemaining} ${aviso.daysRemaining === 1 ? 'día' : 'días'}`;
+    const sent = await sendNotificationEmail({
+      to: usuario.email,
+      subject: `Plazo próximo: ${meta.nombre}`,
+      text: `Hola ${usuario.nombre || ''},\n\nEl plazo de tu meta "${meta.nombre}" termina ${cuando}.\nAhorro actual: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(meta.monto_actual) || 0)} de ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(meta.monto_objetivo) || 0)}.\n\nIngresa a Notaire para revisar tu avance.`
+    });
+    if (!sent) continue;
+
+    const { error: updateError } = await supabase
+      .from('metas')
+      .update({ [aviso.flag]: true })
+      .eq('id', meta.id);
+    if (updateError) console.error('No se pudo marcar el aviso de plazo enviado:', updateError.message);
+  }
+}
+
 export function startEventNotificationScheduler() {
   cron.schedule('* * * * *', async () => {
     try {
       await processEventNotifications();
       await processFinancialReminderNotifications();
+      await processGoalDeadlineNotifications();
     } catch (error) {
       console.error('Error enviando recordatorios:', error.message);
     }

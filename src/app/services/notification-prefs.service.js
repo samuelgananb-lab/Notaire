@@ -2,6 +2,7 @@ import { supabaseAuth } from '../database/supabase.js';
 
 export const DEFAULT_PREFS = Object.freeze({
   browser: true,
+  email: true,
   h24: true,
   h1: true,
   gastos: true,
@@ -9,7 +10,8 @@ export const DEFAULT_PREFS = Object.freeze({
   daily: true,
   monthly: true,
   presupuesto: 0,
-  presupuesto_categorias: null
+  presupuesto_categorias: null,
+  presupuesto_categorias_version: 2
 });
 
 function normalizeBudgetCategories(value) {
@@ -35,8 +37,10 @@ export function normalizePrefs(raw = {}) {
   const source = raw && typeof raw === 'object' ? raw : {};
   const bool = (key) => (typeof source[key] === 'boolean' ? source[key] : DEFAULT_PREFS[key]);
   const presupuesto = Number(source.presupuesto);
+  const categoriesVersion = Number(source.presupuesto_categorias_version);
   return {
     browser: bool('browser'),
+    email: bool('email'),
     h24: bool('h24'),
     h1: bool('h1'),
     gastos: bool('gastos'),
@@ -44,7 +48,10 @@ export function normalizePrefs(raw = {}) {
     daily: bool('daily'),
     monthly: bool('monthly'),
     presupuesto: Number.isFinite(presupuesto) && presupuesto > 0 ? Math.round(presupuesto) : 0,
-    presupuesto_categorias: normalizeBudgetCategories(source.presupuesto_categorias)
+    presupuesto_categorias: normalizeBudgetCategories(source.presupuesto_categorias),
+    presupuesto_categorias_version: Number.isInteger(categoriesVersion) && categoriesVersion >= 0
+      ? categoriesVersion
+      : Array.isArray(source.presupuesto_categorias) ? 0 : DEFAULT_PREFS.presupuesto_categorias_version
   };
 }
 

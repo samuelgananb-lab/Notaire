@@ -185,13 +185,13 @@ function configurarFormulario() {
             if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
             if (typeof cargarVistaSaldo === 'function') await cargarVistaSaldo();
         } catch (error) {
-            alert('Error: ' + error.message);
+            void window.notaireAlert(error.message, { title: 'No se pudo guardar el movimiento' });
         }
     });
 }
 
 async function eliminarMovimiento(id, tipo) {
-    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
+    if (!await window.notaireConfirm('¿Estás seguro de eliminar este registro?', { title: 'Eliminar movimiento', confirmText: 'Eliminar' })) return;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
 

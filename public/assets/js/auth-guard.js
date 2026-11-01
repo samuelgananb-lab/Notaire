@@ -7,8 +7,15 @@
 
 (function() {
     // 1. Cargar y aplicar tema inmediatamente para evitar parpadeos
-    const savedTheme = localStorage.getItem('notaire_theme') || 'notaire';
+    const storedTheme = localStorage.getItem('notaire_theme') || 'notaire';
+    const savedTheme = storedTheme === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : (['dark', 'light', 'notaire'].includes(storedTheme) ? storedTheme : 'notaire');
     document.documentElement.setAttribute('data-theme', savedTheme);
+    const savedPalette = localStorage.getItem('notaire_color_palette');
+    if (['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'].includes(savedPalette)) {
+        document.documentElement.setAttribute('data-color-palette', savedPalette);
+    }
 
     // Helper para obtener cookies por su nombre
     function getCookie(name) {
@@ -116,92 +123,134 @@
             });
     }
 
-    function showLogoutDialog() {
-        let dialog = document.getElementById('notaireLogoutDialog');
+    function showNotaireDialog({ title, message, confirmText = 'Aceptar', cancelText = '', icon = 'fa-circle-info' }) {
+        let dialog = document.getElementById('notaireAppDialog');
         if (!dialog) {
             const styles = document.createElement('style');
             styles.textContent = `
-                .notaire-logout-dialog {
-                    width: min(390px, calc(100vw - 32px));
+                .notaire-app-dialog {
+                    position: fixed;
+                    inset: 0;
+                    margin: auto;
+                    width: min(440px, calc(100vw - 32px));
+                    max-height: min(90vh, 620px);
                     padding: 0;
-                    color: #f4f1fa;
-                    background: #171321;
-                    border: 1px solid rgba(255, 255, 255, .12);
-                    border-radius: 18px;
+                    overflow: auto;
+                    color: var(--color-text-main, var(--text, #f4f1fa));
+                    background: var(--color-card-bg, var(--card, #171321));
+                    border: 1px solid var(--color-card-border, var(--border, rgba(255, 255, 255, .14)));
+                    border-radius: 20px;
                     box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
                     font: 400 14px/1.5 Outfit, sans-serif;
                 }
-                .notaire-logout-dialog::backdrop {
+                .notaire-app-dialog::backdrop {
                     background: rgba(8, 6, 14, .68);
                     backdrop-filter: blur(5px);
                 }
-                .notaire-logout-content { padding: 22px; }
-                .notaire-logout-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-                .notaire-logout-icon {
+                .notaire-app-content { padding: clamp(20px, 5vw, 28px); }
+                .notaire-app-heading { display: flex; align-items: center; gap: 13px; margin-bottom: 10px; }
+                .notaire-app-icon {
                     display: grid;
-                    width: 40px;
-                    height: 40px;
-                    flex: 0 0 40px;
+                    width: 44px;
+                    height: 44px;
+                    flex: 0 0 44px;
                     place-items: center;
-                    border-radius: 12px;
-                    background: rgba(140, 0, 255, .18);
-                    color: #c77aff;
-                    font-size: 18px;
+                    border-radius: 14px;
+                    background: rgba(var(--color-primary-rgb, 140, 0, 255), .16);
+                    color: var(--color-primary, var(--primary, #a855f7));
+                    font-size: 19px;
                 }
-                .notaire-logout-title { margin: 0; color: inherit; font-size: 17px; font-weight: 600; }
-                .notaire-logout-message { margin: 0 0 20px 52px; color: #b8b2c4; }
-                .notaire-logout-actions { display: flex; justify-content: flex-end; gap: 10px; }
-                .notaire-logout-actions button {
-                    min-height: 40px;
-                    padding: 0 16px;
-                    border: 1px solid rgba(255, 255, 255, .12);
-                    border-radius: 10px;
+                .notaire-app-title { margin: 0; color: inherit; font-size: 18px; font-weight: 650; }
+                .notaire-app-message { margin: 0 0 22px 57px; color: var(--color-text-muted, var(--muted, #b8b2c4)); }
+                .notaire-app-actions { display: flex; justify-content: flex-end; gap: 10px; }
+                .notaire-app-actions button {
+                    min-height: 42px;
+                    padding: 0 17px;
+                    border: 1px solid var(--color-card-border, var(--border, rgba(255, 255, 255, .14)));
+                    border-radius: 11px;
                     color: inherit;
-                    background: rgba(255, 255, 255, .06);
+                    background: transparent;
                     font: inherit;
                     font-weight: 500;
                     cursor: pointer;
-                    transition: background .2s ease, transform .2s ease;
+                    transition: background .2s ease, border-color .2s ease, transform .2s ease;
                 }
-                .notaire-logout-actions button:hover { background: rgba(255, 255, 255, .12); transform: translateY(-1px); }
-                .notaire-logout-actions .notaire-logout-confirm {
+                .notaire-app-actions button:hover { border-color: var(--color-primary, var(--primary, #a855f7)); transform: translateY(-1px); }
+                .notaire-app-actions .notaire-app-confirm {
                     border-color: transparent;
-                    background: linear-gradient(135deg, #8c00ff, #8b008b);
+                    background: linear-gradient(135deg, var(--color-primary, var(--primary, #8c00ff)), var(--color-secondary, #8b008b));
                     color: #fff;
                 }
-                .notaire-logout-actions .notaire-logout-confirm:hover { background: linear-gradient(135deg, #9d28ff, #a000a0); }
-                .notaire-logout-actions button:focus-visible { outline: 2px solid #c77aff; outline-offset: 3px; }
+                .notaire-app-actions .notaire-app-confirm:hover { filter: brightness(1.08); }
+                .notaire-app-actions button:focus-visible { outline: 2px solid var(--color-primary, var(--primary, #a855f7)); outline-offset: 3px; }
+                @media (max-width: 480px) {
+                    .notaire-app-message { margin-left: 0; }
+                    .notaire-app-actions button { flex: 1; }
+                }
                 @media (prefers-reduced-motion: reduce) {
-                    .notaire-logout-actions button { transition: none; }
+                    .notaire-app-actions button { transition: none; }
                 }
             `;
             document.head.appendChild(styles);
             dialog = document.createElement('dialog');
-            dialog.id = 'notaireLogoutDialog';
-            dialog.className = 'notaire-logout-dialog';
-            dialog.setAttribute('aria-labelledby', 'notaireLogoutTitle');
+            dialog.id = 'notaireAppDialog';
+            dialog.className = 'notaire-app-dialog';
+            dialog.setAttribute('aria-labelledby', 'notaireAppDialogTitle');
             dialog.innerHTML = `
-                <div class="notaire-logout-content">
-                    <div class="notaire-logout-heading">
-                        <span class="notaire-logout-icon" aria-hidden="true"><i class="fas fa-right-from-bracket"></i></span>
-                        <h2 class="notaire-logout-title" id="notaireLogoutTitle">Cerrar sesión</h2>
+                <div class="notaire-app-content">
+                    <div class="notaire-app-heading">
+                        <span class="notaire-app-icon" aria-hidden="true"><i></i></span>
+                        <h2 class="notaire-app-title" id="notaireAppDialogTitle"></h2>
                     </div>
-                    <p class="notaire-logout-message">¿Quieres cerrar tu sesión de Notaire en este dispositivo?</p>
-                    <div class="notaire-logout-actions">
-                        <button type="button" class="notaire-logout-cancel">Cancelar</button>
-                        <button type="button" class="notaire-logout-confirm">Cerrar sesión</button>
+                    <p class="notaire-app-message"></p>
+                    <div class="notaire-app-actions">
+                        <button type="button" class="notaire-app-cancel">Cancelar</button>
+                        <button type="button" class="notaire-app-confirm"></button>
                     </div>
                 </div>
             `;
-            dialog.querySelector('.notaire-logout-cancel').addEventListener('click', () => dialog.close());
-            dialog.querySelector('.notaire-logout-confirm').addEventListener('click', () => dialog.close('confirm'));
             document.body.appendChild(dialog);
         }
 
         return new Promise(resolve => {
+            const cancelButton = dialog.querySelector('.notaire-app-cancel');
+            const confirmButton = dialog.querySelector('.notaire-app-confirm');
+            dialog.querySelector('.notaire-app-title').textContent = title;
+            dialog.querySelector('.notaire-app-message').textContent = message;
+            dialog.querySelector('.notaire-app-icon i').className = `fas ${icon}`;
+            cancelButton.hidden = !cancelText;
+            cancelButton.textContent = cancelText || 'Cancelar';
+            confirmButton.textContent = confirmText;
+            cancelButton.onclick = () => dialog.close('cancel');
+            confirmButton.onclick = () => dialog.close('confirm');
             dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
             dialog.showModal();
-            dialog.querySelector('.notaire-logout-cancel').focus();
+            (cancelText ? cancelButton : confirmButton).focus();
+        });
+    }
+
+    window.notaireConfirm = (message, options = {}) => showNotaireDialog({
+        title: options.title || 'Confirmar acción',
+        message,
+        confirmText: options.confirmText || 'Confirmar',
+        cancelText: options.cancelText || 'Cancelar',
+        icon: options.icon || 'fa-circle-question'
+    });
+
+    window.notaireAlert = (message, options = {}) => showNotaireDialog({
+        title: options.title || 'Notaire',
+        message,
+        confirmText: options.confirmText || 'Aceptar',
+        icon: options.icon || 'fa-circle-info'
+    });
+
+    function showLogoutDialog() {
+        return showNotaireDialog({
+            title: 'Cerrar sesión',
+            message: '¿Quieres cerrar tu sesión de Notaire en este dispositivo?',
+            confirmText: 'Cerrar sesión',
+            cancelText: 'Cancelar',
+            icon: 'fa-right-from-bracket'
         });
     }
 
@@ -221,13 +270,16 @@
             const styles = document.createElement('style');
             styles.textContent = `
                 .notaire-password-dialog {
+                    position: fixed;
+                    inset: 0;
+                    margin: auto;
                     width: min(440px, calc(100vw - 32px));
                     max-height: min(90vh, 720px);
                     padding: 0;
                     overflow: auto;
                     color: var(--color-text-main, #f4f1fa);
                     background: var(--color-card-bg, #171321);
-                    border: 1px solid rgba(168, 85, 247, .28);
+                    border: 1px solid var(--color-card-border, rgba(168, 85, 247, .28));
                     border-radius: 20px;
                     box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
                     font: 400 14px/1.5 Outfit, sans-serif;
@@ -245,8 +297,8 @@
                     flex: 0 0 44px;
                     place-items: center;
                     border-radius: 14px;
-                    background: rgba(140, 0, 255, .18);
-                    color: #c77aff;
+                    background: rgba(var(--color-primary-rgb, 140, 0, 255), .16);
+                    color: var(--color-primary, var(--primary, #c77aff));
                     font-size: 19px;
                 }
                 .notaire-password-title { margin: 0; color: inherit; font-size: 19px; font-weight: 600; }
@@ -264,7 +316,7 @@
                     border-radius: 11px;
                     font: inherit;
                 }
-                .notaire-password-field input:focus { outline: 2px solid #a855f7; outline-offset: 1px; }
+                .notaire-password-field input:focus { outline: 2px solid var(--color-primary, var(--primary, #a855f7)); outline-offset: 1px; }
                 .notaire-password-status { margin: 14px 0 0; color: var(--color-text-muted, #b8b2c4); }
                 .notaire-password-status.is-error { color: #ff9a9a; }
                 .notaire-password-status[hidden] { display: none; }
@@ -282,7 +334,7 @@
                 }
                 .notaire-password-actions .notaire-password-submit {
                     border-color: transparent;
-                    background: linear-gradient(135deg, #8c00ff, #8b008b);
+                    background: linear-gradient(135deg, var(--color-primary, var(--primary, #8c00ff)), var(--color-secondary, #8b008b));
                     color: #fff;
                 }
                 .notaire-password-actions button:disabled { cursor: wait; opacity: .7; }

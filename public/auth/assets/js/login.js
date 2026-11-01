@@ -35,6 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const togglePass = document.getElementById('togglePassword');
     const passInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+
+    const resetLoginState = () => {
+        if (!loginBtn) return;
+        loginBtn.disabled = false;
+        loginBtn.style.opacity = '1';
+        const label = loginBtn.querySelector('span');
+        if (label) label.textContent = 'Iniciar Sesión';
+        if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
+    };
+
+    window.addEventListener('pageshow', resetLoginState);
 
     if (togglePass && passInput) {
         togglePass.addEventListener('click', () => {
@@ -47,28 +60,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('loginBtn');
+            const btn = loginBtn;
+            if (!btn || btn.disabled) return;
             const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
             const loader = document.getElementById('loader');
-            
+            const label = btn.querySelector('span');
+
+            if (loginError) {
+                loginError.textContent = '';
+                loginError.hidden = true;
+            }
             btn.disabled = true;
             btn.style.opacity = '0.7';
-            if (btn.querySelector('span')) {
-                btn.querySelector('span').innerText = 'Validando...';
-            }
+            if (label) label.textContent = 'Validando...';
             if (loader) loader.style.display = 'block';
-            
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password }),
+                    signal: controller.signal
                 });
                 const data = await parseLoginResponse(response);
 
                 if (!response.ok) {
-                    throw new Error(data.error || data.detalle || 'Credenciales incorrectas');
+                    throw new Error(data.error || data.detalle || 'Correo o contraseña incorrectos.');
                 }
 
                 const assignedRole = resolveUserRole(data.usuario);
@@ -88,13 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 window.location.href = dashboardPath;
             } catch (error) {
-                window.alert('Error de inicio de sesión: ' + error.message);
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                if (btn.querySelector('span')) {
-                    btn.querySelector('span').innerText = 'Iniciar Sesión';
+                if (loginError) {
+                    loginError.textContent = getLoginErrorMessage(error);
+                    loginError.hidden = false;
+                } else {
+                    console.error('Error de inicio de sesión:', error);
                 }
-                if (loader) loader.style.display = 'none';
+            } finally {
+                window.clearTimeout(timeoutId);
+                resetLoginState();
             }
         });
     }
@@ -114,14 +136,29 @@ document.addEventListener('DOMContentLoaded', () => {
 async function parseLoginResponse(response) {
     const body = await response.text();
     if (!body.trim()) {
-        throw new Error(`El servidor respondió sin contenido (HTTP ${response.status}). Verifica que /api/auth/login esté disponible.`);
+        throw new Error(`El servidor respondió sin contenido (HTTP ${response.status}).`);
     }
 
     try {
         return JSON.parse(body);
     } catch {
-        throw new Error(`El servidor devolvió una respuesta no válida (HTTP ${response.status}). Verifica que /api/auth/login esté disponible.`);
+        throw new Error(`El servidor devolvió una respuesta no válida (HTTP ${response.status}).`);
     }
+}
+
+function getLoginErrorMessage(error) {
+    if (error?.name === 'AbortError') return 'La solicitud tardó demasiado. Inténtalo de nuevo.';
+    const message = String(error?.message || '');
+    if (/failed to fetch|networkerror|load failed/i.test(message)) {
+        return 'No se pudo conectar con Notaire. Verifica tu conexión e inténtalo de nuevo.';
+    }
+    if (/credenciales|contraseña|correo/i.test(message)) {
+        return 'Correo o contraseña incorrectos.';
+    }
+    if (/servidor respondió|respuesta no válida|\/api\/auth\/login/i.test(message)) {
+        return `${message} Verifica que el servidor esté disponible.`;
+    }
+    return message || 'No se pudo iniciar sesión. Inténtalo de nuevo.';
 }
 
 function resolveUserRole(user = {}) {

@@ -205,7 +205,7 @@ async function handleGuardarEdicionMeta(event) {
 }
 
 async function eliminarMetaReal(id, nombre) {
-    if (!window.confirm(`¿Eliminar la meta "${nombre}"?`)) return;
+    if (!await window.notaireConfirm(`¿Eliminar la meta "${nombre}"?`, { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
 
@@ -224,18 +224,41 @@ async function eliminarMetaReal(id, nombre) {
     }
 }
 
-function openModalAportarMeta(metaId, metaNombre) {
+function openModalAportarMeta(metaId, metaNombre, objetivo = 0, actual = 0) {
     const id = document.getElementById('aporteMetaId');
     const name = document.getElementById('aporteMetaNombre');
     const amount = document.getElementById('aporteMonto');
     if (id) id.value = metaId;
     if (name) name.value = metaNombre;
     if (amount) amount.value = '';
+    const remaining = Math.max(0, Number(objetivo) - Number(actual));
+    const objetivoInput = document.getElementById('aporteMetaObjetivo');
+    const actualInput = document.getElementById('aporteMetaActual');
+    const remainingLabel = document.getElementById('aporteDisponible');
+    if (objetivoInput) objetivoInput.value = String(Number(objetivo) || 0);
+    if (actualInput) actualInput.value = String(Number(actual) || 0);
+    if (amount) {
+        amount.max = String(remaining);
+        amount.disabled = remaining <= 0;
+    }
+    if (remainingLabel) {
+        const english = window.getCurrentLang?.() === 'en';
+        remainingLabel.textContent = remaining > 0
+            ? `${english ? 'Remaining to reach the goal: ' : 'Máximo disponible para completar la meta: '}${formatCOP(remaining)}`
+            : (english ? 'This goal is already complete.' : 'Esta meta ya alcanzó su monto objetivo.');
+    }
+    const submit = document.querySelector('#modalAportarMeta button[type="submit"]');
+    if (submit) submit.disabled = remaining <= 0;
+    const errorBox = document.getElementById('aporteError');
+    if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+    }
     openModal('modalAportarMeta');
 }
 
-function openModalAbono(metaId, metaNombre) {
-    openModalAportarMeta(metaId, metaNombre);
+function openModalAbono(metaId, metaNombre, objetivo, actual) {
+    openModalAportarMeta(metaId, metaNombre, objetivo, actual);
 }
 
 function openModalPerfil() {
@@ -535,6 +558,10 @@ async function handleGuardarNuevaMeta(event) {
         showToast('Completa un nombre y un monto objetivo válido');
         return;
     }
+    if (!Number.isFinite(payload.monto_actual) || payload.monto_actual < 0 || payload.monto_actual > payload.monto_objetivo) {
+        showToast('El ahorro inicial no puede superar el monto objetivo de la meta.');
+        return;
+    }
 
     try {
         const response = await fetch('/api/metas', {
@@ -564,6 +591,19 @@ async function handleGuardarAporteMeta(event) {
     const metaId = document.getElementById('aporteMetaId')?.value;
     const monto = parseFormattedAmount(document.getElementById('aporteMonto')?.value);
     if (!token || !metaId || !Number.isFinite(monto) || monto <= 0) return;
+    const objetivo = Number(document.getElementById('aporteMetaObjetivo')?.value || 0);
+    const actual = Number(document.getElementById('aporteMetaActual')?.value || 0);
+    const restante = Math.max(0, objetivo - actual);
+    if (monto > restante) {
+        mostrarErrorAporte({
+            codigo: 'META_LIMITE',
+            montoMaximo: restante,
+            error: restante > 0
+                ? `Solo puedes aportar ${formatCOP(restante)} para completar esta meta.`
+                : 'Esta meta ya alcanzó su monto objetivo.'
+        });
+        return;
+    }
 
     try {
         const response = await fetch('/api/metas/aportar', {
@@ -573,6 +613,10 @@ async function handleGuardarAporteMeta(event) {
         });
         const result = await response.json().catch(() => ({}));
         if (response.status === 422 && result.codigo === 'SALDO_INSUFICIENTE') {
+            mostrarErrorAporte(result);
+            return;
+        }
+        if (response.status === 422 && result.codigo === 'META_LIMITE') {
             mostrarErrorAporte(result);
             return;
         }

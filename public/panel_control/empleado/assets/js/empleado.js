@@ -390,7 +390,7 @@
         const { act, id } = button.dataset;
         if (act === 'detail') return openDetail(id);
         if (act === 'del-cita') {
-            if (!window.confirm('¿Eliminar esta cita?')) return;
+            if (!await window.notaireConfirm('¿Eliminar esta cita?', { title: 'Eliminar cita', confirmText: 'Eliminar' })) return;
             try {
                 await api(`/api/eventos/${encodeURIComponent(id)}`, { method: 'DELETE' });
                 notify('Cita eliminada', true);
@@ -401,14 +401,14 @@
         const t = findTramite(id);
         if (!t) return;
         if (act === 'sign') {
-            if (!window.confirm(`¿Firmar y finalizar el trámite "${t.titulo}"?`)) return;
+            if (!await window.notaireConfirm(`¿Firmar y finalizar el trámite "${t.titulo}"?`, { title: 'Finalizar trámite', confirmText: 'Firmar' })) return;
             await updateTramite(id, { estado: 'finalizado' }, 'Trámite firmado y finalizado');
         } else if (act === 'take') {
             await updateTramite(id, { responsable_id: state.user.id }, 'Trámite asignado a ti');
         } else if (act === 'approve') {
             await updateTramite(id, { estado: 'pendiente', responsable_id: t.responsable_id || state.user.id }, 'Verificación aprobada: pendiente de firma');
         } else if (act === 'reject') {
-            if (!window.confirm(`¿Rechazar el trámite "${t.titulo}"?`)) return;
+            if (!await window.notaireConfirm(`¿Rechazar el trámite "${t.titulo}"?`, { title: 'Rechazar trámite', confirmText: 'Rechazar' })) return;
             await updateTramite(id, { estado: 'rechazado' }, 'Trámite rechazado');
         }
     }

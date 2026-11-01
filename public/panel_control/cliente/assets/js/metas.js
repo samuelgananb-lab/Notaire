@@ -3,6 +3,7 @@ async function cargarMetasYAhorros() {
         const respuesta = await fetchMetas();
         const metas = Array.isArray(respuesta) ? respuesta : [];
         const resumen = resumirMetas(metas);
+        notificarAvanceMetas(metas);
         const moneda = valor => `$${valor.toLocaleString('es-CO')}`;
 
         document.querySelectorAll('.total-ahorrado-val').forEach(el => {
@@ -54,7 +55,8 @@ async function cargarMetasYAhorros() {
 
         contenedoresUnicos.forEach(contenedor => {
             if (metas.length === 0) {
-                contenedor.innerHTML = '<p class="data-state data-state-empty">No tienes metas registradas aún.</p>';
+                const english = window.getCurrentLang?.() === 'en';
+                contenedor.innerHTML = `<p class="data-state data-state-empty">${english ? 'You have no goals yet.' : 'No tienes metas registradas aún.'}</p>`;
                 return;
             }
 
@@ -67,7 +69,6 @@ async function cargarMetasYAhorros() {
                 const porcentaje = goal.progreso;
                 const falta = Math.max(objetivo - actual, 0);
                 const english = window.getCurrentLang?.() === 'en';
-                const nombreSeguro = String(nombre).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                 const nombreHtml = String(nombre).replace(/[&<>\"]/g, caracter => ({
                     '&': '&amp;',
                     '<': '&lt;',
@@ -78,6 +79,7 @@ async function cargarMetasYAhorros() {
                 const circumference = 169.64;
                 const strokeOffset = (circumference - (porcentaje / 100) * circumference).toFixed(1);
                 const fechaSegura = escaparTextoMeta(meta.fecha_limite || '');
+                const idSeguro = escaparTextoMeta(id);
 
                 return `
                     <div class="goal-card${goal.completada ? ' is-completed' : ''}">
@@ -97,13 +99,13 @@ async function cargarMetasYAhorros() {
                         </div>
                         <div class="goal-amounts-row">${moneda(actual)} / ${moneda(objetivo)}</div>
                         <div class="goal-details-list">
-                            <span>Falta: ${moneda(falta)}</span>
-                            <span>Fecha: ${escaparTextoMeta(meta.fecha_limite || 'Sin fecha')}</span>
+                            <span>${english ? 'Remaining:' : 'Falta:'} ${moneda(falta)}</span>
+                            <span>${english ? 'Due:' : 'Fecha:'} ${escaparTextoMeta(meta.fecha_limite || (english ? 'No date' : 'Sin fecha'))}</span>
                         </div>
                         <div class="goal-card-actions">
-                            ${goal.completada ? '' : `<button type="button" class="btn-aportar-goal" style="flex:1;" onclick="openModalAportarMeta('${id}', '${nombreSeguro}')"><i class="fas fa-plus"></i> Aportar</button>`}
-                            <button type="button" class="goal-card-icon-action" onclick="openModalEditarMeta('${id}', '${nombreSeguro}', ${objetivo}, ${actual}, '${fechaSegura}')" title="Editar meta" aria-label="Editar meta"><i class="fas fa-pen"></i></button>
-                            <button type="button" class="goal-card-icon-action is-danger" onclick="eliminarMetaReal('${id}', '${nombreSeguro}')" title="Eliminar meta" aria-label="Eliminar meta"><i class="fas fa-trash-can"></i></button>
+                            ${goal.completada ? '' : `<button type="button" class="btn-aportar-goal" style="flex:1;" data-goal-id="${idSeguro}" data-goal-name="${nombreHtml}" data-goal-target="${objetivo}" data-goal-current="${actual}" onclick="openModalAportarMeta(this.dataset.goalId, this.dataset.goalName, Number(this.dataset.goalTarget), Number(this.dataset.goalCurrent))"><i class="fas fa-plus"></i> ${english ? 'Contribute' : 'Aportar'}</button>`}
+                            <button type="button" class="goal-card-icon-action" data-goal-id="${idSeguro}" data-goal-name="${nombreHtml}" data-goal-target="${objetivo}" data-goal-current="${actual}" data-goal-date="${fechaSegura}" onclick="openModalEditarMeta(this.dataset.goalId, this.dataset.goalName, Number(this.dataset.goalTarget), Number(this.dataset.goalCurrent), this.dataset.goalDate)" title="${english ? 'Edit goal' : 'Editar meta'}" aria-label="${english ? 'Edit goal' : 'Editar meta'}"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="goal-card-icon-action is-danger" data-goal-id="${idSeguro}" data-goal-name="${nombreHtml}" onclick="eliminarMetaReal(this.dataset.goalId, this.dataset.goalName)" title="${english ? 'Delete goal' : 'Eliminar meta'}" aria-label="${english ? 'Delete goal' : 'Eliminar meta'}"><i class="fas fa-trash-can"></i></button>
                         </div>
                     </div>
                 `;
@@ -111,12 +113,63 @@ async function cargarMetasYAhorros() {
         });
     } catch (err) {
         console.error('Error sincronizando ahorro y metas:', err);
+        const english = window.getCurrentLang?.() === 'en';
         document.querySelectorAll('#containerGoalsGrid, #metasGoalsGrid').forEach(contenedor => {
-            contenedor.innerHTML = '<p class="data-state data-state-error">No se pudieron cargar las metas.</p>';
+            contenedor.innerHTML = `<p class="data-state data-state-error">${english ? 'Goals could not be loaded.' : 'No se pudieron cargar las metas.'}</p>`;
         });
     } finally {
         window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
+}
+
+function notificarAvanceMetas(metas) {
+    if (typeof triggerSystemNotif !== 'function') return;
+    const english = window.getCurrentLang?.() === 'en';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    metas.forEach(meta => {
+        const goal = resumirMeta(meta);
+        const id = meta.id ?? meta.id_meta;
+        const nombre = String(meta.nombre ?? meta.nombre_meta ?? (english ? 'Goal' : 'Meta'));
+        if (goal.completada) {
+            triggerSystemNotif(
+                english ? '🎉 Goal completed' : '🎉 ¡Terminaste tu meta!',
+                english ? `You completed "${nombre}". Congratulations!` : `Completaste "${nombre}". ¡Felicitaciones!`,
+                { type: 'goal', target: 'view-metas', dedupeKey: `goal:${id}:completed` }
+            );
+            return;
+        }
+
+        if (goal.progreso >= 90) {
+            const remainingPercent = Math.max(0, 100 - goal.progreso);
+            triggerSystemNotif(
+                english ? '✨ Goal almost complete' : '✨ ¡Tu meta está por completarse!',
+                english
+                    ? `${remainingPercent}% remaining to complete "${nombre}".`
+                    : `Te falta ${remainingPercent}% para terminar "${nombre}".`,
+                { type: 'goal', target: 'view-metas', dedupeKey: `goal:${id}:progress-90` }
+            );
+        }
+
+        if (!meta.fecha_limite) return;
+        const deadline = new Date(`${meta.fecha_limite}T00:00:00`);
+        if (Number.isNaN(deadline.getTime())) return;
+        const daysRemaining = Math.round((deadline.getTime() - today.getTime()) / 86400000);
+        if (![7, 3, 1, 0].includes(daysRemaining)) return;
+        const when = daysRemaining === 0
+            ? (english ? 'today' : 'hoy')
+            : (english
+                ? `in ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}`
+                : `en ${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}`);
+        triggerSystemNotif(
+            english ? '⏳ Goal deadline approaching' : '⏳ Se acerca el plazo de tu meta',
+            english
+                ? `The deadline for "${nombre}" ends ${when}.`
+                : `El plazo de "${nombre}" termina ${when}.`,
+            { type: 'goal', target: 'view-metas', dedupeKey: `goal:${id}:deadline:${meta.fecha_limite}:${daysRemaining}` }
+        );
+    });
 }
 
 function resumirMeta(meta) {

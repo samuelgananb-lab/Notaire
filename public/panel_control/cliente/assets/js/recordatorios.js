@@ -44,6 +44,7 @@ async function cargarRecordatorios() {
         }).join('');
     } catch (error) {
         console.error('Error al cargar recordatorios:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudieron cargar los compromisos' });
     } finally {
         window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
@@ -88,7 +89,7 @@ function configurarFormularioRecordatorios() {
             document.getElementById('modalRecordatorio').style.display = 'none';
             await cargarRecordatorios();
         } catch (error) {
-            window.alert(`Detalle del error: ${error.message}`);
+            void window.notaireAlert(error.message, { title: 'No se pudo guardar el compromiso' });
         }
     });
 }
@@ -110,11 +111,12 @@ async function cambiarEstadoRecordatorio(id, estado) {
         await cargarRecordatorios();
     } catch (error) {
         console.error('Error al actualizar estado:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudo actualizar el compromiso' });
     }
 }
 
 async function eliminarRecordatorio(id) {
-    if (!window.confirm('¿Eliminar este compromiso financiero?')) return;
+    if (!await window.notaireConfirm('¿Eliminar este compromiso financiero?', { title: 'Eliminar compromiso', confirmText: 'Eliminar' })) return;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
 
@@ -127,6 +129,7 @@ async function eliminarRecordatorio(id) {
         await cargarRecordatorios();
     } catch (error) {
         console.error('Error al eliminar recordatorio:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudo eliminar el compromiso' });
     }
 }
 
