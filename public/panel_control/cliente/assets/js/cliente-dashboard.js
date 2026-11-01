@@ -7,7 +7,6 @@ const NotaireState = {
     presupuestoTotal: 0
 };
 
-let chartClienteIngresos = null;
 let dashboardMetricsCache = null;
 let dashboardMetricsPromise = null;
 let dashboardMetricsPromiseKey = null;
@@ -54,10 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalSearch();
     initMovimientoModal();
     cargarResumenDashboard();
-});
-
-document.addEventListener('notaire:languagechange', () => {
-    if (chartClienteIngresos) cargarDatosFinancieros();
 });
 
 function sincronizarEstadoCliente() {
@@ -424,9 +419,6 @@ function navigateTo(viewId) {
         headerTitle.textContent = text.toUpperCase();
     }
 
-    if (viewId === 'view-ingresos' && chartClienteIngresos) {
-        window.setTimeout(() => chartClienteIngresos.resize(), 100);
-    }
     if (viewId === 'view-gastos' || viewId === 'view-ingresos') {
         void cargarDatosFinancieros(viewId);
     }
@@ -661,133 +653,58 @@ async function cargarDatosFinancieros(viewId = document.querySelector('.content-
     try {
         setDataState(document.getElementById('listUltimosMovimientos'), 'Cargando gastos...', 'loading');
         setDataState(document.getElementById('listUltimosIngresos'), 'Cargando ingresos...', 'loading');
-        setDataState(document.getElementById('listMayoresGastos'), 'Cargando categorías...', 'loading');
-        const monthKey = window.NotaireFinancialChart?.currentMonthKey();
-        const [dashboardData, transactionsResponse] = await Promise.all([
-            getDashboardMetrics(),
-            fetchTransacciones(monthKey)
-        ]);
+        const monthKey = window.NotaireFinancialChart?.selectedMonthKey() ||
+            window.NotaireFinancialChart?.currentMonthKey();
+        const transactionsResponse = await fetchTransacciones(monthKey);
         const transacciones = Array.isArray(transactionsResponse) ? transactionsResponse : [];
-        const canvasIngresos = document.getElementById('chartEvolucionIngresos');
-        if (canvasIngresos && typeof Chart !== 'undefined' && window.NotaireFinancialChart &&
-            (viewId === 'view-ingresos' || chartClienteIngresos)) {
-            const serieIngresos = window.NotaireFinancialChart.createMonthlyTotals([], 'ingreso');
-            serieIngresos.values = (dashboardData.ingresosMensuales || []).map(item => Number(item.total) || 0);
-            if (chartClienteIngresos) {
-                chartClienteIngresos.data.labels = serieIngresos.labels;
-                chartClienteIngresos.data.datasets[0].data = serieIngresos.values;
-                chartClienteIngresos.update('none');
-            } else {
-                chartClienteIngresos = new Chart(
-                    canvasIngresos.getContext('2d'),
-                    window.NotaireFinancialChart.createConfig(
-                        serieIngresos.labels,
-                        serieIngresos.values,
-                        formatCOP,
-                        window.translateText?.('Ingresos') || 'Ingresos'
-                    )
-                )
-            }
-        } else if (canvasIngresos && (typeof Chart === 'undefined' || !window.NotaireFinancialChart)) {
-            console.error('No se pudo inicializar la gráfica de ingresos: faltan Chart.js o NotaireFinancialChart.');
-        }
         const tipoMovimiento = item => window.NotaireFinancialChart
             ? window.NotaireFinancialChart.getTransactionType(item)
             : String(item.tipo || item.tipo_registro || '').toLowerCase();
-        const gastos = transacciones.filter(item => tipoMovimiento(item) === 'gasto');
-        const ingresos = transacciones.filter(item => tipoMovimiento(item) === 'ingreso');
-        const totalGastos = gastos.reduce((total, item) => total + Number(item.monto || 0), 0);
-        const totalIngresos = ingresos.reduce((total, item) => total + Number(item.monto || 0), 0);
-        const mayorIngreso = ingresos.reduce((mayor, item) => Math.max(mayor, Number(item.monto || 0)), 0);
-        const actualizar = (id, value) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        };
-        actualizar('valGastadoEsteMes', formatCOP(totalGastos));
-        actualizar('centerGastosTotal', formatCOP(totalGastos));
-        actualizar('valTotalIngresos', formatCOP(totalIngresos));
-        actualizar('centerIngresosTotal', formatCOP(totalIngresos));
-        actualizar('valMayorIngreso', formatCOP(mayorIngreso));
-        const promedioMensual = (dashboardData.ingresosMensuales || [])
-            .reduce((total, item) => total + (Number(item.total) || 0), 0) /
-            ((dashboardData.ingresosMensuales || []).length || 1);
-        actualizar('valPromedioMensual', formatCOP(promedioMensual));
-        const presupuesto = Number(localStorage.getItem('notaire_presupuesto') || 0);
-        const presupuestoMensual = window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.calculateBudgetPosition(presupuesto, totalGastos)
-            : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
-        actualizar('valPresupuestoTotal', presupuestoMensual.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
-        actualizar('valPresupuestoPct', presupuestoMensual.hasBudget ? `${Math.round(presupuestoMensual.percentUsed)}% utilizado` : 'Sin presupuesto');
-        renderTransacciones('listUltimosMovimientos', gastos, false);
-        renderTransacciones('listUltimosIngresos', ingresos, true);
-        renderGastosPorCategoria(gastos, totalGastos);
-        renderLeyenda('legendGastosCategorias', gastos, 'gasto');
-        renderLeyenda('legendIngresosFuentes', ingresos, 'ingreso');
+        const monthTransactions = monthKey
+            ? transacciones.filter(item => String(item.fecha || '').slice(0, 7) === monthKey)
+            : transacciones;
+        const movimientosOrdenados = monthTransactions.sort((a, b) =>
+            new Date(b.fecha || 0) - new Date(a.fecha || 0) || Number(b.id) - Number(a.id)
+        );
+        const gastos = movimientosOrdenados.filter(item => tipoMovimiento(item) === 'gasto');
+        const ingresos = movimientosOrdenados.filter(item => tipoMovimiento(item) === 'ingreso');
+        renderTransacciones('listUltimosMovimientos', 'totalGastosLista', gastos, false);
+        renderTransacciones('listUltimosIngresos', 'totalIngresosLista', ingresos, true);
     } catch (error) {
         console.error('Error al cargar datos financieros:', error);
         setDataState(document.getElementById('listUltimosMovimientos'), 'No se pudieron cargar los gastos.', 'error');
         setDataState(document.getElementById('listUltimosIngresos'), 'No se pudieron cargar los ingresos.', 'error');
-        setDataState(document.getElementById('listMayoresGastos'), 'No se pudieron cargar las categorías.', 'error');
+        const totalGastos = document.getElementById('totalGastosLista');
+        const totalIngresos = document.getElementById('totalIngresosLista');
+        if (totalGastos) totalGastos.textContent = formatCOP(0);
+        if (totalIngresos) totalIngresos.textContent = formatCOP(0);
         showToast('No se pudieron cargar los movimientos');
     } finally {
         window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
-function renderTransacciones(containerId, transacciones, sonIngresos) {
+function renderTransacciones(containerId, totalId, transacciones, sonIngresos) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const lista = transacciones.slice(0, 5);
-    container.innerHTML = lista.length ? lista.map(item => `
-        <div class="transaction-row">
+    const total = transacciones.reduce((sum, item) => sum + (Number(item.monto) || 0), 0);
+    const totalElement = document.getElementById(totalId);
+    if (totalElement) totalElement.textContent = formatCOP(total);
+    const escHtml = escaparTextoCliente;
+    container.innerHTML = transacciones.length ? transacciones.map(item => `
+        <div class="transaction-row" data-transaction="${escHtml(JSON.stringify({ ...item, id: item.id || item.id_registro }))}">
             <div class="transaction-left"><div class="transaction-icon-box">${sonIngresos ? '💼' : '🧾'}</div>
-            <div class="transaction-info"><span class="transaction-title">${escaparTextoCliente(item.descripcion || item.categoria || 'Movimiento')}</span>
-            <span class="transaction-date" data-user-content="true">${escaparTextoCliente(item.fecha || '')} · ${escaparTextoCliente(item.categoria || '')}</span></div></div>
+                <div class="transaction-info">
+                    <span class="transaction-title" data-user-content="true">${escHtml(item.descripcion || item.categoria || 'Movimiento')}</span>
+                    <span class="transaction-date" data-user-content="true">${escHtml(item.fecha || '')} · ${escHtml(item.categoria || '')}</span>
+                </div>
+            </div>
             <span class="${sonIngresos ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${sonIngresos ? '+' : '-'}${formatCOP(item.monto)}</span>
+            <div class="transaction-actions">
+                <button type="button" class="btn-tx-edit" aria-label="Editar movimiento" title="Editar" onclick="abrirModalEdicion(JSON.parse(this.closest('.transaction-row').dataset.transaction))"><i class="fas fa-pen"></i></button>
+                <button type="button" class="btn-tx-delete" aria-label="Eliminar movimiento" title="Eliminar" data-id="${escHtml(item.id || item.id_registro)}" data-type="${sonIngresos ? 'ingreso' : 'gasto'}" onclick="eliminarMovimiento(this.dataset.id, this.dataset.type)"><i class="fas fa-trash"></i></button>
+            </div>
         </div>`).join('') : '<p class="data-state data-state-empty">No hay registros este mes.</p>';
-}
-
-function renderGastosPorCategoria(gastos, totalGastos) {
-    const container = document.getElementById('listMayoresGastos');
-    if (!container) return;
-    const colorTema = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
-    const categorias = {};
-    gastos.forEach(item => {
-        const categoria = item.categoria || 'Otros';
-        categorias[categoria] = (categorias[categoria] || 0) + Number(item.monto || 0);
-    });
-    const lista = Object.entries(categorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    container.innerHTML = lista.length ? lista.map(([categoria, monto]) => {
-        const porcentaje = totalGastos ? Math.round((monto / totalGastos) * 100) : 0;
-        return `<div class="category-progress-item"><div class="category-info-row"><span class="category-name-icon" data-user-content="true">${escaparTextoCliente(categoria)}</span><div class="category-amount-pct"><span class="category-amount">${formatCOP(monto)}</span><span class="category-pct">${porcentaje}%</span></div></div><div class="progress-track-bg"><div class="progress-fill-bar" style="width: ${porcentaje}%; background: ${colorTema};"></div></div></div>`;
-    }).join('') : '<p class="data-state data-state-empty">No hay gastos registrados este mes.</p>';
-}
-
-function renderLeyenda(containerId, transacciones, tipo) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const movimientos = transacciones.filter(item => (
-        String(item.tipo || item.tipo_registro || '').toLowerCase() === tipo
-    ));
-    const total = movimientos.reduce((sum, item) => sum + Number(item.monto || 0), 0);
-    const grupos = {};
-    movimientos.forEach(item => {
-        const clave = item.categoria || 'Otros';
-        grupos[clave] = (grupos[clave] || 0) + Number(item.monto || 0);
-    });
-    const styles = getComputedStyle(document.documentElement);
-    const colores = [
-        styles.getPropertyValue('--color-accent-orange').trim(),
-        styles.getPropertyValue('--color-primary').trim(),
-        styles.getPropertyValue('--color-primary-hover').trim(),
-        styles.getPropertyValue('--color-secondary').trim(),
-        styles.getPropertyValue('--color-secondary-light').trim()
-    ];
-    const lista = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
-    container.innerHTML = lista.length ? lista.map(([nombre, monto], index) => {
-        const porcentaje = total ? Math.round((monto / total) * 100) : 0;
-        return `<div class="legend-item"><span class="legend-dot" style="background: ${colores[index % colores.length]};"></span> <span data-user-content="true">${escaparTextoCliente(nombre)}</span> ${porcentaje}%</div>`;
-    }).join('') : '<span class="data-state data-state-empty">Sin registros este mes.</span>';
 }
 
 const loadDashboardData = cargarResumenDashboard;

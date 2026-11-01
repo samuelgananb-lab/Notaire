@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261101-restore-lists">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261101-restore-lists">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-single-list-panels">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-single-list-panels">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -217,56 +217,18 @@
                             <p>Controla y analiza en qué estás utilizando tu dinero.</p>
                         </div>
                         <div class="section-actions-group">
-                            <select class="period-select" id="gastosPeriodSelect">
-                                <option value="este_mes">Este mes</option>
-                                <option value="mes_pasado">Mes pasado</option>
-                            </select>
                             <button class="btn-primary-action" onclick="openModalRegistrarGasto()">
                                 <i class="fas fa-plus"></i> Registrar gasto
                             </button>
                         </div>
                     </div>
 
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">GASTADO ESTE MES</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valGastadoEsteMes">$0</div></div>
-                            <div><span class="metric-trend-badge trend-down" id="gastosTendencia"><i class="fas fa-minus"></i> Sin comparación</span></div>
+                    <div class="card-box transaction-history-panel">
+                        <div class="card-box-header transaction-history-header">
+                            <h3>Lista de gastos</h3>
+                            <div><span>Total de gastos</span><strong id="totalGastosLista">$0</strong></div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PRESUPUESTO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valPresupuestoTotal">$0</div></div>
-                            <div><span class="progress-pill-red" id="valPresupuestoPct">0% utilizado</span></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">LIQUIDEZ DISPONIBLE</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valDisponibleGastos">$0</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">después de gastos</span></div>
-                        </div>
-                    </div>
-
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>¿En qué gastas más?</h3></div>
-                            <div class="donut-container">
-                                <canvas id="chartGastosDona" width="220" height="220"></canvas>
-                                <div class="donut-center-label">
-                                    <span id="centerGastosTotal">$0</span>
-                                    <small>Gastos totales</small>
-                                </div>
-                            </div>
-                            <div class="legend-list" id="legendGastosCategorias"></div>
-                        </div>
-
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Tus mayores gastos</h3></div>
-                            <div class="category-progress-list" id="listMayoresGastos"></div>
-                        </div>
-                    </div>
-
-                    <div class="card-box">
-                        <div class="card-box-header"><h3>Últimos movimientos</h3></div>
-                        <div class="transactions-list" id="listUltimosMovimientos"></div>
+                        <div class="transactions-list" id="listUltimosMovimientos" aria-live="polite"></div>
                     </div>
                 </div>
 
@@ -286,42 +248,12 @@
                         </div>
                     </div>
 
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">TOTAL INGRESOS</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valTotalIngresos">$0</div></div>
-                            <div><span class="metric-trend-badge trend-up" id="ingresosTendencia"><i class="fas fa-minus"></i> Sin comparación</span></div>
+                    <div class="card-box transaction-history-panel">
+                        <div class="card-box-header transaction-history-header">
+                            <h3>Lista de ingresos</h3>
+                            <div><span>Total de ingresos</span><strong id="totalIngresosLista">$0</strong></div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PROMEDIO MENSUAL</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valPromedioMensual">$0</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">Periodo actual</span></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">MAYOR INGRESO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valMayorIngreso">$0</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">Mayor registro</span></div>
-                        </div>
-                    </div>
-
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Evolución de ingresos</h3></div>
-                            <div class="financial-chart-canvas" style="height: 220px; position: relative;"><canvas id="chartEvolucionIngresos"></canvas></div>
-                        </div>
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Fuentes de ingresos</h3></div>
-                            <div class="donut-container">
-                                <canvas id="chartFuentesIngresos" width="220" height="220"></canvas>
-                                <div class="donut-center-label"><span id="centerIngresosTotal">$0</span><small>Total</small></div>
-                            </div>
-                            <div class="legend-list" id="legendIngresosFuentes"></div>
-                        </div>
-                    </div>
-
-                    <div class="card-box">
-                        <div class="card-box-header"><h3>Últimos ingresos</h3></div>
-                        <div class="transactions-list" id="listUltimosIngresos"></div>
+                        <div class="transactions-list" id="listUltimosIngresos" aria-live="polite"></div>
                     </div>
                 </div>
 
@@ -1294,9 +1226,9 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261101-restore-lists"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261105-single-list-panels"></script>
     <script src="assets/js/cliente-dashboard-ext.js?v=20261104-panel-polish2"></script>
-    <script src="assets/js/movimientos.js?v=20261101-restore-lists"></script>
+    <script src="assets/js/movimientos.js?v=20261101-single-list-panels"></script>
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>
