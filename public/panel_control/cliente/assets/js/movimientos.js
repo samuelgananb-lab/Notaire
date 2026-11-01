@@ -10,57 +10,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function cambiarSeccion(tipo) {
     moduloActivo = tipo;
-    document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
-    document.querySelectorAll('#sidebarMenu li').forEach(item => item.classList.remove('active'));
-
     const target = tipo === 'gasto' ? 'view-gastos' : 'view-ingresos';
-    if (window.matchMedia('(max-width: 768px)').matches) {
-        document.getElementById(target)?.classList.add('active');
-    }
-    document.getElementById('seccion-detallada')?.classList.add('active');
-    document.querySelector(`#sidebarMenu a[data-target="${target}"]`)?.parentElement.classList.add('active');
-    const headerTitle = document.getElementById('headerDynamicTitle');
-    if (headerTitle) headerTitle.textContent = tipo === 'gasto' ? 'GASTOS' : 'INGRESOS';
+    if (typeof navigateTo === 'function') navigateTo(target);
+    else cargarTablaMovimientos(tipo);
+}
 
-    cargarTablaMovimientos(tipo);
+function getFinancialHistoryPanel(tipo = moduloActivo) {
+    return document.querySelector(`.financial-history-panel[data-financial-type="${tipo}"]`);
 }
 
 async function cargarTablaMovimientos(tipo) {
+    moduloActivo = tipo;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
+
+    const panel = getFinancialHistoryPanel(tipo);
+    const tbody = panel?.querySelector('.financial-history-body');
+    const totalElement = panel?.querySelector('.financial-history-total');
+    if (!tbody) return;
 
     try {
         const mesElegido = window.NotaireFinancialChart?.selectedMonthKey() ||
             window.NotaireFinancialChart?.currentMonthKey();
         const datos = await fetchTransacciones(mesElegido);
-        transaccionesCargadas = datos.filter(item => (item.tipo || item.tipo_registro) === tipo
+        transaccionesCargadas = datos.filter(item => String(item.tipo || item.tipo_registro || '').toLowerCase() === tipo
             && String(item.fecha || '').slice(0, 7) === mesElegido);
-        aplicarFiltros();
-        const tbody = document.getElementById('tabla-detallada-body');
-        const tituloSeccion = document.getElementById('titulo-seccion-detallada');
-
-        if (tituloSeccion) {
-            tituloSeccion.textContent = tipo === 'gasto' ? 'Listado de Gastos' : 'Listado de Ingresos';
-        }
-
-        if (!tbody) return;
+        aplicarFiltros(tipo);
     } catch (error) {
         console.error(`Error al cargar ${tipo}:`, error);
-        const tbody = document.getElementById('tabla-detallada-body');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#fca5a5; padding:20px;">No se pudieron cargar los movimientos. Revisa tu sesión o intenta de nuevo.</td></tr>';
-        }
-        const totalElement = document.getElementById('total-seccion-detallada');
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#fca5a5; padding:20px;">No se pudieron cargar los movimientos. Revisa tu sesión o intenta de nuevo.</td></tr>';
         if (totalElement) totalElement.textContent = '$0';
     } finally {
         window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
-function aplicarFiltros() {
-    const texto = (document.getElementById('filtroTexto')?.value || '').toLowerCase().trim();
-    const desde = document.getElementById('filtroFechaDesde')?.value || '';
-    const hasta = document.getElementById('filtroFechaHasta')?.value || '';
+function aplicarFiltros(tipo = moduloActivo) {
+    const panel = getFinancialHistoryPanel(tipo);
+    if (!panel) return;
+    const texto = (panel.querySelector('[data-history-filter="search"]')?.value || '').toLowerCase().trim();
+    const desde = panel.querySelector('[data-history-filter="from"]')?.value || '';
+    const hasta = panel.querySelector('[data-history-filter="to"]')?.value || '';
 
     const filtrados = transaccionesCargadas.filter(item => {
         const categoria = String(item.categoria || '').toLowerCase();
@@ -71,12 +61,13 @@ function aplicarFiltros() {
             && (!hasta || fecha <= hasta);
     });
 
-    renderizarTablaFiltrada(filtrados);
+    renderizarTablaFiltrada(filtrados, tipo);
 }
 
-function renderizarTablaFiltrada(lista) {
-    const tbody = document.getElementById('tabla-detallada-body');
-    const totalElement = document.getElementById('total-seccion-detallada');
+function renderizarTablaFiltrada(lista, tipo = moduloActivo) {
+    const panel = getFinancialHistoryPanel(tipo);
+    const tbody = panel?.querySelector('.financial-history-body');
+    const totalElement = panel?.querySelector('.financial-history-total');
     if (!tbody) return;
 
     if (lista.length === 0) {
@@ -88,16 +79,16 @@ function renderizarTablaFiltrada(lista) {
     const escHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     tbody.innerHTML = lista.map(item => {
         const id = item.id || item.id_registro;
-        const itemJson = JSON.stringify({ ...item, id }).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        const itemJson = escHtml(JSON.stringify({ ...item, id }));
         return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <tr data-transaction="${itemJson}" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 12px; color: var(--color-text-muted);">${escHtml(item.fecha || 'N/A')}</td>
                 <td data-user-content="true" style="padding: 12px; color: var(--color-text-main); font-weight: 500;">${escHtml(item.categoria || 'General')}</td>
                 <td data-user-content="true" style="padding: 12px; color: var(--color-text-muted);">${escHtml(item.descripcion || '-')}</td>
-                <td style="padding: 12px; font-weight: bold; color: ${moduloActivo === 'ingreso' ? '#22c55e' : '#ef4444'};">${formatCurrency(item.monto)}</td>
+                <td style="padding: 12px; font-weight: bold; color: ${tipo === 'ingreso' ? '#22c55e' : '#ef4444'};">${formatCurrency(item.monto)}</td>
                 <td style="padding: 12px; text-align: center; display: flex; gap: 8px; justify-content: center;">
-                    <button type="button" onclick="abrirModalEdicion(${itemJson})" style="background: none; border: none; color: #3b82f6; cursor: pointer;" title="Editar">✏️</button>
-                    <button type="button" onclick="eliminarMovimiento('${id}', '${moduloActivo}')" style="background: none; border: none; color: #ef4444; cursor: pointer;" title="Eliminar">🗑️</button>
+                    <button type="button" onclick="abrirModalEdicion(JSON.parse(this.closest('tr').dataset.transaction))" style="background: none; border: none; color: #3b82f6; cursor: pointer;" title="Editar">✏️</button>
+                    <button type="button" data-id="${escHtml(id)}" data-type="${tipo}" onclick="eliminarMovimiento(this.dataset.id, this.dataset.type)" style="background: none; border: none; color: #ef4444; cursor: pointer;" title="Eliminar">🗑️</button>
                 </td>
             </tr>
         `;
@@ -106,14 +97,14 @@ function renderizarTablaFiltrada(lista) {
     if (totalElement) {
         const total = lista.reduce((sum, item) => sum + Number(item.monto || 0), 0);
         totalElement.textContent = formatCurrency(total);
-        totalElement.style.color = moduloActivo === 'ingreso' ? '#22c55e' : '#ef4444';
+        totalElement.style.color = tipo === 'ingreso' ? '#22c55e' : '#ef4444';
     }
 }
 
 function limpiarFiltros() {
-    ['filtroTexto', 'filtroFechaDesde', 'filtroFechaHasta'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) input.value = '';
+    const panel = getFinancialHistoryPanel();
+    panel?.querySelectorAll('[data-history-filter]').forEach(input => {
+        input.value = '';
     });
     aplicarFiltros();
 }
@@ -178,6 +169,10 @@ function configurarFormulario() {
             if (typeof cargarResumenDashboard === 'function') await cargarResumenDashboard();
             if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
             if (typeof cargarVistaSaldo === 'function') await cargarVistaSaldo();
+            if (document.querySelector('.content-section.active')?.id === (body.tipo === 'gasto' ? 'view-gastos' : 'view-ingresos')) {
+                await cargarTablaMovimientos(body.tipo);
+                if (typeof cargarDatosFinancieros === 'function') await cargarDatosFinancieros();
+            }
         } catch (error) {
             void window.notaireAlert(error.message, { title: 'No se pudo guardar el movimiento' });
         }
@@ -196,10 +191,14 @@ async function eliminarMovimiento(id, tipo) {
         });
         if (!response.ok) throw new Error('Error al eliminar transacción');
         invalidateApiCache();
-        await cargarTablaMovimientos(tipo);
         if (typeof cargarResumenDashboard === 'function') await cargarResumenDashboard();
         if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
-        if (typeof cargarUltimosMovimientos === 'function') await cargarUltimosMovimientos();
+        const activeView = document.querySelector('.content-section.active')?.id;
+        const activeType = activeView === 'view-gastos' ? 'gasto' : activeView === 'view-ingresos' ? 'ingreso' : null;
+        if (activeType) {
+            if (typeof cargarDatosFinancieros === 'function') await cargarDatosFinancieros(activeView);
+            await cargarTablaMovimientos(activeType);
+        }
     } catch (error) {
         console.error('Error al eliminar:', error);
     }

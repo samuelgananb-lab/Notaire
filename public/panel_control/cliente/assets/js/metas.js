@@ -15,9 +15,9 @@ async function cargarMetasYAhorros() {
         const metasCountLabel = document.getElementById('metasCountLabel');
         if (metasCountLabel) {
             const english = window.getCurrentLang?.() === 'en';
-            metasCountLabel.textContent = english
-                ? `${resumen.activas.length} active · ${resumen.completadas.length} completed`
-                : `${resumen.activas.length} activas · ${resumen.completadas.length} terminadas`;
+            metasCountLabel.innerHTML = `
+                <span class="goal-status-summary-item is-progress"><strong>${resumen.activas.length}</strong> ${english ? 'in progress' : 'en progreso'}</span>
+                <span class="goal-status-summary-item is-completed"><strong>${resumen.completadas.length}</strong> ${english ? 'completed' : 'terminadas'}</span>`;
         }
         document.querySelectorAll('.porcentaje-total-val').forEach(el => {
             el.textContent = `${resumen.progresoPromedio}%`;
@@ -27,7 +27,7 @@ async function cargarMetasYAhorros() {
             const el = document.getElementById(id);
             if (el) el.textContent = moneda(resumen.totalAhorrado);
         });
-        ['metasActivas', 'valMetasActivasCount', 'valMetasCount'].forEach(id => {
+        ['metasActivas', 'valMetasActivasCount', 'valMetasEnProgreso'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = resumen.activas.length;
         });

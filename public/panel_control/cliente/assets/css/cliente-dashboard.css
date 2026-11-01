@@ -2,6 +2,10 @@
    NOTAIRE SYSTEM DESIGN SYSTEM - CLIENT COLOR PALETTES
    ========================================================================== */
 
+html {
+    font-size: 102%;
+}
+
 :root, [data-theme="notaire"] {
     --color-primary: #2563eb;
     --color-primary-hover: #1d4ed8;
@@ -1817,6 +1821,86 @@ body {
     gap: 10px;
 }
 
+.financial-history-panel { min-width: 0; }
+.financial-history-header,
+.financial-history-header > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.financial-history-header { margin-bottom: 18px; }
+.financial-history-header h3 {
+    margin: 0;
+    color: var(--color-text-main);
+    font-size: 17px;
+}
+.financial-history-header > div {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+.financial-history-header strong {
+    color: var(--color-primary);
+    font-size: 16px;
+}
+.financial-history-filters {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(135px, .42fr)) auto;
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.financial-history-filters label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+.financial-history-filters input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 11px;
+    border: 1px solid var(--color-card-border);
+    border-radius: 10px;
+    outline: none;
+    color: var(--color-text-main);
+    background: var(--color-input-bg);
+    font: inherit;
+}
+.financial-history-filters input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), .12);
+}
+.financial-history-filters button {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid rgba(var(--color-primary-rgb), .3);
+    border-radius: 10px;
+    color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), .1);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.financial-history-table-wrap { width: 100%; overflow-x: auto; }
+.financial-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--color-text-main);
+    font-size: 13px;
+}
+.financial-history-table thead {
+    color: var(--color-text-muted);
+    background: rgba(var(--color-primary-rgb), .07);
+    text-align: left;
+}
+.financial-history-table th { padding: 11px 10px; white-space: nowrap; }
+.financial-history-table td { border-bottom: 1px solid var(--color-card-border); }
+.financial-history-table tbody tr:last-child td { border-bottom: 0; }
+
 .transaction-row {
     display: flex;
     align-items: center;
@@ -2111,6 +2195,70 @@ body {
 }
 
 .goal-count-breakdown strong { color: #10b981; }
+
+.goal-status-counts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.goal-status-count {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(var(--color-primary-rgb), .22);
+    border-radius: 14px;
+    background: rgba(var(--color-primary-rgb), .08);
+}
+
+.goal-status-count strong {
+    grid-row: span 2;
+    color: var(--color-primary);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.goal-status-count span {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.goal-status-count.is-completed {
+    border-color: rgba(16, 185, 129, .24);
+    background: rgba(16, 185, 129, .08);
+}
+
+.goal-status-count.is-completed strong { color: #10b981; }
+
+.goal-status-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.goal-status-summary-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border: 1px solid rgba(var(--color-primary-rgb), .2);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    background: rgba(var(--color-primary-rgb), .08);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.goal-status-summary-item strong { color: var(--color-primary); }
+.goal-status-summary-item.is-completed {
+    border-color: rgba(16, 185, 129, .22);
+    background: rgba(16, 185, 129, .08);
+}
+.goal-status-summary-item.is-completed strong { color: #10b981; }
 
 .goals-next-section {
     margin: 20px 0 28px;

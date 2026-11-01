@@ -361,24 +361,6 @@ async function handleGuardarPerfil(event) {
     }
 }
 
-async function openModalVerTodos(tipo) {
-    const token = localStorage.getItem('notaire_token');
-    const container = document.getElementById('verTodosContentList');
-    const title = document.getElementById('verTodosTitle');
-    if (!container || !token) return;
-    const response = await fetch('/api/transacciones', { headers: { Authorization: `Bearer ${token}` } });
-    const movimientos = response.ok ? await response.json() : [];
-    const lista = movimientos.filter(item => tipo === 'ingresos' ? item.tipo === 'ingreso' : item.tipo === 'gasto');
-    if (title) title.textContent = tipo === 'ingresos' ? 'Historial de ingresos' : 'Historial de gastos';
-    container.innerHTML = lista.length ? lista.map(item => `
-        <div class="transaction-row">
-            <div class="transaction-left"><div class="transaction-icon-box">${item.tipo === 'ingreso' ? '💼' : '🧾'}</div>
-            <div class="transaction-info"><span class="transaction-title">${escaparTextoCliente(item.descripcion || item.categoria)}</span><span class="transaction-date">${escaparTextoCliente(item.fecha || '')}</span></div></div>
-            <span class="${item.tipo === 'ingreso' ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${item.tipo === 'ingreso' ? '+' : '-'}${formatCOP(item.monto)}</span>
-        </div>`).join('') : '<p class="no-data">No hay movimientos registrados.</p>';
-    openModal('modalVerTodos');
-}
-
 function confirmLogout() {
     localStorage.removeItem('notaire_token');
     localStorage.removeItem('notaire_user');
@@ -395,6 +377,10 @@ async function actualizarVistaCliente() {
         cargarResumenDashboard(),
         cargarDatosFinancieros()
     ];
+    const activeView = document.querySelector('.content-section.active')?.id;
+    if (activeView === 'view-gastos' || activeView === 'view-ingresos') {
+        actualizaciones.push(cargarTablaMovimientos(activeView === 'view-gastos' ? 'gasto' : 'ingreso'));
+    }
     if (typeof cargarVistaMetasAhorros === 'function') {
         actualizaciones.push(cargarVistaMetasAhorros());
     }
@@ -447,6 +433,9 @@ function navigateTo(viewId) {
     }
     if (viewId === 'view-gastos' || viewId === 'view-ingresos') {
         void cargarDatosFinancieros(viewId);
+        if (typeof cargarTablaMovimientos === 'function') {
+            void cargarTablaMovimientos(viewId === 'view-gastos' ? 'gasto' : 'ingreso');
+        }
     }
     if (viewId === 'view-saldo') {
         const saldoSection = document.getElementById('seccion-saldo');
@@ -677,8 +666,6 @@ async function cargarDatosFinancieros(viewId = document.querySelector('.content-
     if (!token) return;
 
     try {
-        setDataState(document.getElementById('listUltimosMovimientos'), 'Cargando gastos...', 'loading');
-        setDataState(document.getElementById('listUltimosIngresos'), 'Cargando ingresos...', 'loading');
         setDataState(document.getElementById('listMayoresGastos'), 'Cargando categorías...', 'loading');
         const monthKey = window.NotaireFinancialChart?.currentMonthKey();
         const [dashboardData, transactionsResponse] = await Promise.all([
@@ -736,33 +723,16 @@ async function cargarDatosFinancieros(viewId = document.querySelector('.content-
             : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
         actualizar('valPresupuestoTotal', presupuestoMensual.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
         actualizar('valPresupuestoPct', presupuestoMensual.hasBudget ? `${Math.round(presupuestoMensual.percentUsed)}% utilizado` : 'Sin presupuesto');
-        renderTransacciones('listUltimosMovimientos', gastos, false);
-        renderTransacciones('listUltimosIngresos', ingresos, true);
         renderGastosPorCategoria(gastos, totalGastos);
         renderLeyenda('legendGastosCategorias', gastos, 'gasto');
         renderLeyenda('legendIngresosFuentes', ingresos, 'ingreso');
     } catch (error) {
         console.error('Error al cargar datos financieros:', error);
-        setDataState(document.getElementById('listUltimosMovimientos'), 'No se pudieron cargar los gastos.', 'error');
-        setDataState(document.getElementById('listUltimosIngresos'), 'No se pudieron cargar los ingresos.', 'error');
         setDataState(document.getElementById('listMayoresGastos'), 'No se pudieron cargar las categorías.', 'error');
         showToast('No se pudieron cargar los movimientos');
     } finally {
         window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
-}
-
-function renderTransacciones(containerId, transacciones, sonIngresos) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const lista = transacciones.slice(0, 5);
-    container.innerHTML = lista.length ? lista.map(item => `
-        <div class="transaction-row">
-            <div class="transaction-left"><div class="transaction-icon-box">${sonIngresos ? '💼' : '🧾'}</div>
-            <div class="transaction-info"><span class="transaction-title">${escaparTextoCliente(item.descripcion || item.categoria || 'Movimiento')}</span>
-            <span class="transaction-date" data-user-content="true">${escaparTextoCliente(item.fecha || '')} · ${escaparTextoCliente(item.categoria || '')}</span></div></div>
-            <span class="${sonIngresos ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${sonIngresos ? '+' : '-'}${formatCOP(item.monto)}</span>
-        </div>`).join('') : '<p class="data-state data-state-empty">No hay registros este mes.</p>';
 }
 
 function renderGastosPorCategoria(gastos, totalGastos) {

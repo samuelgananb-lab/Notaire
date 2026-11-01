@@ -12,10 +12,11 @@ const EVENT_TYPE_ALIASES = {
   green: 'financiero',
   orange: 'recordatorio',
   blue: 'personal',
-  pink: 'cumpleanos',
+  pink: 'personal',
+  cumpleanos: 'personal',
   pago: 'financiero'
 };
-const EVENT_TYPES = new Set(['notarial', 'financiero', 'recordatorio', 'personal', 'cumpleanos']);
+const EVENT_TYPES = new Set(['notarial', 'financiero', 'recordatorio', 'personal']);
 
 function normalizeEventType(tipo) {
   const normalized = EVENT_TYPE_ALIASES[tipo] || tipo || 'notarial';

@@ -83,6 +83,8 @@ async function cargarPanelInicio() {
             sumaPorcentajes += Math.min((actual / objetivo) * 100, 100);
         });
 
+        const metasCompletadas = metas.filter(meta => typeof resumirMeta === 'function' && resumirMeta(meta).completada).length;
+        const metasActivas = metas.length - metasCompletadas;
         const pctPromedioMetas = metas.length > 0
             ? Math.round(sumaPorcentajes / metas.length)
             : 0;
@@ -96,13 +98,16 @@ async function cargarPanelInicio() {
         actualizarTexto('kpiGastosMes', moneda(gastosMes));
         actualizarTexto('kpiAhorrosTotales', moneda(ahorrosTotales));
         const idiomaIngles = window.getCurrentLang?.() === 'en';
-        const etiquetaMetas = metas.length === 1 ? (idiomaIngles ? 'goal' : 'meta') : (idiomaIngles ? 'goals' : 'metas');
-        actualizarTexto('kpiMetasActivas', idiomaIngles
-            ? `${metas.length} ${etiquetaMetas} (${pctPromedioMetas}% average)`
-            : `${metas.length} ${etiquetaMetas} (${pctPromedioMetas}% promedio)`);
+        actualizarTexto('kpiMetasActivas', String(metasActivas));
         actualizarTexto('kpiMetasPromedio', idiomaIngles
-            ? `${pctPromedioMetas}% average`
-            : `${pctPromedioMetas}% promedio`);
+            ? `${pctPromedioMetas}% average progress`
+            : `${pctPromedioMetas}% progreso promedio`);
+        const homeMetaStatus = document.getElementById('homeMetaStatus');
+        if (homeMetaStatus) {
+            homeMetaStatus.innerHTML = `
+                <span class="goal-status-summary-item is-progress"><strong>${metasActivas}</strong> ${idiomaIngles ? 'in progress' : 'en progreso'}</span>
+                <span class="goal-status-summary-item is-completed"><strong>${metasCompletadas}</strong> ${idiomaIngles ? 'completed' : 'terminadas'}</span>`;
+        }
 
         const escaparHtml = valor => String(valor ?? '').replace(/[&<>"']/g, caracter => ({
             '&': '&amp;',

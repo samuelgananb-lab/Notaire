@@ -15,11 +15,10 @@ const CalendarState = {
 };
 
 const typeColorMap = {
-    purple: { bg: 'rgba(var(--color-primary-rgb), 0.4)', border: 'var(--color-primary)', dot: 'var(--color-primary)', label: 'Notarial' },
-    green:  { bg: 'rgba(16, 185, 129, 0.3)',  border: '#10b981', dot: '#10b981', label: 'Financiero' },
+    purple: { bg: 'rgba(var(--color-primary-rgb), 0.4)', border: 'var(--color-primary)', dot: 'var(--color-primary)', label: 'Eventos' },
+    green:  { bg: 'rgba(16, 185, 129, 0.3)',  border: '#10b981', dot: '#10b981', label: 'Pagos' },
     orange: { bg: 'rgba(var(--color-accent-orange-rgb), 0.18)', border: 'var(--color-accent-orange)', dot: 'var(--color-accent-orange)', label: 'Recordatorio' },
     blue:   { bg: 'rgba(6, 182, 212, 0.3)',   border: '#06b6d4', dot: '#06b6d4', label: 'Personal' },
-    pink:   { bg: 'rgba(236, 72, 153, 0.3)',  border: '#ec4899', dot: '#ec4899', label: 'Cumpleaños' },
 };
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -61,7 +60,7 @@ async function cargarEventosPersistidos() {
 }
 
 function normalizeCalendarEvent(evento) {
-    const tiposVisuales = { notarial: 'purple', financiero: 'green', recordatorio: 'orange', personal: 'blue', cumpleanos: 'pink' };
+    const tiposVisuales = { notarial: 'purple', financiero: 'green', recordatorio: 'orange', personal: 'blue', cumpleanos: 'blue', pink: 'blue' };
     const hora = evento.hora || String(evento.fecha_hora || '').slice(11, 16) || '08:00';
     return {
         ...evento,
@@ -366,7 +365,7 @@ function renderUpcomingEvents() {
     container.innerHTML = upcoming.slice(0, CalendarState.upcomingExpanded ? upcoming.length : 5).map(evt => {
         const colors = typeColorMap[evt.tipo] || typeColorMap.purple;
         const dateLabel = getDateLabel(evt.fecha);
-        const iconMap = { purple: '⚖️', green: '💳', orange: '🔔', blue: '👤', pink: '🎂' };
+        const iconMap = { purple: '⚖️', green: '💳', orange: '🔔', blue: '👤' };
         return `
             <div class="upcoming-event-card" style="cursor:pointer;" onclick="openDetalleEvento(${evt.id})">
                 <div class="upcoming-event-left">
@@ -410,14 +409,14 @@ function renderMonthSummary(year, month) {
     const monthEvents = CalendarState.events.filter(e => e.fecha.startsWith(monthStr));
 
     const counts = {
-        total: monthEvents.length,
+        eventos: monthEvents.filter(e => e.tipo === 'purple').length,
         pagos: monthEvents.filter(e => e.tipo === 'green').length,
         recordatorios: monthEvents.filter(e => e.tipo === 'orange').length,
-        personal: monthEvents.filter(e => e.tipo === 'blue' || e.tipo === 'pink').length,
+        personal: monthEvents.filter(e => e.tipo === 'blue').length,
     };
 
     const items = [
-        { icon: '📅', color: 'var(--color-primary)', val: counts.total, lbl: 'Eventos' },
+        { icon: '📅', color: 'var(--color-primary)', val: counts.eventos, lbl: 'Eventos' },
         { icon: '💳', color: '#10b981', val: counts.pagos, lbl: 'Pagos' },
         { icon: '🔔', color: 'var(--color-accent-orange)', rgb: 'var(--color-accent-orange-rgb)', val: counts.recordatorios, lbl: 'Recordatorio' },
         { icon: '👤', color: '#06b6d4', val: counts.personal, lbl: 'Personal' },

@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261103-calendar-event1">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261103-calendar-event1">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261104-panel-polish2">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261104-panel-polish2">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -166,9 +166,10 @@
                         <div class="home-stat-card home-stat-goals">
                             <div class="home-stat-icon"><i class="fas fa-bullseye"></i></div>
                             <div class="home-stat-info">
-                                <span class="home-stat-label">Metas activas</span>
-                                <span class="home-stat-value" id="kpiMetasActivas">0 metas (0% promedio)</span>
-                                <span class="home-stat-sub trend-neutral" id="kpiMetasPromedio">0% promedio</span>
+                                <span class="home-stat-label">Metas de ahorro</span>
+                                <span class="home-stat-value" id="kpiMetasActivas">0</span>
+                                <span class="home-stat-sub trend-neutral" id="kpiMetasPromedio">0% progreso promedio</span>
+                                <span class="goal-status-summary" id="homeMetaStatus"></span>
                             </div>
                         </div>
                     </div>
@@ -263,12 +264,23 @@
                         </div>
                     </div>
 
-                    <div class="card-box">
-                        <div class="card-box-header">
-                            <h3>Últimos movimientos</h3>
-                            <button class="btn-link-action" onclick="openModalVerTodos('movimientos')">Ver todos</button>
+                    <div class="card-box financial-history-panel" data-financial-type="gasto">
+                        <div class="financial-history-header">
+                            <h3 id="titulo-seccion-detallada-gasto">Listado de gastos</h3>
+                            <div><span>Total del periodo</span><strong class="financial-history-total" id="total-seccion-detallada-gasto">$0</strong></div>
                         </div>
-                        <div class="transactions-list" id="listUltimosMovimientos"></div>
+                        <div class="financial-history-filters">
+                            <label><span>Buscar</span><input type="text" data-history-filter="search" placeholder="Categoría o descripción" oninput="aplicarFiltros()"></label>
+                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros()"></label>
+                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros()"></label>
+                            <button type="button" onclick="limpiarFiltros()">Limpiar filtros</button>
+                        </div>
+                        <div class="financial-history-table-wrap">
+                            <table class="financial-history-table">
+                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+                                <tbody class="financial-history-body" id="tabla-detallada-body-gasto"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -321,16 +333,26 @@
                         </div>
                     </div>
 
-                    <div class="card-box">
-                        <div class="card-box-header">
-                            <h3>Últimos ingresos</h3>
-                            <button class="btn-link-action" onclick="openModalVerTodos('ingresos')">Ver todos</button>
+                    <div class="card-box financial-history-panel" data-financial-type="ingreso">
+                        <div class="financial-history-header">
+                            <h3 id="titulo-seccion-detallada-ingreso">Listado de ingresos</h3>
+                            <div><span>Total del periodo</span><strong class="financial-history-total" id="total-seccion-detallada-ingreso">$0</strong></div>
                         </div>
-                        <div class="transactions-list" id="listUltimosIngresos"></div>
+                        <div class="financial-history-filters">
+                            <label><span>Buscar</span><input type="text" data-history-filter="search" placeholder="Categoría o descripción" oninput="aplicarFiltros()"></label>
+                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros()"></label>
+                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros()"></label>
+                            <button type="button" onclick="limpiarFiltros()">Limpiar filtros</button>
+                        </div>
+                        <div class="financial-history-table-wrap">
+                            <table class="financial-history-table">
+                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+                                <tbody class="financial-history-body" id="tabla-detallada-body-ingreso"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Detalle dinámico de gastos e ingresos -->
                 <!-- ============================================================ -->
                 <!-- ============================================================ -->
                 <!-- MI SALDO                                                      -->
@@ -396,8 +418,8 @@
                 <div class="content-section" id="view-metas">
                     <div class="section-header-bar">
                         <div class="section-title-group">
-                            <h2>AHORROS</h2>
-                            <p>Organiza tus objetivos, aportes y presupuesto en un solo lugar.</p>
+                            <h2>AHORROS Y METAS</h2>
+                            <p>Convierte tus planes en metas alcanzables: define cuánto quieres ahorrar, registra tus aportes y sigue tu avance hasta cumplir cada objetivo.</p>
                         </div>
                     </div>
 
@@ -407,7 +429,7 @@
                             <div class="metas-hero-icon">🎯</div>
                             <div class="metas-hero-text">
                                 <h3>Crear nueva meta de ahorro</h3>
-                                <p>Define tu objetivo, monto y fecha límite. Notaire te ayuda a llegar allá.</p>
+                                <p>Elige tu objetivo y una fecha límite; registra cada aporte y celebra tu progreso con Notaire.</p>
                             </div>
                         </div>
                         <button class="btn-add-meta-hero">
@@ -424,11 +446,16 @@
                             <div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> +15.3%</span></div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-card-header">METAS ACTIVAS</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valMetasCount">0</div></div>
-                            <div class="goal-count-breakdown">
-                                <span class="metric-trend-badge trend-neutral">en progreso</span>
-                                <span><strong id="valMetasCompletadas">0</strong> terminadas</span>
+                            <div class="metric-card-header">ESTADO DE TUS METAS</div>
+                            <div class="goal-status-counts">
+                                <div class="goal-status-count is-progress">
+                                    <strong id="valMetasEnProgreso">0</strong>
+                                    <span>En progreso</span>
+                                </div>
+                                <div class="goal-status-count is-completed">
+                                    <strong id="valMetasCompletadas">0</strong>
+                                    <span>Terminadas</span>
+                                </div>
                             </div>
                         </div>
                         <div class="metric-card">
@@ -456,7 +483,7 @@
                                 <h3>Mis metas</h3>
                                 <p>Consulta tus objetivos en progreso y los que ya completaste.</p>
                             </div>
-                            <span style="font-size: 13px; color: var(--color-text-muted);" id="metasCountLabel">0 metas</span>
+                            <div class="goal-status-summary" id="metasCountLabel" aria-label="Estado de las metas"></div>
                         </div>
                         <div class="goals-grid" id="metasGoalsGrid"></div>
                     </div>
@@ -996,16 +1023,6 @@
                                         </button>
                                     </div>
                                     <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-shield-halved"></i>
-                                            <span>Autenticación 2FA</span>
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="tog2FA" onchange="showToast('2FA ' + (this.checked ? 'activado' : 'desactivado'))">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="config-security-row">
                                         <button class="config-security-button is-logout" type="button" onclick="confirmLogout()">
                                             <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
                                             <span><strong>Cerrar sesión</strong><small>Salir de Notaire en este dispositivo</small></span>
@@ -1126,14 +1143,6 @@
         </div>
     </div>
 
-    <!-- Modal: Ver Todos -->
-    <div class="modal-overlay" id="modalVerTodos">
-        <div class="modal-container-box" style="max-width: 680px;">
-            <div class="modal-header-box"><h3 id="verTodosTitle">Historial</h3><button class="modal-close-btn" onclick="closeModal('modalVerTodos')">&times;</button></div>
-            <div class="transactions-list" id="verTodosContentList" style="max-height: 350px; overflow-y: auto;"></div>
-        </div>
-    </div>
-
     <!-- Modal: Editar Gasto -->
     <div class="modal-overlay" id="modalEditarGasto">
         <div class="modal-container-box">
@@ -1188,11 +1197,10 @@
                 <div class="form-group"><label>Título del evento</label><input type="text" class="form-control" id="eventoTitulo" placeholder="Ej: Pago de hipoteca" required></div>
                 <div class="form-group"><label>Tipo</label>
                     <select class="form-control" id="eventoTipo">
-                        <option value="purple">🟣 Notarial</option>
-                        <option value="green">🟢 Pago / Financiero</option>
+                        <option value="purple">📅 Eventos</option>
+                        <option value="green">🟢 Pagos</option>
                         <option value="orange">🟠 Recordatorio</option>
                         <option value="blue">🔵 Personal</option>
-                        <option value="pink">🩷 Cumpleaños</option>
                     </select>
                 </div>
                 <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="eventoFecha" required></div>
@@ -1314,15 +1322,15 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261102-dashboard-fixes1"></script>
-    <script src="assets/js/cliente-dashboard-ext.js?v=20261103-calendar-event1"></script>
-    <script src="assets/js/movimientos.js?v=20261102-dashboard-fixes1"></script>
-    <script src="assets/js/metas.js?v=20261101-goals3"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/movimientos.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>
     <script src="assets/js/scientific-calculator.js?v=20261031-9"></script>
     <script src="assets/js/saldo.js?v=20261102-dashboard-fixes1"></script>
-    <script src="assets/js/inicio.js?v=20261031-5"></script>
+    <script src="assets/js/inicio.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
     <script src="assets/js/cliente-solicitudes.js?v=20261031-2"></script>
     <script src="../../assets/js/notaire-i18n.js?v=20261101-goals3"></script>

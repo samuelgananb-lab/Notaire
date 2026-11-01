@@ -17,6 +17,76 @@ test('el dashboard cliente no carga el script administrativo', async () => {
     assert.match(html, /assets\/js\/cliente-dashboard\.js/);
 });
 
+test('gastos e ingresos muestran un solo historial completo y permiten filtrar', async () => {
+    const [html, source, dashboard] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/movimientos.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js')
+    ]);
+    const createPanel = () => {
+        const fields = {
+            search: { value: '' },
+            from: { value: '' },
+            to: { value: '' }
+        };
+        const body = { innerHTML: '' };
+        const total = { textContent: '', style: {} };
+        return {
+            body,
+            total,
+            querySelector(selector) {
+                if (selector === '.financial-history-body') return body;
+                if (selector === '.financial-history-total') return total;
+                const field = selector.match(/data-history-filter="(search|from|to)"/)?.[1];
+                return field ? fields[field] : null;
+            }
+        };
+    };
+    const expensePanel = createPanel();
+    const incomePanel = createPanel();
+    const context = {
+        document: {
+            addEventListener() {},
+            querySelector(selector) {
+                return selector.includes('data-financial-type="ingreso"') ? incomePanel : expensePanel;
+            }
+        },
+        window: {
+            NotaireFinancialChart: {
+                selectedMonthKey: () => '2026-11',
+                currentMonthKey: () => '2026-11'
+            },
+            translateStaticContent() {}
+        },
+        localStorage: { getItem: () => 'test-token' },
+        fetchTransacciones: async () => [
+            { id: 1, tipo: 'gasto', monto: 1200, categoria: 'Servicios', descripcion: 'Luz', fecha: '2026-11-01' },
+            { id: 2, tipo: 'ingreso', monto: 8000, categoria: 'Honorarios', descripcion: 'Consulta', fecha: '2026-11-01' }
+        ],
+        formatCurrency: value => `$${value}`,
+        console
+    };
+    vm.runInNewContext(source, context);
+
+    await context.cargarTablaMovimientos('gasto');
+    assert.match(expensePanel.body.innerHTML, /Luz/);
+    assert.doesNotMatch(expensePanel.body.innerHTML, /Consulta/);
+    assert.equal(expensePanel.total.textContent, '$1200');
+    assert.equal(expensePanel.total.style.color, '#ef4444');
+    expensePanel.querySelector('[data-history-filter="search"]').value = 'servicios';
+    context.aplicarFiltros('gasto');
+    assert.match(expensePanel.body.innerHTML, /Luz/);
+    assert.equal((html.match(/class="card-box financial-history-panel"/g) || []).length, 2);
+    assert.doesNotMatch(html, /listUltimosMovimientos|listUltimosIngresos|modalVerTodos/);
+
+    await context.cargarTablaMovimientos('ingreso');
+    assert.match(incomePanel.body.innerHTML, /Consulta/);
+    assert.doesNotMatch(incomePanel.body.innerHTML, /Luz/);
+    assert.equal(incomePanel.total.textContent, '$8000');
+    assert.equal(incomePanel.total.style.color, '#22c55e');
+    assert.doesNotMatch(dashboard, /openModalVerTodos|modalVerTodos/);
+});
+
 test('el dashboard conserva Soporte y Configuración dentro del contenedor de vistas', async () => {
     const [html, calculator, dashboard, dashboardExt, support, movements] = await Promise.all([
         read('public/panel_control/cliente/dashboard.html'),
@@ -37,7 +107,9 @@ test('el dashboard conserva Soporte y Configuración dentro del contenedor de vi
     assert.doesNotMatch(dashboardExt, /function navigateTo\(/);
     assert.match(movements, /const datos = await fetchTransacciones\(mesElegido\);/);
     assert.doesNotMatch(movements, /btnGastos|btnIngresos|addEventListener\('click',\s*\(\)\s*=>\s*cambiarSeccion/);
-    assert.doesNotMatch(html, /id="seccion-detallada"/);
+    assert.match(html, /data-financial-type="gasto"[\s\S]*tabla-detallada-body-gasto/);
+    assert.match(html, /data-financial-type="ingreso"[\s\S]*tabla-detallada-body-ingreso/);
+    assert.doesNotMatch(html, /listUltimosMovimientos|listUltimosIngresos|modalVerTodos/);
     assert.match(support, /document\.querySelector\('a\[data-target="view-solicitudes"\]'\)\?\.addEventListener\('click', \(\) => void load\(\)\)/);
     assert.match(support, /view-solicitudes'\)\?\.classList\.contains\('active'\)\) void load\(\)/);
     assert.match(calculator, /addEventListener\('click', \(\) => void loadCurrencyCatalog\(\)\)/);
@@ -296,7 +368,7 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     assert.match(styles, /html\[data-theme="light"\] \.cal-event-pill/);
     assert.match(styles, /html\[data-theme="light"\] \.hero-welcome-title span[\s\S]*-webkit-text-fill-color: var\(--color-primary\)/);
     assert.match(styles, /--color-bg: #f3f5f8/);
-    assert.match(mobileStyles, /\[data-theme="light"\] #seccion-detallada input\[type="text"\][\s\S]*color: #172033 !important/);
+    assert.match(mobileStyles, /\[data-theme="light"\] \.financial-history-filters input[\s\S]*color: #172033 !important/);
     assert.match(script, /color:var\(--color-text-main\);\">\$\{escapeHtmlExt\(evt\.titulo\)\}/);
     assert.match(styles, /\.theme-swatch-gold/);
     assert.match(styles, /\.theme-swatch-black/);
@@ -1021,7 +1093,7 @@ test('el calendario cambia de vista y el error de aporte solo muestra el límite
     assert.match(calendar, /CalendarState\.upcomingExpanded \? upcoming\.length : 5/);
     assert.match(styles, /\.calendar-month-grid\.is-day-view \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.calendar-month-grid\.is-day-view/);
-    assert.doesNotMatch(html, /id="seccion-detallada"/);
+    assert.match(html, /class="card-box financial-history-panel" data-financial-type="gasto"/);
     assert.match(aporteError, /box\.textContent = message/);
     assert.doesNotMatch(aporteError, /createElement|openModalRegistrarIngreso|aporte-error-actions/);
     assert.match(register, /assets\/css\/login\.css/);
@@ -1038,14 +1110,16 @@ test('el calendario guarda categorías compatibles y muestra los días en su pro
         read('public/panel_control/cliente/assets/css/cliente-mobile.css')
     ]);
 
-    assert.match(route, /const EVENT_TYPES = new Set\(\['notarial', 'financiero', 'recordatorio', 'personal', 'cumpleanos'\]\)/);
+    assert.match(route, /const EVENT_TYPES = new Set\(\['notarial', 'financiero', 'recordatorio', 'personal'\]\)/);
     assert.match(route, /EVENT_TYPE_ALIASES\[tipo\] \|\| tipo \|\| 'notarial'/);
     assert.match(route, /normalizeEventType\(tipo\)/);
     assert.match(route, /eventos_calendario_tipo_check/);
     assert.match(migration, /drop constraint if exists eventos_calendario_tipo_check/);
-    assert.match(migration, /check \(tipo in \('notarial', 'financiero', 'recordatorio', 'personal', 'cumpleanos'\)\)\s+not valid/);
+    assert.match(migration, /check \(tipo in \('notarial', 'financiero', 'recordatorio', 'personal'\)\)\s+not valid/);
     assert.match(databaseGuide, /eventos_calendario_tipo_migration\.sql/);
     assert.match(html, /id="calendarWeekdays"[\s\S]*Dom[\s\S]*Lun[\s\S]*Sáb/);
+    assert.equal((html.match(/<option value="(?:purple|green|orange|blue)">/g) || []).length, 4);
+    assert.doesNotMatch(html, /value="pink"|Cumpleaños|tog2FA|Autenticación 2FA/);
     assert.doesNotMatch(html, /calendar-legend-tags|calendarMonthPicker"[^>]*type="month"/);
     assert.match(calendar, /WEEKDAY_NAMES\[window\.getCurrentLang/);
     assert.match(calendar, /calendarMonthApply/);
@@ -1056,9 +1130,11 @@ test('el calendario guarda categorías compatibles y muestra los días en su pro
 });
 
 test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
-    const [goals, dashboard] = await Promise.all([
+    const [goals, dashboard, home, styles] = await Promise.all([
         read('public/panel_control/cliente/assets/js/metas.js'),
-        read('public/panel_control/cliente/dashboard.html')
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/inicio.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
     ]);
     const statsSource = goals.match(/function resumirMetas\(metas\) \{[\s\S]*?\n\}/)?.[0];
     assert.ok(statsSource);
@@ -1080,6 +1156,15 @@ test('las metas completadas se separan y las tres más avanzadas se destacan', a
     assert.deepEqual(Array.from(results.proximas, goal => goal.meta.id), [1, 2, 3]);
     assert.equal(resumirMeta({ monto_actual: 25, monto_objetivo: 25 }).completada, true);
     assert.match(dashboard, /id="valMetasCompletadas"/);
+    assert.match(dashboard, /id="valMetasEnProgreso"/);
+    assert.match(dashboard, /class="goal-status-counts"/);
+    assert.match(dashboard, /Convierte tus planes en metas alcanzables/);
+    assert.match(goals, /goal-status-summary-item is-progress/);
+    assert.match(goals, /goal-status-summary-item is-completed/);
+    assert.match(home, /resumirMeta\(meta\)\.completada/);
+    assert.match(dashboard, /id="homeMetaStatus"/);
+    assert.doesNotMatch(dashboard, /Autenticación 2FA|tog2FA/);
+    assert.match(styles, /html\s*\{\s*font-size:\s*102%;\s*\}/);
     assert.match(dashboard, /id="metasProximasGrid"/);
     assert.match(goals, /class="goal-card\$\{goal\.completada \? ' is-completed' : ''\}"/);
 });
