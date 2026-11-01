@@ -299,6 +299,8 @@
     .calendar-legend-tags { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px 10px; overflow: visible !important; font-size: 11px; margin: 10px 0; }
     .calendar-legend-tags .tag-item { white-space: normal; min-width: 0; }
     .calendar-month-grid { display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 4px !important; width: 100%; min-width: 0 !important; }
+    .calendar-month-grid.is-day-view { grid-template-columns: minmax(0, 1fr) !important; }
+    .calendar-month-grid.is-week-view { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
     .cal-day-header { font-size: 10px; text-align: center; overflow: hidden; }
     .cal-day-cell { min-width: 0; min-height: 40px; aspect-ratio: 1 / 1; padding: 3px; overflow: hidden; display: flex; align-items: flex-start; justify-content: center; }
     .cal-day-num { font-size: 12px; }
@@ -377,4 +379,13 @@
 
     #view-metas .metas-savings-details { grid-template-columns: minmax(0, 1fr); }
     #view-metas .metas-budget-card { margin-top: 14px; }
+}
+
+@media (max-width: 768px) {
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 100%;
+        min-width: 0;
+    }
 }

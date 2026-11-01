@@ -14,15 +14,6 @@ document.addEventListener('notaire:languagechange', () => {
     cargarGraficoEvolucion(ultimoResumenSaldo.evolucion);
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    const btnSaldo = document.querySelector('#sidebarMenu a[data-target="view-saldo"]');
-    btnSaldo?.addEventListener('click', () => {
-        const seccionSaldo = document.getElementById('seccion-saldo');
-        if (seccionSaldo) seccionSaldo.style.display = 'block';
-        cargarVistaSaldo();
-    });
-});
-
 async function cargarVistaSaldo() {
     const token = localStorage.getItem('notaire_token');
     if (!token) return;

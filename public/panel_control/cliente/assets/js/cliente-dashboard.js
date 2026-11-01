@@ -419,9 +419,8 @@ function initNavigation() {
     });
 
     const savedView = sessionStorage.getItem('notaire_cliente_active_view');
-    if (Array.from(navLinks).some(link => link.getAttribute('data-target') === savedView)) {
-        navigateTo(savedView);
-    }
+    const validSavedView = Array.from(navLinks).some(link => link.getAttribute('data-target') === savedView);
+    navigateTo(validSavedView ? savedView : 'view-inicio');
 }
 
 function navigateTo(viewId) {
@@ -446,7 +445,20 @@ function navigateTo(viewId) {
     if (viewId === 'view-ingresos' && chartClienteIngresos) {
         window.setTimeout(() => chartClienteIngresos.resize(), 100);
     }
-
+    if (viewId === 'view-gastos' || viewId === 'view-ingresos') {
+        void cargarDatosFinancieros(viewId);
+    }
+    if (viewId === 'view-saldo') {
+        const saldoSection = document.getElementById('seccion-saldo');
+        if (saldoSection) saldoSection.style.display = 'block';
+        void cargarVistaSaldo();
+    }
+    if (viewId === 'view-metas' && typeof cargarVistaMetasAhorros === 'function') {
+        void cargarVistaMetasAhorros();
+    }
+    if (viewId === 'view-recordatorios' && typeof renderCalendar === 'function') renderCalendar();
+    if (viewId === 'view-configuracion' && typeof refreshConfigDisplay === 'function') refreshConfigDisplay();
+    if (viewId === 'view-inicio' && typeof cargarPanelInicio === 'function') void cargarPanelInicio();
 }
 
 function initSidebar() {
@@ -635,33 +647,12 @@ async function handleGuardarAporteMeta(event) {
 
 function mostrarErrorAporte(info) {
     const box = document.getElementById('aporteError');
-    if (!box) return showToast(info.error);
-    box.textContent = '';
-    const msg = document.createElement('p');
-    msg.textContent = info.error;
-    box.appendChild(msg);
-
-    const actions = document.createElement('div');
-    actions.className = 'aporte-error-actions';
-    if (info.saldoDisponible > 0) {
-        const abonar = document.createElement('button');
-        abonar.type = 'button';
-        abonar.textContent = `Abonar ${formatCOP(info.saldoDisponible)}`;
-        abonar.onclick = () => {
-            document.getElementById('aporteMonto').value = info.saldoDisponible;
-            box.hidden = true;
-        };
-        actions.appendChild(abonar);
-    }
-    const ingreso = document.createElement('button');
-    ingreso.type = 'button';
-    ingreso.textContent = 'Registrar un ingreso';
-    ingreso.onclick = () => {
-        closeModal('modalAportarMeta');
-        if (typeof openModalRegistrarIngreso === 'function') openModalRegistrarIngreso();
-    };
-    actions.appendChild(ingreso);
-    box.appendChild(actions);
+    const english = window.getCurrentLang?.() === 'en';
+    const message = typeof info?.error === 'string' && info.error.trim()
+        ? info.error
+        : (english ? 'The contribution could not be completed.' : 'No se pudo completar el aporte.');
+    if (!box) return showToast(message);
+    box.textContent = message;
     box.hidden = false;
 }
 

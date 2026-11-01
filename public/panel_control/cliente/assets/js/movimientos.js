@@ -5,11 +5,6 @@ let transaccionesCargadas = [];
 const MOVIMIENTOS_API_URL = '/api/transacciones';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const btnGastos = document.querySelector('#sidebarMenu a[data-target="view-gastos"]');
-    const btnIngresos = document.querySelector('#sidebarMenu a[data-target="view-ingresos"]');
-
-    btnGastos?.addEventListener('click', () => cambiarSeccion('gasto'));
-    btnIngresos?.addEventListener('click', () => cambiarSeccion('ingreso'));
     configurarFormulario();
 });
 
@@ -180,7 +175,6 @@ function configurarFormulario() {
             if (tituloModal) tituloModal.textContent = 'Registrar Movimiento';
             document.getElementById('modalMovimiento')?.style.setProperty('display', 'none');
 
-            if (typeof cargarTablaMovimientos === 'function') await cargarTablaMovimientos(moduloActivo);
             if (typeof cargarResumenDashboard === 'function') await cargarResumenDashboard();
             if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
             if (typeof cargarVistaSaldo === 'function') await cargarVistaSaldo();

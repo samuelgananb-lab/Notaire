@@ -83,3 +83,78 @@ body {
     .register-container { padding: 25px 20px 21px; }
     .register-heading { font-size: 21px; }
 }
+
+body {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 24px 0;
+    background-color: var(--color-bg);
+    background-image: none;
+}
+
+.register-container {
+    width: min(100% - 32px, 470px);
+    padding: 40px;
+    border: 1px solid var(--color-card-border);
+    border-radius: 24px;
+    background: var(--color-card-bg);
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, .5);
+}
+
+.brand-logo-container { width: 70px; height: 70px; margin: 0 auto 20px; }
+.main-logo { width: 100%; height: 100%; filter: drop-shadow(0 5px 15px rgba(140, 0, 255, .4)); }
+.register-heading {
+    margin: 0 0 10px;
+    font-size: 26px;
+    font-weight: 600;
+    background: linear-gradient(to right, #fff, rgba(255,255,255,.7));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.register-subtitle { margin: 0 0 30px; color: rgba(255,255,255,.65); font-size: 14px; }
+.register-form { display: block; }
+.register-form .input-group { margin-bottom: 20px; }
+.input-group label { margin-bottom: 8px; color: #fff; font-size: 13px; opacity: .8; }
+.input-shell { position: relative; }
+.input-icon {
+    left: 15px;
+    top: 50%;
+    color: #fff;
+    opacity: .4;
+    font-size: 16px;
+    transform: translateY(-50%);
+}
+.input-field {
+    height: 46px;
+    padding: 12px 45px;
+    border: 1px solid var(--color-card-border);
+    border-radius: 12px;
+    color: #fff;
+    background: rgba(0,0,0,.3);
+    font-size: 14px;
+}
+.input-field:focus { border-color: var(--color-primary); background: rgba(0,0,0,.5); }
+.input-field::placeholder { color: rgba(255,255,255,.42); }
+.password-toggle { right: 15px; color: #fff; opacity: .55; }
+.password-meter span { height: 3px; }
+.password-hint { color: rgba(255,255,255,.55); font-size: 11px; }
+.form-message { margin: 0 0 12px; font-size: 13px; }
+.btn-create {
+    height: auto;
+    min-height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    font-size: 15px;
+}
+.register-footer { margin-top: 30px; font-size: 14px; }
+.register-footer a { color: var(--color-primary); }
+
+@media (max-width: 520px) {
+    .register-container { padding: 30px 24px; }
+    .register-heading { font-size: 24px; }
+}

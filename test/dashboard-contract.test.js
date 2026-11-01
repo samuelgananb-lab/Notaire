@@ -32,12 +32,14 @@ test('el dashboard conserva Soporte y Configuración dentro del contenedor de vi
     assert.match(html, /id="view-solicitudes"[\s\S]*id="view-configuracion"/);
     const startupHandler = dashboard.match(/document\.addEventListener\('DOMContentLoaded', \(\) => \{[\s\S]*?\n\}\);/)?.[0] || '';
     assert.doesNotMatch(startupHandler, /cargarDatosFinancieros/);
-    assert.match(dashboardExt, /viewId === 'view-gastos' \|\| viewId === 'view-ingresos'[\s\S]*cargarDatosFinancieros/);
+    assert.match(dashboard, /viewId === 'view-gastos' \|\| viewId === 'view-ingresos'[\s\S]*cargarDatosFinancieros\(viewId\)/);
+    assert.match(dashboard, /const validSavedView = Array\.from\(navLinks\)\.some\(link => link\.getAttribute\('data-target'\) === savedView\)/);
+    assert.doesNotMatch(dashboardExt, /function navigateTo\(/);
     assert.match(movements, /const datos = await fetchTransacciones\(mesElegido\);/);
-    assert.match(movements, /if \(window\.matchMedia\('\(max-width: 768px\)'\)\.matches\) \{\s*document\.getElementById\(target\)\?\.classList\.add\('active'\)/);
-    assert.match(movements, /document\.getElementById\('seccion-detallada'\)\?\.classList\.add\('active'\)/);
+    assert.doesNotMatch(movements, /btnGastos|btnIngresos|addEventListener\('click',\s*\(\)\s*=>\s*cambiarSeccion/);
+    assert.doesNotMatch(html, /id="seccion-detallada"/);
     assert.match(support, /document\.querySelector\('a\[data-target="view-solicitudes"\]'\)\?\.addEventListener\('click', \(\) => void load\(\)\)/);
-    assert.doesNotMatch(support, /document\.addEventListener\('DOMContentLoaded',[\s\S]{0,200}\n\s*load\(\);/);
+    assert.match(support, /view-solicitudes'\)\?\.classList\.contains\('active'\)\) void load\(\)/);
     assert.match(calculator, /addEventListener\('click', \(\) => void loadCurrencyCatalog\(\)\)/);
 });
 
@@ -345,12 +347,11 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
 });
 
 test('las pestañas secundarias cargan metas, ahorros y saldo al abrirse', async () => {
-    const [dashboard, metas, savings, balance, navigation, transactionRoute] = await Promise.all([
+    const [dashboard, metas, savings, balance, transactionRoute] = await Promise.all([
         read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
         read('public/panel_control/cliente/assets/js/metas.js'),
         read('public/panel_control/cliente/assets/js/ahorros.js'),
         read('public/panel_control/cliente/assets/js/saldo.js'),
-        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
         read('src/app/routes/transacciones.routes.js')
     ]);
 
@@ -358,7 +359,7 @@ test('las pestañas secundarias cargan metas, ahorros y saldo al abrirse', async
     assert.doesNotMatch(metas, /DOMContentLoaded['"]\s*,\s*cargarMetasYAhorros/);
     assert.doesNotMatch(savings, /DOMContentLoaded['"]\s*,\s*cargarVistaAhorros/);
     assert.doesNotMatch(balance, /DOMContentLoaded['"]\s*,\s*cargarGraficoEvolucion/);
-    assert.match(navigation, /view-metas.*cargarVistaMetasAhorros/);
+    assert.match(dashboard, /view-metas.*cargarVistaMetasAhorros/);
     assert.match(savings, /function cargarVistaMetasAhorros\(\)[\s\S]*cargarMetasYAhorros[\s\S]*cargarVistaAhorros/);
     assert.match(transactionRoute, /query\.gte\('fecha', inicioMes\)\.lt\('fecha', inicioMesSiguiente\)/);
 });
@@ -999,8 +1000,31 @@ test('el dashboard restaura la vista activa después de recargar', async () => {
     assert.match(dashboard, /sessionStorage\.getItem\('notaire_cliente_active_view'\)/);
     assert.match(dashboard, /sessionStorage\.setItem\('notaire_cliente_active_view', viewId\)/);
     assert.match(dashboard, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
-    assert.match(await read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'), /sessionStorage\.setItem\('notaire_cliente_active_view', viewId\)/);
     assert.match(registration, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
+});
+
+test('el calendario cambia de vista y el error de aporte solo muestra el límite', async () => {
+    const [html, calendar, dashboard, styles, register] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/auth/register.html')
+    ]);
+    const aporteError = dashboard.match(/function mostrarErrorAporte\(info\) \{[\s\S]*?\n\}/)?.[0] || '';
+
+    assert.match(html, /id="calendarMonthPicker"/);
+    assert.match(html, /id="calViewWeek"/);
+    assert.match(html, /id="calViewDay"/);
+    assert.match(html, /id="btnUpcomingAll"/);
+    assert.match(calendar, /CalendarState\.viewMode === 'week' \? 7 : 1/);
+    assert.match(calendar, /CalendarState\.upcomingExpanded \? upcoming\.length : 5/);
+    assert.match(styles, /\.calendar-month-grid\.is-day-view \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.calendar-month-grid\.is-day-view/);
+    assert.doesNotMatch(html, /id="seccion-detallada"/);
+    assert.match(aporteError, /box\.textContent = message/);
+    assert.doesNotMatch(aporteError, /createElement|openModalRegistrarIngreso|aporte-error-actions/);
+    assert.match(register, /assets\/css\/login\.css/);
 });
 
 test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
@@ -1078,7 +1102,7 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.match(calculator, /code: currency\.iso_code/);
     assert.match(calculator, /formatToParts\(1234\.5\)/);
     assert.match(html, /id="calculatorMemoryIndicator"/);
-    assert.match(styles, /\.calculator-keypad \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\); gap: 6px; \}/);
+    assert.match(styles, /\.calculator-keypad \{[\s\S]*grid-template-columns: repeat\(8, minmax\(0, 1fr\)\);[\s\S]*grid-template-rows: repeat\(6, minmax\(44px, 1fr\)\)/);
     assert.match(styles, /@media \(max-width: 1000px\)[\s\S]*?\.calculator-workspace \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     assert.match(i18n, /'view-calculadora': 'CALCULADORA'/);
     const elements = new Map();

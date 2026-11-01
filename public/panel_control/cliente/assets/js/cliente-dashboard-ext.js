@@ -10,7 +10,8 @@ const CalendarState = {
     currentDate: new Date(),
     viewMode: 'month', // 'month' | 'week' | 'day'
     events: [],
-    currentEventId: null
+    currentEventId: null,
+    upcomingExpanded: false
 };
 
 const typeColorMap = {
@@ -72,42 +73,6 @@ function normalizeCalendarEvent(evento) {
 /* ============================================================
    NAVEGACIÓN HELPER
    ============================================================ */
-function navigateTo(viewId) {
-    const targetSection = document.getElementById(viewId);
-    if (!targetSection) return;
-
-    document.querySelectorAll('#sidebarMenu li').forEach(li => li.classList.remove('active'));
-    document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
-    targetSection.classList.add('active');
-    sessionStorage.setItem('notaire_cliente_active_view', viewId);
-
-    const link = document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`);
-    if (link) link.parentElement.classList.add('active');
-
-    const currentLang = (typeof getCurrentLang === 'function') ? getCurrentLang() : (localStorage.getItem('notaire_lang') || 'es');
-    const titlesObj = (window.translations && window.translations[currentLang] && window.translations[currentLang].titles) ? window.translations[currentLang].titles : {
-        'view-gastos': 'MIS GASTOS',
-        'view-ingresos': 'MIS INGRESOS',
-        'view-saldo': 'MI SALDO',
-        'view-inicio': 'PANEL PRINCIPAL',
-        'view-metas': 'AHORROS',
-        'view-calculadora': 'CALCULADORA CIENTÍFICA',
-        'view-recordatorios': 'CALENDARIO NOTARIAL',
-        'view-configuracion': 'CONFIGURACIÓN'
-    };
-    const headerTitle = document.getElementById('headerDynamicTitle');
-    if (headerTitle && titlesObj[viewId]) headerTitle.textContent = titlesObj[viewId];
-
-    // Refrescar calendario al entrar
-    if (viewId === 'view-recordatorios') renderCalendar();
-    if (viewId === 'view-metas' && typeof cargarVistaMetasAhorros === 'function') cargarVistaMetasAhorros();
-    if (viewId === 'view-configuracion') refreshConfigDisplay();
-    if (viewId === 'view-inicio' && typeof updateHeroGreeting === 'function') updateHeroGreeting();
-    if ((viewId === 'view-gastos' || viewId === 'view-ingresos') && typeof cargarDatosFinancieros === 'function') {
-        void cargarDatosFinancieros(viewId);
-    }
-}
-
 function setupNavigateTo() {
     if (typeof updateHeroGreeting === 'function') {
         updateHeroGreeting();
@@ -128,12 +93,16 @@ function initCalendar() {
     });
     document.getElementById('btnCalPrev')?.addEventListener('click', () => {
         const d = CalendarState.currentDate;
-        CalendarState.currentDate = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+        CalendarState.currentDate = CalendarState.viewMode === 'month'
+            ? new Date(d.getFullYear(), d.getMonth() - 1, 1)
+            : new Date(d.getFullYear(), d.getMonth(), d.getDate() - (CalendarState.viewMode === 'week' ? 7 : 1));
         renderCalendar();
     });
     document.getElementById('btnCalNext')?.addEventListener('click', () => {
         const d = CalendarState.currentDate;
-        CalendarState.currentDate = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        CalendarState.currentDate = CalendarState.viewMode === 'month'
+            ? new Date(d.getFullYear(), d.getMonth() + 1, 1)
+            : new Date(d.getFullYear(), d.getMonth(), d.getDate() + (CalendarState.viewMode === 'week' ? 7 : 1));
         renderCalendar();
     });
 
@@ -146,6 +115,24 @@ function initCalendar() {
         });
     });
 
+    const monthTitle = document.getElementById('calMonthTitle');
+    const monthPicker = document.getElementById('calendarMonthPicker');
+    monthTitle?.addEventListener('click', () => {
+        if (typeof monthPicker?.showPicker === 'function') monthPicker.showPicker();
+        else monthPicker?.click();
+    });
+    monthPicker?.addEventListener('change', () => {
+        if (!monthPicker.value) return;
+        const [year, month] = monthPicker.value.split('-').map(Number);
+        CalendarState.currentDate = new Date(year, month - 1, 1);
+        renderCalendar();
+    });
+    document.getElementById('btnUpcomingAll')?.addEventListener('click', event => {
+        CalendarState.upcomingExpanded = !CalendarState.upcomingExpanded;
+        event.currentTarget.setAttribute('aria-expanded', String(CalendarState.upcomingExpanded));
+        renderUpcomingEvents();
+    });
+
     renderCalendar();
 }
 
@@ -155,18 +142,51 @@ function renderCalendar() {
     const month = d.getMonth();
     const today = new Date();
 
-    // Actualizar título
     const titleEl = document.getElementById('calMonthTitle');
-    if (titleEl) titleEl.innerHTML = `${MONTH_NAMES[month]} ${year} <i class="fas fa-chevron-down" style="font-size:14px;"></i>`;
+    const english = window.getCurrentLang?.() === 'en';
+    const monthName = english
+        ? new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(year, month, 1))
+        : MONTH_NAMES[month];
+    const title = `${monthName} ${year}`;
+    if (titleEl) {
+        titleEl.textContent = title;
+        titleEl.setAttribute('aria-label', `${english ? 'Select month and year' : 'Seleccionar mes y año'}: ${title}`);
+    }
+    const monthPicker = document.getElementById('calendarMonthPicker');
+    if (monthPicker) monthPicker.value = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-    renderMonthGrid(year, month, today);
+    renderCalendarGrid(year, month, today);
     renderUpcomingEvents();
     renderMonthSummary(year, month);
+}
+
+function renderCalendarGrid(year, month, today) {
+    if (CalendarState.viewMode === 'month') {
+        renderMonthGrid(year, month, today);
+        return;
+    }
+
+    const grid = document.getElementById('calendarMonthGrid');
+    if (!grid) return;
+    const headers = Array.from(grid.querySelectorAll('.cal-day-header'));
+    grid.classList.toggle('is-day-view', CalendarState.viewMode === 'day');
+    grid.classList.toggle('is-week-view', CalendarState.viewMode === 'week');
+    const start = new Date(CalendarState.currentDate);
+    if (CalendarState.viewMode === 'week') start.setDate(start.getDate() - start.getDay());
+    const days = CalendarState.viewMode === 'week' ? 7 : 1;
+    const visibleHeaders = CalendarState.viewMode === 'day' ? [headers[start.getDay()]] : headers;
+    grid.replaceChildren(...visibleHeaders.filter(Boolean).map(header => header.cloneNode(true)));
+    for (let offset = 0; offset < days; offset += 1) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + offset);
+        grid.appendChild(createDayCell(date.getFullYear(), date.getMonth(), date.getDate(), false, today));
+    }
 }
 
 function renderMonthGrid(year, month, today) {
     const grid = document.getElementById('calendarMonthGrid');
     if (!grid) return;
+    grid.classList.remove('is-day-view', 'is-week-view');
 
     // Mantener encabezados
     const headers = Array.from(grid.querySelectorAll('.cal-day-header'));
@@ -218,31 +238,27 @@ function createDayCell(year, month, day, otherMonth, today) {
     }
     cell.appendChild(numDiv);
 
-    // Agregar eventos de este día
-    if (!otherMonth) {
-        const dayEvents = CalendarState.events.filter(e => e.fecha === dateStr);
-        dayEvents.forEach(evt => {
-            const colors = typeColorMap[evt.tipo] || typeColorMap.purple;
-            const pill = document.createElement('div');
-            pill.className = 'cal-event-pill';
-            pill.dataset.userContent = 'true';
-            pill.style.background = colors.bg;
-            pill.style.border = `1px solid ${colors.border}`;
-            pill.textContent = (evt.hora ? evt.hora + ' ' : '') + evt.titulo;
-            pill.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openDetalleEvento(evt.id);
-            });
-            cell.appendChild(pill);
+    const dayEvents = CalendarState.events.filter(e => e.fecha === dateStr);
+    dayEvents.forEach(evt => {
+        const colors = typeColorMap[evt.tipo] || typeColorMap.purple;
+        const pill = document.createElement('div');
+        pill.className = 'cal-event-pill';
+        pill.dataset.userContent = 'true';
+        pill.style.background = colors.bg;
+        pill.style.border = `1px solid ${colors.border}`;
+        pill.textContent = (evt.hora ? evt.hora + ' ' : '') + evt.titulo;
+        pill.addEventListener('click', event => {
+            event.stopPropagation();
+            openDetalleEvento(evt.id);
         });
+        cell.appendChild(pill);
+    });
 
-        // Click en celda para crear evento
-        cell.addEventListener('click', () => {
-            const fechaInput = document.getElementById('eventoFecha');
-            if (fechaInput) fechaInput.value = dateStr;
-            openModalNuevoEvento();
-        });
-    }
+    cell.addEventListener('click', () => {
+        const fechaInput = document.getElementById('eventoFecha');
+        if (fechaInput) fechaInput.value = dateStr;
+        openModalNuevoEvento();
+    });
 
     return cell;
 }
@@ -263,18 +279,26 @@ function renderUpcomingEvents() {
 
     const upcoming = CalendarState.events
         .filter(e => e.fecha >= todayStr)
-        .sort((a, b) => a.fecha.localeCompare(b.fecha))
-        .slice(0, 5);
+        .sort((a, b) => a.fecha.localeCompare(b.fecha) || String(a.hora || '').localeCompare(String(b.hora || '')));
+    const english = window.getCurrentLang?.() === 'en';
+    const button = document.getElementById('btnUpcomingAll');
+    if (button) {
+        button.disabled = upcoming.length <= 5;
+        button.textContent = CalendarState.upcomingExpanded
+            ? (english ? 'Show less' : 'Ver menos')
+            : (english ? 'Show all' : 'Ver todos');
+        button.setAttribute('aria-expanded', String(CalendarState.upcomingExpanded));
+    }
 
     if (upcoming.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--color-text-muted);">
             <i class="fas fa-calendar-check" style="font-size:28px; opacity:0.4; display:block; margin-bottom:8px;"></i>
-            Sin eventos próximos
+            ${english ? 'No upcoming events' : 'Sin eventos próximos'}
         </div>`;
         return;
     }
 
-    container.innerHTML = upcoming.map(evt => {
+    container.innerHTML = upcoming.slice(0, CalendarState.upcomingExpanded ? upcoming.length : 5).map(evt => {
         const colors = typeColorMap[evt.tipo] || typeColorMap.purple;
         const dateLabel = getDateLabel(evt.fecha);
         const iconMap = { purple: '⚖️', green: '💳', orange: '🔔', blue: '👤', pink: '🎂' };

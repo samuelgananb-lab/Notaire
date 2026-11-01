@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261101-goals2">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261101-goals2">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261102-dashboard-fixes1">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261102-dashboard-fixes1">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -331,50 +331,13 @@
                 </div>
 
                 <!-- Detalle dinámico de gastos e ingresos -->
-                <div class="content-section" id="seccion-detallada" style="background: var(--color-card-bg); padding: 20px; border-radius: 12px; margin-top: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 id="titulo-seccion-detallada" style="color: var(--color-text-main); margin: 0;">Listado de Gastos</h3>
-                        <div>
-                            <span style="color: var(--color-text-muted); font-size: 0.9em;">Total: </span>
-                            <strong id="total-seccion-detallada" style="font-size: 1.2em; color: #ef4444;">$0</strong>
-                        </div>
-                    </div>
-
-                    <!-- Barra de filtros -->
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
-                        <div style="flex: 1; min-width: 200px;">
-                            <input type="text" id="filtroTexto" placeholder="Buscar por categoría o descripción..." oninput="aplicarFiltros()" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);">
-                        </div>
-                        <div>
-                            <input type="date" id="filtroFechaDesde" onchange="aplicarFiltros()" style="padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);">
-                        </div>
-                        <div>
-                            <input type="date" id="filtroFechaHasta" onchange="aplicarFiltros()" style="padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);">
-                        </div>
-                        <button type="button" onclick="limpiarFiltros()" style="padding: 8px 12px; border-radius: 999px; background: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); border: 1px solid var(--color-card-border); cursor: pointer; font-weight: 600;">Limpiar</button>
-                    </div>
-
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: rgba(255,255,255,0.05); text-align: left; color: #888; font-size: 0.85em;">
-                                <th style="padding: 10px;">Fecha</th>
-                                <th style="padding: 10px;">Categoría</th>
-                                <th style="padding: 10px;">Descripción</th>
-                                <th style="padding: 10px;">Monto</th>
-                                <th style="padding: 10px; text-align: center;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-detallada-body"></tbody>
-                    </table>
-                </div>
-
                 <!-- ============================================================ -->
                 <!-- ============================================================ -->
                 <!-- MI SALDO                                                      -->
                 <!-- ============================================================ -->
                 <div class="content-section" id="view-saldo">
                     <!-- Sección Módulo Saldo -->
-                    <div id="seccion-saldo" style="display: none; margin-top: 10px;">
+                    <div id="seccion-saldo" style="margin-top: 10px;">
                         <h2 style="color: var(--color-text-main); margin-bottom: 20px; font-weight: 700;">MI SALDO</h2>
 
                         <div class="saldo-charts-grid">
@@ -624,9 +587,12 @@
                                     <button class="btn-cal-nav" id="btnCalPrev"><i class="fas fa-chevron-left"></i></button>
                                     <button class="btn-cal-nav" id="btnCalNext"><i class="fas fa-chevron-right"></i></button>
                                 </div>
-                                <div class="month-title-select" id="calMonthTitle">Agosto 2026 <i class="fas fa-chevron-down" style="font-size: 14px;"></i></div>
+                                <button type="button" class="month-title-select" id="calMonthTitle" aria-label="Seleccionar mes y año"></button>
+                                <input type="month" id="calendarMonthPicker" class="visually-hidden" tabindex="-1" aria-hidden="true">
                                 <div class="view-toggle-pill">
                                     <button class="view-toggle-btn active" id="calViewMonth">Mes</button>
+                                    <button class="view-toggle-btn" id="calViewWeek">Semana</button>
+                                    <button class="view-toggle-btn" id="calViewDay">Día</button>
                                 </div>
                             </div>
 
@@ -671,7 +637,7 @@
                             <div class="card-box">
                                 <div class="card-box-header">
                                     <h3>Próximos eventos</h3>
-                                    <button class="btn-link-action">Ver todos</button>
+                                    <button type="button" class="btn-link-action" id="btnUpcomingAll" aria-expanded="false">Ver todos</button>
                                 </div>
                                 <div class="upcoming-events-list" id="upcomingEventsList">
                                     <!-- Se genera dinámicamente -->
@@ -1359,14 +1325,14 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261101-view2"></script>
-    <script src="assets/js/cliente-dashboard-ext.js?v=20261101-goals3"></script>
-    <script src="assets/js/movimientos.js?v=20261026-light-contrast2"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261102-dashboard-fixes1"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261102-dashboard-fixes1"></script>
+    <script src="assets/js/movimientos.js?v=20261102-dashboard-fixes1"></script>
     <script src="assets/js/metas.js?v=20261101-goals3"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>
     <script src="assets/js/scientific-calculator.js?v=20261031-9"></script>
-    <script src="assets/js/saldo.js?v=20261031-2"></script>
+    <script src="assets/js/saldo.js?v=20261102-dashboard-fixes1"></script>
     <script src="assets/js/inicio.js?v=20261031-5"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
     <script src="assets/js/cliente-solicitudes.js?v=20261031-2"></script>

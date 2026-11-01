@@ -76,5 +76,6 @@
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clienteSolForm')?.addEventListener('submit', submit);
         document.querySelector('a[data-target="view-solicitudes"]')?.addEventListener('click', () => void load());
+        if (document.getElementById('view-solicitudes')?.classList.contains('active')) void load();
     });
 })();
