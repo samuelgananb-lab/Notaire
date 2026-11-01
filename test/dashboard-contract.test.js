@@ -17,90 +17,108 @@ test('el dashboard cliente no carga el script administrativo', async () => {
     assert.match(html, /assets\/js\/cliente-dashboard\.js/);
 });
 
-test('gastos e ingresos muestran su historial completo con fecha y acciones', async () => {
+test('gastos e ingresos muestran tablas separadas con filtros y acciones propias', async () => {
     const [html, dashboard, movements] = await Promise.all([
         read('public/panel_control/cliente/dashboard.html'),
         read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
         read('public/panel_control/cliente/assets/js/movimientos.js')
     ]);
-    const expenseList = { innerHTML: '' };
-    const incomeList = { innerHTML: '' };
-    const expenseTotal = { textContent: '' };
-    const incomeTotal = { textContent: '' };
-    const renderer = dashboard.match(/function renderTransacciones\(containerId, totalId, transacciones, sonIngresos\) \{[\s\S]*?\n\}/)?.[0];
-    assert.ok(renderer, 'Debe existir el renderizador de listas de movimientos');
+    const makePanel = () => {
+        const filters = {
+            search: { value: '' },
+            from: { value: '' },
+            to: { value: '' }
+        };
+        const tbody = { innerHTML: '' };
+        const total = { textContent: '' };
+        return {
+            filters,
+            tbody,
+            total,
+            querySelector: selector => selector === '.financial-history-body'
+                ? tbody
+                : selector === '.financial-history-total'
+                    ? total
+                    : filters[selector.match(/data-history-filter="([^"]+)"/)?.[1]],
+            querySelectorAll: () => Object.values(filters)
+        };
+    };
+    const panels = { gasto: makePanel(), ingreso: makePanel() };
+    const filterFunction = movements.match(/function aplicarFiltros\(tipo = moduloActivo\) \{[\s\S]*?\n\}/)?.[0];
+    const renderFunction = movements.match(/function renderizarTablaFiltrada\(transacciones, tipo\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(filterFunction, 'Debe existir el filtrado por fecha y texto');
+    assert.ok(renderFunction, 'Debe existir el renderizado de la tabla');
     const context = {
         document: {
-            getElementById: id => ({
-                listUltimosMovimientos: expenseList,
-                listUltimosIngresos: incomeList,
-                totalGastosLista: expenseTotal,
-                totalIngresosLista: incomeTotal
-            })[id]
+            querySelector: selector => panels[selector.match(/data-financial-type="([^"]+)"/)?.[1]]
+        },
+        getFinancialHistoryPanel: type => panels[type],
+        transaccionesCargadas: {
+            gasto: [
+                { id: 1, tipo: 'gasto', fecha: '2026-11-01', categoria: 'Servicios', descripcion: 'Factura de agua', monto: 100 },
+                { id: 2, tipo: 'gasto', fecha: '2026-11-04', categoria: 'Transporte', descripcion: 'Taxi', monto: 200 }
+            ],
+            ingreso: [
+                { id: 3, tipo: 'ingreso', fecha: '2026-11-02', categoria: 'Honorarios', descripcion: 'Consulta', monto: 500 },
+                { id: 4, tipo: 'ingreso', fecha: '2026-11-05', categoria: 'Salario', descripcion: 'Pago mensual', monto: 1000 }
+            ]
         },
         escaparTextoCliente: value => String(value ?? '').replace(/[&<>"']/g, character => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[character])),
-        formatearFechaMovimiento: value => String(value || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1'),
-        formatCOP: value => `$${value}`
+        formatCOP: value => `$${value}`,
+        moduloActivo: 'gasto'
     };
-    vm.runInNewContext(renderer, context);
-    const gastos = Array.from({ length: 7 }, (_, index) => ({
-        id: index + 1,
-        tipo: 'gasto',
-        descripcion: `Gasto ${index + 1}`,
-        monto: 100 + index,
-        categoria: 'Servicios',
-        fecha: '2026-11-01'
-    }));
-    const ingresos = Array.from({ length: 7 }, (_, index) => ({
-        id: index + 11,
-        tipo: 'ingreso',
-        descripcion: `Ingreso ${index + 1}`,
-        monto: 200 + index,
-        categoria: 'Honorarios',
-        fecha: '2026-11-01'
-    }));
-    context.renderTransacciones('listUltimosMovimientos', 'totalGastosLista', gastos, false);
-    context.renderTransacciones('listUltimosIngresos', 'totalIngresosLista', ingresos, true);
+    vm.runInNewContext(`${filterFunction}\n${renderFunction}`, context);
+    panels.gasto.filters.search.value = 'servicios';
+    panels.gasto.filters.from.value = '2026-11-01';
+    panels.gasto.filters.to.value = '2026-11-03';
+    context.aplicarFiltros('gasto');
+    context.aplicarFiltros('ingreso');
 
-    assert.equal((expenseList.innerHTML.match(/class="transaction-row"/g) || []).length, 7);
-    assert.equal((incomeList.innerHTML.match(/class="transaction-row"/g) || []).length, 7);
-    assert.match(expenseList.innerHTML, /Gasto 1/);
-    assert.match(expenseList.innerHTML, /Gasto 7/);
-    assert.doesNotMatch(expenseList.innerHTML, /Ingreso/);
-    assert.match(expenseList.innerHTML, /transaction-amount-negative/);
-    assert.match(expenseList.innerHTML, /<time class="transaction-date" datetime="2026-11-01"[^>]*>01\/11\/2026/);
-    assert.match(incomeList.innerHTML, /Ingreso 1/);
-    assert.match(incomeList.innerHTML, /Ingreso 7/);
-    assert.doesNotMatch(incomeList.innerHTML, /Gasto/);
-    assert.match(incomeList.innerHTML, /transaction-amount-positive/);
-    assert.equal(expenseTotal.textContent, '$721');
-    assert.equal(incomeTotal.textContent, '$1421');
+    assert.match(panels.gasto.tbody.innerHTML, /Factura de agua/);
+    assert.doesNotMatch(panels.gasto.tbody.innerHTML, /Taxi|Honorarios|Consulta/);
+    assert.match(panels.gasto.tbody.innerHTML, /2026-11-01/);
+    assert.match(panels.gasto.tbody.innerHTML, /data-type="gasto"/);
+    assert.match(panels.gasto.tbody.innerHTML, /btn-tx-edit/);
+    assert.match(panels.gasto.tbody.innerHTML, /btn-tx-delete/);
+    assert.equal(panels.gasto.total.textContent, '$100');
+    assert.match(panels.ingreso.tbody.innerHTML, /Honorarios/);
+    assert.match(panels.ingreso.tbody.innerHTML, /data-type="ingreso"/);
+    assert.doesNotMatch(panels.ingreso.tbody.innerHTML, /Factura de agua|Taxi/);
+    assert.equal(panels.ingreso.total.textContent, '$1500');
+    vm.runInNewContext(
+        movements.match(/function limpiarFiltros\(tipo = moduloActivo\) \{[\s\S]*?\n\}/)?.[0],
+        context
+    );
+    context.limpiarFiltros('gasto');
+    assert.equal(panels.gasto.filters.search.value, '');
+    assert.equal((panels.gasto.tbody.innerHTML.match(/<tr data-transaction=/g) || []).length, 2);
+    assert.equal(panels.gasto.total.textContent, '$300');
     const expensesStart = html.indexOf('<div class="content-section" id="view-gastos">');
     const incomeStart = html.indexOf('<div class="content-section" id="view-ingresos">');
     const balanceStart = html.indexOf('<div class="content-section" id="view-saldo">');
     const expensesView = html.slice(expensesStart, incomeStart);
     const incomeView = html.slice(incomeStart, balanceStart);
-    for (const [view, listId, totalId] of [
-        [expensesView, 'listUltimosMovimientos', 'totalGastosLista'],
-        [incomeView, 'listUltimosIngresos', 'totalIngresosLista']
+    for (const [view, type, bodyId, title] of [
+        [expensesView, 'gasto', 'tabla-detallada-body-gasto', 'Listado de Gastos'],
+        [incomeView, 'ingreso', 'tabla-detallada-body-ingreso', 'Listado de Ingresos']
     ]) {
-        assert.equal((view.match(/class="card-box transaction-history-panel"/g) || []).length, 1);
-        assert.match(view, new RegExp(`id="${listId}"`));
-        assert.match(view, new RegExp(`id="${totalId}"`));
+        assert.equal((view.match(/class="card-box financial-history-panel"/g) || []).length, 1);
+        assert.match(view, new RegExp(`data-financial-type="${type}"`));
+        assert.match(view, new RegExp(`id="${bodyId}"`));
+        assert.match(view, new RegExp(title));
+        assert.equal((view.match(/data-history-filter="search"/g) || []).length, 1);
+        assert.equal((view.match(/data-history-filter="from"/g) || []).length, 1);
+        assert.equal((view.match(/data-history-filter="to"/g) || []).length, 1);
         assert.doesNotMatch(view, /metrics-grid|two-column-grid|<canvas|listMayoresGastos|legend-list/);
         assert.doesNotMatch(view, /section-actions-group|openModalRegistrar(?:Gasto|Ingreso)/);
     }
-    assert.match(dashboard, /renderTransacciones\('listUltimosMovimientos', 'totalGastosLista', gastos, false\)/);
-    assert.match(dashboard, /renderTransacciones\('listUltimosIngresos', 'totalIngresosLista', ingresos, true\)/);
-    assert.match(dashboard, /const transactionsResponse = await fetchTransacciones\(\)/);
-    assert.match(dashboard, /const movimientosOrdenados = transacciones\.sort/);
-    assert.doesNotMatch(dashboard, /monthTransactions|fetchTransacciones\(monthKey\)/);
-    assert.match(expenseList.innerHTML, /btn-tx-edit/);
-    assert.match(expenseList.innerHTML, /btn-tx-delete/);
-    assert.match(dashboard, /abrirModalEdicion\(JSON\.parse\(this\.closest\('\.transaction-row'\)\.dataset\.transaction\)\)/);
-    assert.match(dashboard, /eliminarMovimiento\(this\.dataset\.id, this\.dataset\.type\)/);
+    assert.match(dashboard, /await Promise\.all\(tipos\.map\(tipo => cargarTablaMovimientos\(tipo\)\)\)/);
+    assert.match(movements, /fetchTransacciones\(monthKey \|\| null\)/);
+    assert.match(movements, /\.filter\(item => tipoDeMovimiento\(item\) === tipo\)/);
+    assert.match(movements, /abrirModalEdicion\(JSON\.parse\(this\.closest\('tr'\)\.dataset\.transaction\)\)/);
+    assert.match(movements, /eliminarMovimiento\(this\.dataset\.id, this\.dataset\.type\)/);
     assert.match(html, /<input type="date" id="fechaMovimiento"[^>]*required>/);
     assert.match(movements, /document\.getElementById\('fechaMovimiento'\)\.value = String\(item\.fecha \|\| ''\)\.slice\(0, 10\)/);
     assert.match(movements, /fecha: fechaInput\?\.value/);
@@ -123,7 +141,8 @@ test('gastos e ingresos muestran su historial completo con fecha y acciones', as
     });
     assert.equal(fields.fechaMovimiento.value, '2026-10-28');
     assert.equal(title.textContent, 'Editar Movimiento');
-    assert.doesNotMatch(html + movements, /financial-history-panel|data-history-filter|tabla-detallada-body|cargarTablaMovimientos|modalVerTodos/);
+    assert.match(movements, /function limpiarFiltros\(tipo = moduloActivo\)/);
+    assert.doesNotMatch(html + movements, /listUltimosMovimientos|listUltimosIngresos|modalVerTodos/);
 });
 
 test('el dashboard conserva Soporte y Configuración dentro del contenedor de vistas', async () => {
@@ -144,15 +163,14 @@ test('el dashboard conserva Soporte y Configuración dentro del contenedor de vi
     assert.match(dashboard, /viewId === 'view-gastos' \|\| viewId === 'view-ingresos'[\s\S]*cargarDatosFinancieros\(viewId\)/);
     assert.match(dashboard, /const validSavedView = Array\.from\(navLinks\)\.some\(link => link\.getAttribute\('data-target'\) === savedView\)/);
     assert.doesNotMatch(dashboardExt, /function navigateTo\(/);
-    assert.doesNotMatch(movements, /financial-history-panel|cargarTablaMovimientos/);
-    assert.match(html, /<div><span>Total acumulado<\/span><strong id="totalGastosLista">/);
-    assert.match(html, /<div><span>Total acumulado<\/span><strong id="totalIngresosLista">/);
-    assert.match(dashboard, /renderTransacciones\('listUltimosMovimientos', 'totalGastosLista', gastos, false\)/);
-    assert.match(dashboard, /renderTransacciones\('listUltimosIngresos', 'totalIngresosLista', ingresos, true\)/);
+    assert.match(movements, /function cargarTablaMovimientos\(tipo\)/);
+    assert.match(html, /id="view-gastos"[\s\S]*data-financial-type="gasto"[\s\S]*tabla-detallada-body-gasto/);
+    assert.match(html, /id="view-ingresos"[\s\S]*data-financial-type="ingreso"[\s\S]*tabla-detallada-body-ingreso/);
     assert.doesNotMatch(movements, /btnGastos|btnIngresos|addEventListener\('click',\s*\(\)\s*=>\s*cambiarSeccion/);
-    assert.match(html, /id="view-gastos"[\s\S]*class="card-box transaction-history-panel"[\s\S]*id="listUltimosMovimientos"/);
-    assert.match(html, /id="view-ingresos"[\s\S]*class="card-box transaction-history-panel"[\s\S]*id="listUltimosIngresos"/);
-    assert.doesNotMatch(html, /financial-history-panel|data-history-filter|tabla-detallada-body|modalVerTodos/);
+    assert.match(html, /id="view-gastos"[\s\S]*class="card-box financial-history-panel"[\s\S]*id="tabla-detallada-body-gasto"/);
+    assert.match(html, /id="view-ingresos"[\s\S]*class="card-box financial-history-panel"[\s\S]*id="tabla-detallada-body-ingreso"/);
+    assert.match(html, /data-history-filter="search"/);
+    assert.doesNotMatch(html, /modalVerTodos/);
     assert.match(support, /document\.querySelector\('a\[data-target="view-solicitudes"\]'\)\?\.addEventListener\('click', \(\) => void load\(\)\)/);
     assert.match(support, /view-solicitudes'\)\?\.classList\.contains\('active'\)\) void load\(\)/);
     assert.match(calculator, /addEventListener\('click', \(\) => void loadCurrencyCatalog\(\)\)/);
@@ -220,10 +238,13 @@ test('el backend usa las tablas canónicas de Supabase', async () => {
 });
 
 test('el cliente tiene estados de carga y manejo de perfil persistente', async () => {
-    const clientScript = await read('public/panel_control/cliente/assets/js/cliente-dashboard.js');
-    assert.match(clientScript, /data-state-loading|Cargando/);
+    const [clientScript, movementsScript] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/movimientos.js')
+    ]);
+    assert.match(movementsScript, /financial-history-state">Cargando movimientos/);
+    assert.match(clientScript + movementsScript, /api\/transacciones|fetchTransacciones/);
     assert.match(clientScript, /api\/auth\/me/);
-    assert.match(clientScript, /api\/transacciones/);
 });
 
 test('el panel cliente carga movimientos y permite desplazarse en móvil', async () => {
@@ -411,7 +432,7 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     assert.match(styles, /html\[data-theme="light"\] \.cal-event-pill/);
     assert.match(styles, /html\[data-theme="light"\] \.hero-welcome-title span[\s\S]*-webkit-text-fill-color: var\(--color-primary\)/);
     assert.match(styles, /--color-bg: #f3f5f8/);
-    assert.doesNotMatch(mobileStyles, /financial-history-filters/);
+    assert.match(mobileStyles, /financial-history-filters \{ grid-template-columns: 1fr 1fr/);
     assert.match(script, /color:var\(--color-text-main\);\">\$\{escapeHtmlExt\(evt\.titulo\)\}/);
     assert.match(styles, /\.theme-swatch-gold/);
     assert.match(styles, /\.theme-swatch-black/);
@@ -1136,7 +1157,7 @@ test('el calendario cambia de vista y el error de aporte solo muestra el límite
     assert.match(calendar, /CalendarState\.upcomingExpanded \? upcoming\.length : 5/);
     assert.match(styles, /\.calendar-month-grid\.is-day-view \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.calendar-month-grid\.is-day-view/);
-    assert.match(html, /<h3>Lista de gastos<\/h3>[\s\S]*id="listUltimosMovimientos"/);
+    assert.match(html, /<h3>Listado de Gastos<\/h3>[\s\S]*id="tabla-detallada-body-gasto"/);
     assert.match(aporteError, /box\.textContent = message/);
     assert.doesNotMatch(aporteError, /createElement|openModalRegistrarIngreso|aporte-error-actions/);
     assert.match(register, /assets\/css\/login\.css/);

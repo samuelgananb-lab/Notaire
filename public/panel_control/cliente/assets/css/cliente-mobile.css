@@ -143,6 +143,10 @@
     }
     [data-theme="light"] .sidebar { background: #e8ebf0; }
     [data-theme="light"] .modal-container-box { background: #eef1f5; }
+    [data-theme="light"] .financial-history-filters input {
+        color: #172033 !important;
+        background: #f1f4f8 !important;
+    }
     [data-theme="light"] .saldo-hero-mobile small { color: #526174; }
 
     /* Menú lateral ("Más") */
@@ -176,15 +180,41 @@
 @media (max-width: 768px) {
     .section-header-bar { margin-bottom: 8px !important; }
     #view-gastos .section-header-bar, #view-ingresos .section-header-bar { padding-bottom: 0; }
-    .transaction-history-panel .transaction-row { gap: 8px; padding: 10px; }
-    .transaction-history-panel .transaction-left { gap: 8px; }
-    .transaction-history-panel .transaction-icon-box { flex: 0 0 34px; width: 34px; height: 34px; }
-    .transaction-history-panel .transaction-title { font-size: 13px; overflow-wrap: anywhere; }
-    .transaction-history-panel .transaction-amount-positive,
-    .transaction-history-panel .transaction-amount-negative { font-size: 13px; white-space: nowrap; }
-    .transaction-history-panel .transaction-actions { gap: 2px; }
-    .transaction-history-panel .btn-tx-edit,
-    .transaction-history-panel .btn-tx-delete { width: 28px; height: 28px; }
+    .financial-history-panel { padding: 16px !important; margin-top: 0 !important; }
+    .financial-history-header,
+    .financial-history-header > div { align-items: flex-start; }
+    .financial-history-header > div { flex-direction: column; align-items: flex-end; gap: 2px; }
+    .financial-history-header > div strong { font-size: 18px; }
+    .financial-history-filters { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .financial-history-filters label:first-child { grid-column: 1 / -1; }
+    .financial-history-filters input {
+        width: 100%; box-sizing: border-box; min-height: 42px; border-radius: 12px;
+    }
+    .financial-history-filters button { grid-column: 1 / -1; min-height: 40px; }
+    .financial-history-table, .financial-history-table tbody { display: block; width: 100%; }
+    .financial-history-table thead { display: none; }
+    .financial-history-table tbody tr:not(.financial-history-empty-row) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "category amount" "description description" "date actions";
+        gap: 5px 10px;
+        align-items: center;
+        padding: 14px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(var(--color-secondary-rgb), .25);
+        border-radius: 16px;
+        background: linear-gradient(160deg, rgba(var(--color-card-rgb), .85), rgba(var(--color-sidebar-rgb), .9));
+    }
+    .financial-history-table td { display: block; padding: 0; border: 0; }
+    .financial-history-table td:nth-child(1) { grid-area: date; font-size: 12px; }
+    .financial-history-table td:nth-child(2) { grid-area: category; font-size: 15px; }
+    .financial-history-table td:nth-child(3) { grid-area: description; font-size: 13px; overflow-wrap: anywhere; }
+    .financial-history-table td:nth-child(4) { grid-area: amount; font-size: 16px; text-align: right; }
+    .financial-history-table td:nth-child(5) { grid-area: actions; }
+    .financial-history-actions .btn-tx-edit,
+    .financial-history-actions .btn-tx-delete { width: 34px; height: 34px; }
+    .financial-history-empty-row { display: block !important; }
+    .financial-history-empty-row td[colspan] { text-align: center; padding: 22px 0 !important; }
 }
 
 /* ---------- CALENDARIO y SALDO: sin desbordes ---------- */

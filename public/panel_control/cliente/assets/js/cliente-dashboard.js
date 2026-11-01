@@ -647,65 +647,13 @@ async function cargarResumenDashboard() {
 }
 
 async function cargarDatosFinancieros(viewId = document.querySelector('.content-section.active')?.id) {
-    const token = localStorage.getItem('notaire_token');
-    if (!token) return;
-
-    try {
-        setDataState(document.getElementById('listUltimosMovimientos'), 'Cargando gastos...', 'loading');
-        setDataState(document.getElementById('listUltimosIngresos'), 'Cargando ingresos...', 'loading');
-        const transactionsResponse = await fetchTransacciones();
-        const transacciones = Array.isArray(transactionsResponse) ? transactionsResponse : [];
-        const tipoMovimiento = item => window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.getTransactionType(item)
-            : String(item.tipo || item.tipo_registro || '').toLowerCase();
-        const movimientosOrdenados = transacciones.sort((a, b) =>
-            new Date(b.fecha || 0) - new Date(a.fecha || 0) || Number(b.id) - Number(a.id)
-        );
-        const gastos = movimientosOrdenados.filter(item => tipoMovimiento(item) === 'gasto');
-        const ingresos = movimientosOrdenados.filter(item => tipoMovimiento(item) === 'ingreso');
-        renderTransacciones('listUltimosMovimientos', 'totalGastosLista', gastos, false);
-        renderTransacciones('listUltimosIngresos', 'totalIngresosLista', ingresos, true);
-    } catch (error) {
-        console.error('Error al cargar datos financieros:', error);
-        setDataState(document.getElementById('listUltimosMovimientos'), 'No se pudieron cargar los gastos.', 'error');
-        setDataState(document.getElementById('listUltimosIngresos'), 'No se pudieron cargar los ingresos.', 'error');
-        const totalGastos = document.getElementById('totalGastosLista');
-        const totalIngresos = document.getElementById('totalIngresosLista');
-        if (totalGastos) totalGastos.textContent = formatCOP(0);
-        if (totalIngresos) totalIngresos.textContent = formatCOP(0);
-        showToast('No se pudieron cargar los movimientos');
-    } finally {
-        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
-    }
-}
-
-function renderTransacciones(containerId, totalId, transacciones, sonIngresos) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const total = transacciones.reduce((sum, item) => sum + (Number(item.monto) || 0), 0);
-    const totalElement = document.getElementById(totalId);
-    if (totalElement) totalElement.textContent = formatCOP(total);
-    const escHtml = escaparTextoCliente;
-    container.innerHTML = transacciones.length ? transacciones.map(item => `
-        <div class="transaction-row" data-transaction="${escHtml(JSON.stringify({ ...item, id: item.id || item.id_registro }))}">
-            <div class="transaction-left"><div class="transaction-icon-box">${sonIngresos ? '💼' : '🧾'}</div>
-                <div class="transaction-info">
-                    <span class="transaction-title" data-user-content="true">${escHtml(item.descripcion || item.categoria || 'Movimiento')}</span>
-                    <time class="transaction-date" datetime="${escHtml(String(item.fecha || '').slice(0, 10))}" data-user-content="true">${escHtml(formatearFechaMovimiento(item.fecha))} · ${escHtml(item.categoria || '')}</time>
-                </div>
-            </div>
-            <span class="${sonIngresos ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${sonIngresos ? '+' : '-'}${formatCOP(item.monto)}</span>
-            <div class="transaction-actions">
-                <button type="button" class="btn-tx-edit" aria-label="Editar movimiento" title="Editar" onclick="abrirModalEdicion(JSON.parse(this.closest('.transaction-row').dataset.transaction))"><i class="fas fa-pen"></i></button>
-                <button type="button" class="btn-tx-delete" aria-label="Eliminar movimiento" title="Eliminar" data-id="${escHtml(item.id || item.id_registro)}" data-type="${sonIngresos ? 'ingreso' : 'gasto'}" onclick="eliminarMovimiento(this.dataset.id, this.dataset.type)"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`).join('') : '<p class="data-state data-state-empty">No hay registros.</p>';
-}
-
-function formatearFechaMovimiento(fecha) {
-    const valor = String(fecha || '').slice(0, 10);
-    const coincidencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
-    return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha || '');
+    const activeView = viewId || document.querySelector('.content-section.active')?.id;
+    const tipos = activeView === 'view-gastos'
+        ? ['gasto']
+        : activeView === 'view-ingresos'
+            ? ['ingreso']
+            : ['gasto', 'ingreso'];
+    await Promise.all(tipos.map(tipo => cargarTablaMovimientos(tipo)));
 }
 
 const loadDashboardData = cargarResumenDashboard;
