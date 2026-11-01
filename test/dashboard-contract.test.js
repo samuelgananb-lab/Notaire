@@ -1226,6 +1226,8 @@ test('las metas completadas se separan y las tres más avanzadas se destacan', a
     assert.match(dashboard, /id="valMetasCompletadas"/);
     assert.match(dashboard, /id="valMetasEnProgreso"/);
     assert.match(dashboard, /class="goal-status-counts"/);
+    assert.match(dashboard, /class="metric-card goal-status-card">[\s\S]*?ESTADO DE TUS METAS/);
+    assert.match(dashboard, /class="config-card appearance-config-card">[\s\S]*?<h3>Apariencia<\/h3>/);
     assert.match(dashboard, /Convierte tus planes en metas alcanzables/);
     assert.match(goals, /goal-status-summary-item is-progress/);
     assert.match(goals, /goal-status-summary-item is-completed/);
@@ -1233,6 +1235,9 @@ test('las metas completadas se separan y las tres más avanzadas se destacan', a
     assert.match(dashboard, /id="homeMetaStatus"/);
     assert.doesNotMatch(dashboard, /Autenticación 2FA|tog2FA/);
     assert.match(styles, /html\s*\{\s*font-size:\s*102%;\s*\}/);
+    assert.match(styles, /\.goal-status-card\s*\{/);
+    assert.match(styles, /\.theme-palette-section\s*\{/);
+    assert.match(styles, /\.appearance-config-card \.config-toggle-row\s*\{/);
     assert.match(dashboard, /id="metasProximasGrid"/);
     assert.match(goals, /class="goal-card\$\{goal\.completada \? ' is-completed' : ''\}"/);
 });
