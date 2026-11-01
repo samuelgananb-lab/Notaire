@@ -147,10 +147,6 @@
         color: #172033;
         background: #f1f4f8;
     }
-    [data-theme="light"] .financial-history-filters input {
-        color: #172033 !important;
-        background: #f1f4f8 !important;
-    }
     [data-theme="light"] .saldo-hero-mobile small { color: #526174; }
 
     /* Menú lateral ("Más") */
@@ -220,53 +216,10 @@
     }
 }
 
-/* ---------- Listado de movimientos (gastos / ingresos) como tarjetas ---------- */
-@media (max-width: 768px) {
-    .financial-history-panel { padding: 16px !important; }
-    .financial-history-header,
-    .financial-history-header > div { align-items: flex-start; }
-    .financial-history-header > div { flex-direction: column; align-items: flex-end; gap: 2px; }
-    .financial-history-header > div strong { font-size: 18px; }
-    .financial-history-filters { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .financial-history-filters label:first-child { grid-column: 1 / -1; }
-    .financial-history-filters label { min-width: 0; }
-    .financial-history-filters input {
-        width: 100% !important; box-sizing: border-box; min-height: 42px; border-radius: 14px !important;
-        background: rgba(255,255,255,.06) !important; border: 1px solid rgba(var(--color-secondary-rgb), .3) !important; color: #fff !important; font-family: inherit;
-    }
-    .financial-history-filters button {
-        grid-column: 1 / -1; min-height: 40px; border-radius: 14px !important;
-        background: rgba(var(--color-primary-rgb), .18) !important; color: var(--color-secondary-light) !important; border: 1px solid rgba(var(--color-secondary-rgb), .35) !important; font-weight: 600;
-    }
-
-    /* Tabla -> tarjetas */
-    .financial-history-table, .financial-history-table tbody { display: block; width: 100%; }
-    .financial-history-table thead { display: none; }
-    .financial-history-table tbody tr {
-        display: grid !important; grid-template-columns: 1fr auto; grid-template-areas: "cat monto" "desc desc" "fecha acc";
-        gap: 4px 10px; align-items: center; padding: 14px; margin-bottom: 10px;
-        border: 1px solid rgba(var(--color-secondary-rgb), .25) !important; border-radius: 16px;
-        background: linear-gradient(160deg, rgba(var(--color-card-rgb),.85), rgba(var(--color-sidebar-rgb),.9));
-    }
-    .financial-history-table td { padding: 0 !important; display: block !important; border: 0; }
-    .financial-history-table td:nth-child(1) { grid-area: fecha; font-size: 12px; }
-    .financial-history-table td:nth-child(2) { grid-area: cat; font-size: 16px; }
-    .financial-history-table td:nth-child(3) { grid-area: desc; font-size: 13px; overflow-wrap: anywhere; }
-    .financial-history-table td:nth-child(4) { grid-area: monto; font-size: 17px; text-align: right; }
-    .financial-history-table td:nth-child(5) { grid-area: acc; display: flex !important; justify-content: flex-end !important; gap: 10px !important; }
-    .financial-history-table td:nth-child(5) button {
-        width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,.07) !important; font-size: 15px;
-    }
-    .financial-history-table td[colspan] { grid-column: 1 / -1; text-align: center; padding: 22px 0 !important; }
-    .financial-history-table tr:has(td[colspan]) { display: block !important; text-align: center; }
-}
-
 @media (max-width: 768px) {
     .section-header-bar { margin-bottom: 8px !important; }
     #view-gastos .metrics-grid, #view-ingresos .metrics-grid { margin-top: 0; }
     #view-gastos .section-header-bar, #view-ingresos .section-header-bar { padding-bottom: 0; }
-    #view-gastos .card-box, #view-ingresos .card-box { margin-bottom: 0; }
-    .financial-history-panel { margin-top: 0 !important; }
 }
 
 /* ---------- CALENDARIO y SALDO: sin desbordes ---------- */
@@ -358,8 +311,6 @@
     #view-ingresos .donut-container { width: 200px; height: 200px; margin: 4px auto 10px; }
     #view-ingresos .legend-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; font-size: 13px; }
     #view-ingresos .two-column-grid { margin-bottom: 14px; }
-    .financial-history-header strong { transition: color .2s; }
-
     #view-metas .section-header-bar { margin-bottom: 12px !important; }
     #view-metas .metas-hero-cta { border-radius: 20px; }
     #view-metas .metas-hero-cta button, #view-metas .metas-hero-cta .btn-primary-action { width: 100%; justify-content: center; min-height: 50px; border-radius: 16px; }

@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261104-panel-polish2">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261104-panel-polish2">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261101-restore-lists">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261101-restore-lists">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -264,23 +264,9 @@
                         </div>
                     </div>
 
-                    <div class="card-box financial-history-panel" data-financial-type="gasto">
-                        <div class="financial-history-header">
-                            <h3 id="titulo-seccion-detallada-gasto">Listado de gastos</h3>
-                            <div><span>Total del periodo</span><strong class="financial-history-total" id="total-seccion-detallada-gasto">$0</strong></div>
-                        </div>
-                        <div class="financial-history-filters">
-                            <label><span>Buscar</span><input type="text" data-history-filter="search" placeholder="Categoría o descripción" oninput="aplicarFiltros()"></label>
-                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros()"></label>
-                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros()"></label>
-                            <button type="button" onclick="limpiarFiltros()">Limpiar filtros</button>
-                        </div>
-                        <div class="financial-history-table-wrap">
-                            <table class="financial-history-table">
-                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
-                                <tbody class="financial-history-body" id="tabla-detallada-body-gasto"></tbody>
-                            </table>
-                        </div>
+                    <div class="card-box">
+                        <div class="card-box-header"><h3>Últimos movimientos</h3></div>
+                        <div class="transactions-list" id="listUltimosMovimientos"></div>
                     </div>
                 </div>
 
@@ -333,23 +319,9 @@
                         </div>
                     </div>
 
-                    <div class="card-box financial-history-panel" data-financial-type="ingreso">
-                        <div class="financial-history-header">
-                            <h3 id="titulo-seccion-detallada-ingreso">Listado de ingresos</h3>
-                            <div><span>Total del periodo</span><strong class="financial-history-total" id="total-seccion-detallada-ingreso">$0</strong></div>
-                        </div>
-                        <div class="financial-history-filters">
-                            <label><span>Buscar</span><input type="text" data-history-filter="search" placeholder="Categoría o descripción" oninput="aplicarFiltros()"></label>
-                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros()"></label>
-                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros()"></label>
-                            <button type="button" onclick="limpiarFiltros()">Limpiar filtros</button>
-                        </div>
-                        <div class="financial-history-table-wrap">
-                            <table class="financial-history-table">
-                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
-                                <tbody class="financial-history-body" id="tabla-detallada-body-ingreso"></tbody>
-                            </table>
-                        </div>
+                    <div class="card-box">
+                        <div class="card-box-header"><h3>Últimos ingresos</h3></div>
+                        <div class="transactions-list" id="listUltimosIngresos"></div>
                     </div>
                 </div>
 
@@ -1322,9 +1294,9 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261101-restore-lists"></script>
     <script src="assets/js/cliente-dashboard-ext.js?v=20261104-panel-polish2"></script>
-    <script src="assets/js/movimientos.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/movimientos.js?v=20261101-restore-lists"></script>
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261027"></script>
