@@ -863,6 +863,8 @@
         'Movimiento guardado correctamente': 'Transaction saved successfully',
         'Calculadora': 'Calculator',
         'CALCULADORA': 'CALCULATOR',
+        'TUS OPERACIONES': 'YOUR CALCULATIONS',
+        'Operaciones anteriores': 'Previous calculations',
         'Resuelve operaciones cotidianas y científicas con precisión.': 'Solve everyday and scientific calculations with precision.',
         'No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando.': 'Do not work only for money; build something that creates value even when you are not working.',
         'Agregar categoría': 'Add category',
