@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -267,12 +267,13 @@ test('el login redirige según el rol recibido del backend', async () => {
 });
 
 test('el fondo animado del login no crea desbordamiento en móviles', async () => {
-    const loginStyles = await read('public/auth/assets/css/login.css');
+    const loginStyles = await read('public/auth/assets/css/auth.css');
     const loginHtml = await read('public/auth/login.html');
 
-    assert.match(loginStyles, /\.background-shapes \{[^}]*overflow: clip;/);
-    assert.match(loginStyles, /@media \(max-width: 520px\) \{[\s\S]*?height: auto;[\s\S]*?overflow-y: auto;/);
-    assert.match(loginHtml, /assets\/css\/login\.css\?v=/);
+    assert.match(loginStyles, /\.auth-page \.background-shapes \{[\s\S]*?overflow: clip;/);
+    assert.match(loginStyles, /body\.auth-page \{[\s\S]*?overflow-y: auto;/);
+    assert.match(loginHtml, /assets\/css\/auth\.css\?v=/);
+    assert.doesNotMatch(loginHtml, /assets\/css\/login\.css/);
 });
 
 test('el login informa si la API devuelve una respuesta vacía o no JSON', async () => {
@@ -774,7 +775,7 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     const [loginHtml, recoveryHtml, recoveryStyles, recoveryScript, passwordHtml, passwordScript, clientHtml, adminHtml, employeeHtml, authRoute, authGuard, clientLogout, adminLogout] = await Promise.all([
         read('public/auth/login.html'),
         read('public/auth/olvide-password.html'),
-        read('public/auth/assets/css/olvide-password.css'),
+        read('public/auth/assets/css/auth.css'),
         read('public/auth/assets/js/olvide-password.js'),
         read('public/auth/cambiar-password.html'),
         read('public/auth/assets/js/cambiar-password.js'),
@@ -793,13 +794,10 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     assert.match(recoveryHtml, /id="recoveryForm"/);
     assert.match(recoveryHtml, /id="recoveryResult"/);
     assert.match(recoveryHtml, /href="login\.html" class="back-link"/);
-    assert.match(recoveryStyles, /\.shape-1 \{[\s\S]*?width: 500px;[\s\S]*?top: -10%;[\s\S]*?left: -10%;/);
-    assert.match(recoveryStyles, /33% \{ transform: translate\(40px, -60px\) scale\(1\.1\); \}/);
-    assert.match(recoveryStyles, /\.shape-3 \{[\s\S]*?opacity: 0\.05;[\s\S]*?animation-delay: -12s;/);
-    assert.match(recoveryStyles, /\.recovery-card \{[\s\S]*?animation: card-in 0\.45s ease-out both;[\s\S]*?transition: transform 0\.6s/);
-    assert.match(recoveryStyles, /@keyframes card-in \{\s*from \{ opacity: 0; transform: translateY\(14px\) scale\(0\.98\); \}\s*to \{ opacity: 1; transform: none; \}\s*\}/);
-    assert.match(recoveryStyles, /id="windParticles"|#windParticles/);
-    assert.match(recoveryStyles, /recovery-card[\s\S]*?backdrop-filter: blur\(35px\)/);
+    assert.match(recoveryStyles, /\.auth-page \.shape-1 \{[\s\S]*?radial-gradient/);
+    assert.match(recoveryStyles, /@keyframes auth-light-drift/);
+    assert.match(recoveryStyles, /\.auth-panel \{[\s\S]*?auth-panel-enter/);
+    assert.match(recoveryStyles, /backdrop-filter: blur\(28px\)/);
     assert.match(recoveryScript, /\/api\/auth\/recover/);
     assert.match(recoveryScript, /window\.NotaireAuthScreens\.recovery = initializeRecoveryScreen/);
     assert.doesNotMatch(recoveryScript, /requestAnimationFrame|mousemove/);
@@ -837,6 +835,15 @@ test('todas las pantallas de autenticación reutilizan el fondo, el logo y la na
         read('public/auth/assets/img/notaire-auth-logo.svg')
     ]);
     const pages = [loginHtml, registerHtml, recoveryHtml, passwordHtml];
+    const authHtmlFiles = (await readdir(path.join(root, 'public', 'auth')))
+        .filter(file => file.endsWith('.html'))
+        .sort();
+    assert.deepEqual(authHtmlFiles, [
+        'cambiar-password.html',
+        'login.html',
+        'olvide-password.html',
+        'register.html'
+    ]);
 
     for (const html of pages) {
         assert.match(html, /<body class="auth-page">/);
@@ -845,6 +852,7 @@ test('todas las pantallas de autenticación reutilizan el fondo, el logo y la na
         assert.match(html, /assets\/img\/notaire-auth-logo\.svg/);
         assert.match(html, /assets\/css\/auth\.css\?v=/);
         assert.match(html, /assets\/js\/auth-app\.js\?v=/);
+        assert.doesNotMatch(html, /assets\/css\/(?:login|register|olvide-password)\.css/);
         assert.doesNotMatch(html, /<svg\b/);
     }
 
@@ -858,6 +866,11 @@ test('todas las pantallas de autenticación reutilizan el fondo, el logo y la na
     assert.match(authStyles, /@media \(prefers-reduced-motion: reduce\)/);
     assert.match(authStyles, /@media \(max-width: 520px\)/);
     assert.match(authApp, /requestAnimationFrame\(drawFrame\)/);
+    assert.match(authApp, /glowRadius: 9 \+ Math\.random\(\) \* 15/);
+    assert.match(authApp, /createRadialGradient/);
+    assert.match(authApp, /const flash = pulse \*\* 12/);
+    assert.match(authApp, /speedY: \(Math\.random\(\) - \.5\) \* \.09/);
+    assert.match(authApp, /createLinearGradient/);
     assert.match(authApp, /reduceMotion\.matches/);
     assert.match(authApp, /currentPanel\.replaceWith\(document\.importNode\(nextPanel, true\)\)/);
     assert.equal((authApp.match(/initializeBackground\(\);/g) || []).length, 1);
@@ -1219,7 +1232,7 @@ test('el calendario cambia de vista y el error de aporte solo muestra el límite
     assert.match(html, /<h3>Listado de Gastos<\/h3>[\s\S]*id="tabla-detallada-body-gasto"/);
     assert.match(aporteError, /box\.textContent = message/);
     assert.doesNotMatch(aporteError, /createElement|openModalRegistrarIngreso|aporte-error-actions/);
-    assert.match(register, /assets\/css\/login\.css/);
+    assert.match(register, /assets\/css\/auth\.css/);
 });
 
 test('el calendario guarda categorías compatibles y muestra los días en su propia franja', async () => {

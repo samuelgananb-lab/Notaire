@@ -33,19 +33,23 @@
                     length: 10 + Math.random() * 33,
                     speed: .12 + Math.random() * .35,
                     direction: Math.random() > .17 ? 1 : -1,
+                    driftY: (Math.random() - .5) * .1,
                     opacity: .08 + Math.random() * .18,
                     phase: Math.random() * Math.PI * 2,
                     phaseSpeed: .00035 + Math.random() * .00055
                 });
             }
-            for (let index = 0; index < 12; index += 1) {
+            for (let index = 0; index < 22; index += 1) {
                 particles.push({
                     x: Math.random() * width,
                     y: Math.random() * height,
-                    radius: .5 + Math.random() * .7,
-                    opacity: .07 + Math.random() * .12,
+                    radius: .65 + Math.random() * .9,
+                    glowRadius: 9 + Math.random() * 15,
+                    speedX: (Math.random() - .5) * .12,
+                    speedY: (Math.random() - .5) * .09,
+                    opacity: .12 + Math.random() * .2,
                     phase: Math.random() * Math.PI * 2,
-                    phaseSpeed: .0004 + Math.random() * .0005
+                    phaseSpeed: .00045 + Math.random() * .0008
                 });
             }
         }
@@ -66,27 +70,68 @@
                 return;
             }
             if (timestamp - lastFrameTime >= 33) {
+                const delta = lastFrameTime ? Math.min(timestamp - lastFrameTime, 66) : 33;
                 lastFrameTime = timestamp;
                 context.clearRect(0, 0, width, height);
                 streaks.forEach(streak => {
-                    streak.x += streak.speed * streak.direction;
+                    const frameScale = delta / 33;
+                    streak.x += streak.speed * streak.direction * frameScale;
+                    streak.y += streak.driftY * frameScale;
                     if (streak.direction > 0 && streak.x > width + streak.length) streak.x = -streak.length;
                     if (streak.direction < 0 && streak.x < -streak.length) streak.x = width + streak.length;
-                    streak.phase += streak.phaseSpeed * 33;
+                    if (streak.y < -4) streak.y = height + 4;
+                    if (streak.y > height + 4) streak.y = -4;
+                    streak.phase += streak.phaseSpeed * delta;
                     const alpha = streak.opacity * (.48 + .52 * Math.sin(streak.phase) ** 2);
+                    const trail = context.createLinearGradient(
+                        streak.x,
+                        streak.y,
+                        streak.x - streak.length * streak.direction,
+                        streak.y
+                    );
+                    trail.addColorStop(0, `rgba(220, 188, 255, ${alpha})`);
+                    trail.addColorStop(1, 'rgba(177, 115, 255, 0)');
                     context.beginPath();
                     context.moveTo(streak.x, streak.y);
                     context.lineTo(streak.x - streak.length * streak.direction, streak.y);
-                    context.strokeStyle = `rgba(218, 188, 255, ${alpha})`;
-                    context.lineWidth = .7;
+                    context.strokeStyle = trail;
+                    context.lineWidth = .65;
                     context.stroke();
                 });
                 particles.forEach(particle => {
-                    particle.phase += particle.phaseSpeed * 33;
-                    const alpha = particle.opacity * (.45 + .55 * Math.sin(particle.phase) ** 2);
+                    const frameScale = delta / 33;
+                    particle.x += particle.speedX * frameScale;
+                    particle.y += particle.speedY * frameScale;
+                    if (particle.x < -particle.glowRadius) particle.x = width + particle.glowRadius;
+                    if (particle.x > width + particle.glowRadius) particle.x = -particle.glowRadius;
+                    if (particle.y < -particle.glowRadius) particle.y = height + particle.glowRadius;
+                    if (particle.y > height + particle.glowRadius) particle.y = -particle.glowRadius;
+                    particle.phase += particle.phaseSpeed * delta;
+                    const pulse = Math.max(0, Math.sin(particle.phase));
+                    const alpha = particle.opacity * (.08 + .92 * pulse ** 2);
+                    const flash = pulse ** 12;
+                    const glowSize = particle.glowRadius * (1 + flash * .28);
+                    const glow = context.createRadialGradient(
+                        particle.x,
+                        particle.y,
+                        0,
+                        particle.x,
+                        particle.y,
+                        glowSize
+                    );
+                    glow.addColorStop(0, `rgba(230, 202, 255, ${alpha * (.48 + flash * .32)})`);
+                    glow.addColorStop(.22, `rgba(177, 91, 255, ${alpha * (.3 + flash * .4)})`);
+                    glow.addColorStop(1, 'rgba(140, 0, 255, 0)');
+                    context.fillStyle = glow;
+                    context.fillRect(
+                        particle.x - glowSize,
+                        particle.y - glowSize,
+                        glowSize * 2,
+                        glowSize * 2
+                    );
                     context.beginPath();
-                    context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-                    context.fillStyle = `rgba(222, 199, 255, ${alpha})`;
+                    context.arc(particle.x, particle.y, particle.radius + flash * .35, 0, Math.PI * 2);
+                    context.fillStyle = `rgba(244, 232, 255, ${alpha * (.72 + flash * .28)})`;
                     context.fill();
                 });
             }
