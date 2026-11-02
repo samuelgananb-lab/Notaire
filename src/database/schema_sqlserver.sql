@@ -1,5 +1,5 @@
 -- ============================================================================
--- BASE DE DATOS NOTAIRE - CÓDIGO DIRECTO Y CONEXIONES RELACIONALES (SSMS 19)
+-- BASE DE DATOS NOTAIRE - CÓDIGO DIRECTO Y CONEXIONES RELACIONALES 
 -- ============================================================================
 
 SET NOCOUNT ON;
@@ -23,6 +23,7 @@ EXEC sp_executesql @sql;
 GO
 
 IF OBJECT_ID('dbo.registros_financieros', 'U') IS NOT NULL DROP TABLE dbo.registros_financieros;
+IF OBJECT_ID('dbo.aportes_meta', 'U') IS NOT NULL DROP TABLE dbo.aportes_meta;
 IF OBJECT_ID('dbo.metas_financieras', 'U') IS NOT NULL DROP TABLE dbo.metas_financieras;
 IF OBJECT_ID('dbo.notificaciones', 'U') IS NOT NULL DROP TABLE dbo.notificaciones;
 IF OBJECT_ID('dbo.usuarios', 'U') IS NOT NULL DROP TABLE dbo.usuarios;
@@ -84,7 +85,19 @@ CREATE TABLE dbo.metas_financieras (
 );
 GO
 
--- 5. TABLA REGISTROS FINANCIEROS (Conexiones: FK id_usuario -> usuarios.id_usuario, FK id_meta -> metas_financieras.id_meta)
+-- 5. APORTES A METAS
+CREATE TABLE dbo.aportes_meta (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    meta_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    monto DECIMAL(12, 2) NOT NULL CHECK (monto > 0),
+    fecha DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT FK_aportes_meta_meta FOREIGN KEY (meta_id) REFERENCES dbo.metas_financieras(id_meta) ON DELETE CASCADE,
+    CONSTRAINT FK_aportes_meta_usuario FOREIGN KEY (usuario_id) REFERENCES dbo.usuarios(id_usuario) ON DELETE CASCADE
+);
+GO
+
+-- 6. TABLA REGISTROS FINANCIEROS (Conexiones: FK id_usuario -> usuarios.id_usuario, FK id_meta -> metas_financieras.id_meta)
 CREATE TABLE dbo.registros_financieros (
     id_registro INT IDENTITY(1,1) PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -143,7 +156,4 @@ INSERT INTO dbo.notificaciones (id_notificacion, id_usuario, titulo, mensaje, ti
 SET IDENTITY_INSERT dbo.notificaciones OFF;
 GO
 
-PRINT '============================================================================='
-PRINT ' Base de Datos NotaireDB Creada Correctamente con sus 5 Tablas y Conexiones.'
-PRINT '============================================================================='
-GO
+

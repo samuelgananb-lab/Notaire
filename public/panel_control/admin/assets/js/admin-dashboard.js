@@ -7,39 +7,39 @@
 
 // Estado Global de la Aplicación
 const NotaireState = {
-    user: {
-        nombre: 'Samuel Gañán',
-        email: 'samuel.ganan@notaire.com',
-        telefono: '+57 300 123 4567',
-        documento: '1098765432',
-        iniciales: 'SG'
-    },
-    gastos: [
-        { id: 1, concepto: 'Restaurante', categoria: 'Alimentación', icono: '🍔', monto: 35000, fecha: 'Hoy' },
-        { id: 2, concepto: 'Transporte', categoria: 'Transporte', icono: '🚌', monto: 8500, fecha: 'Ayer' },
-        { id: 3, concepto: 'Videojuego', categoria: 'Entretenimiento', icono: '🎮', monto: 79900, fecha: '18 Ago' },
-        { id: 4, concepto: 'Supermercado', categoria: 'Otros', icono: '🛒', monto: 124000, fecha: '17 Ago' }
-    ],
-    ingresos: [
-        { id: 1, concepto: 'Salario - Empresa', fuente: 'Salario', icono: '💼', monto: 1800000, fecha: 'Hoy' },
-        { id: 2, concepto: 'Proyecto Freelance', fuente: 'Freelance', icono: '💻', monto: 350000, fecha: '15 Ago' },
-        { id: 3, concepto: 'Venta de producto', fuente: 'Negocio', icono: '🛍️', monto: 200000, fecha: '10 Ago' },
-        { id: 4, concepto: 'Intereses', fuente: 'Intereses', icono: '💰', monto: 100000, fecha: '5 Ago' }
-    ],
-    metas: [
-        { id: 1, nombre: 'Viaje a Europa', icono: '✈️', actual: 3000000, objetivo: 4000000, fecha: '20 Dic 2025', color: '#10b981' },
-        { id: 2, nombre: 'Fondo de emergencia', icono: '🛡️', actual: 1200000, objetivo: 2000000, fecha: '30 Nov 2025', color: '#3b82f6' },
-        { id: 3, nombre: 'Nueva Laptop', icono: '💻', actual: 800000, objetivo: 2000000, fecha: '15 Oct 2025', color: '#f59e0b' },
-        { id: 4, nombre: 'Casa propia', icono: '🏠', actual: 1000000, objetivo: 4000000, fecha: '1 Ene 2027', color: '#8b5cf6' }
-    ],
-    ahorrosRecientes: [
-        { id: 1, meta: 'Viaje a Europa', monto: 150000, fecha: 'Hoy', icono: '💚' },
-        { id: 2, meta: 'Fondo de emergencia', monto: 100000, fecha: 'Ayer', icono: '💚' },
-        { id: 3, meta: 'Nueva Laptop', monto: 50000, fecha: '18 Ago', icono: '💙' },
-        { id: 4, meta: 'Casa propia', monto: 120000, fecha: '17 Ago', icono: '💜' }
-    ],
-    presupuestoTotal: 1500000
+    user: { nombre: '', email: '', telefono: '', documento: '', iniciales: '' },
+    gastos: [],
+    ingresos: [],
+    metas: [],
+    ahorrosRecientes: [],
+    presupuestoTotal: 0
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.matchMedia('(max-width: 900px)').matches) {
+        document.querySelector('.sidebar')?.classList.add('collapsed');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const mobileTrigger = document.getElementById('mobileMenuTrigger');
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('mobileSidebarBackdrop');
+    if (!mobileTrigger || !sidebar) return;
+    mobileTrigger.addEventListener('click', toggleSidebar);
+    backdrop?.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        backdrop.classList.remove('visible');
+        mobileTrigger.setAttribute('aria-expanded', 'false');
+    });
+    document.querySelectorAll('#sidebarMenu a[data-target]').forEach(link => link.addEventListener('click', () => {
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            sidebar.classList.remove('mobile-open');
+            backdrop?.classList.remove('visible');
+            mobileTrigger.setAttribute('aria-expanded', 'false');
+        }
+    }));
+});
 
 // Referencias a Gráficos Instanciados
 let chartGastosDonaInstance = null;
@@ -53,19 +53,38 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initCharts();
     updateAllMetrics();
-    setupCurrentDates();
+    if (typeof setupCurrentDates === 'function') setupCurrentDates();
     // Restaurar estado del sidebar
     if (localStorage.getItem('notaire_sidebar_collapsed') === '1') {
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) sidebar.classList.add('collapsed');
+    }
+    if (window.matchMedia('(max-width: 900px)').matches) {
+        document.querySelector('.sidebar')?.classList.add('collapsed');
     }
 });
 
 /* ==========================================================================
    1. NAVEGACIÓN Y SPA TABS
    ========================================================================== */
+function initSidebarSubmenus() {
+    document.querySelectorAll('#sidebarMenu .submenu-toggle').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const parentLi = toggle.closest('.has-submenu');
+            if (!parentLi) return;
+            const willOpen = !parentLi.classList.contains('open');
+            document.querySelectorAll('#sidebarMenu .has-submenu.open').forEach(li => {
+                if (li !== parentLi) li.classList.remove('open');
+            });
+            parentLi.classList.toggle('open', willOpen);
+        });
+    });
+}
+
 function initNavigation() {
-    const menuItems = document.querySelectorAll('#sidebarMenu li a');
+    initSidebarSubmenus();
+    const menuItems = document.querySelectorAll('#sidebarMenu li a[data-target]');
     
     menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
@@ -77,6 +96,10 @@ function initNavigation() {
             document.querySelectorAll('#sidebarMenu li').forEach(li => li.classList.remove('active'));
             item.parentElement.classList.add('active');
 
+            // Mantener expandido el submenú del enlace activo
+            const parentSubmenu = item.closest('.has-submenu');
+            if (parentSubmenu) parentSubmenu.classList.add('open');
+
             // Cambiar vista activa
             document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
             const targetSection = document.getElementById(targetViewId);
@@ -87,6 +110,11 @@ function initNavigation() {
             // Actualizar título en top header respetando idioma activo
             const currentLang = (typeof getCurrentLang === 'function') ? getCurrentLang() : (localStorage.getItem('notaire_lang') || 'es');
             const titlesObj = (window.translations && window.translations[currentLang] && window.translations[currentLang].titles) ? window.translations[currentLang].titles : {
+                'view-usuarios': 'GESTIÓN DE USUARIOS',
+                'view-tramites': 'TRÁMITES NOTARIALES',
+                'view-auditoria': 'AUDITORÍA',
+                'view-notificaciones': 'CENTRO DE NOTIFICACIONES',
+                'view-reportes': 'REPORTES',
                 'view-gastos': 'MIS GASTOS',
                 'view-ingresos': 'MIS INGRESOS',
                 'view-ahorros': 'MIS AHORROS',
@@ -149,9 +177,9 @@ function initCharts() {
         chartGastosDonaInstance = new Chart(ctxGastos.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Alimentación', 'Transporte', 'Entretenimiento', 'Servicios', 'Otros'],
+                    labels: [],
                 datasets: [{
-                    data: [396000, 260000, 223000, 198000, 163500],
+                    data: [],
                     backgroundColor: ['#f59e0b', '#8b5cf6', '#06b6d4', '#10b981', '#64748b'],
                     borderWidth: 0,
                     hoverOffset: 6
@@ -168,37 +196,12 @@ function initCharts() {
 
     // 2. Gráfico de Línea: Evolución de ingresos (Ingresos)
     const ctxIngEvol = document.getElementById('chartEvolucionIngresos');
-    if (ctxIngEvol) {
-        const gradient = ctxIngEvol.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.4)');
-        gradient.addColorStop(1, 'rgba(124, 58, 237, 0.0)');
-
-        chartEvolucionIngresosInstance = new Chart(ctxIngEvol.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'],
-                datasets: [{
-                    label: 'Ingresos ($)',
-                    data: [1500000, 1800000, 1400000, 1900000, 2100000, 2450000],
-                    borderColor: '#8b5cf6',
-                    borderWidth: 3,
-                    fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    pointBackgroundColor: '#8b5cf6',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { callback: v => '$' + (v/1000000) + 'M' } }
-                }
-            }
-        });
+    if (ctxIngEvol && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlyTotals([], 'ingreso');
+        chartEvolucionIngresosInstance = new Chart(
+            ctxIngEvol.getContext('2d'),
+            window.NotaireFinancialChart.createConfig(series.labels, series.values, adminCurrency, 'Ingresos')
+        );
     }
 
     // 3. Gráfico Dona: Fuentes de Ingresos (Ingresos)
@@ -207,9 +210,9 @@ function initCharts() {
         chartFuentesIngresosInstance = new Chart(ctxIngFuentes.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Salario', 'Freelance', 'Negocio', 'Otros'],
+                labels: [],
                 datasets: [{
-                    data: [1800000, 350000, 200000, 100000],
+                    data: [],
                     backgroundColor: ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981'],
                     borderWidth: 0,
                     hoverOffset: 6
@@ -226,37 +229,12 @@ function initCharts() {
 
     // 4. Gráfico de Área: Evolución del Patrimonio (Saldo)
     const ctxPatrimonio = document.getElementById('chartPatrimonioEvolucion');
-    if (ctxPatrimonio) {
-        const gradient = ctxPatrimonio.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
-        gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
-
-        chartPatrimonioEvolucionInstance = new Chart(ctxPatrimonio.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'],
-                datasets: [{
-                    label: 'Patrimonio Netos ($)',
-                    data: [6000000, 6800000, 6200000, 7100000, 7900000, 8750000],
-                    borderColor: '#06b6d4',
-                    borderWidth: 3,
-                    fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    pointBackgroundColor: '#06b6d4',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { callback: v => '$' + (v/1000000) + 'M' } }
-                }
-            }
-        });
+    if (ctxPatrimonio && window.NotaireFinancialChart) {
+        const series = window.NotaireFinancialChart.createMonthlySeries([]);
+        chartPatrimonioEvolucionInstance = new Chart(
+            ctxPatrimonio.getContext('2d'),
+            window.NotaireFinancialChart.createConfig(series.labels, series.values, adminCurrency)
+        );
     }
 
     // 5. Gráfico Dona: Distribución de Activos (Saldo)
@@ -265,9 +243,9 @@ function initCharts() {
         chartDistribucionActivosInstance = new Chart(ctxDistrib.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Cuentas y efectivo', 'Inversiones', 'Bienes', 'Otros'],
+                labels: [],
                 datasets: [{
-                    data: [4340000, 3720000, 3100000, 1240000],
+                    data: [],
                     backgroundColor: ['#3b82f6', '#06b6d4', '#f59e0b', '#64748b'],
                     borderWidth: 0,
                     hoverOffset: 6
@@ -287,22 +265,32 @@ function initCharts() {
    3. CÁLCULO DINÁMICO DE MÉTRICAS Y ACTUALIZACIÓN DE INTERFAZ
    ========================================================================== */
 function updateAllMetrics() {
-    // 1. Gastos
-    const totalGastos = NotaireState.gastos.reduce((acc, curr) => acc + curr.monto, 0);
-    const presupuesto = NotaireState.presupuestoTotal;
-    const disponible = Math.max(0, presupuesto - totalGastos);
-    const pctUtilizado = ((totalGastos / presupuesto) * 100).toFixed(1);
+    const monthKey = window.NotaireFinancialChart?.currentMonthKey();
+    const inCurrentMonth = transaction => String(transaction.fecha || '').slice(0, 7) === monthKey;
+    const sumAmounts = transactions => transactions.reduce((total, transaction) => {
+        const amount = Number(transaction.monto);
+        return total + (Number.isFinite(amount) && amount > 0 ? amount : 0);
+    }, 0);
+    const gastosMes = NotaireState.gastos.filter(inCurrentMonth);
+    const ingresosMes = NotaireState.ingresos.filter(inCurrentMonth);
+    const totalGastos = sumAmounts(gastosMes);
+    const totalIngresos = sumAmounts(ingresosMes);
+    const presupuesto = Number(NotaireState.presupuestoTotal) || 0;
+    const budgetPosition = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.calculateBudgetPosition(presupuesto, totalGastos)
+        : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
 
     setElemText('valGastadoEsteMes', formatCOP(totalGastos));
-    setElemText('valPresupuestoTotal', formatCOP(presupuesto));
-    setElemText('valDisponibleGastos', formatCOP(disponible));
-    setElemText('valPresupuestoPct', `${pctUtilizado}% utilizado`);
+    setElemText('valPresupuestoTotal', budgetPosition.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
+    setElemText('valPresupuestoPct', budgetPosition.hasBudget
+        ? `${budgetPosition.percentUsed.toFixed(1)}% utilizado`
+        : 'Sin presupuesto');
     setElemText('centerGastosTotal', formatCOP(totalGastos));
 
-    // 2. Ingresos
-    const totalIngresos = NotaireState.ingresos.reduce((acc, curr) => acc + curr.monto, 0);
-    const promedioIngresos = (totalIngresos / 1.12).toFixed(0);
-    const mayorIngreso = Math.max(...NotaireState.ingresos.map(i => i.monto));
+    const promedioIngresos = window.NotaireFinancialChart
+        ? window.NotaireFinancialChart.averageMonthlyTotal(NotaireState.ingresos, 'ingreso')
+        : totalIngresos / 6;
+    const mayorIngreso = ingresosMes.reduce((largest, income) => Math.max(largest, Number(income.monto) || 0), 0);
 
     setElemText('valTotalIngresos', formatCOP(totalIngresos));
     setElemText('valPromedioMensual', formatCOP(promedioIngresos));
@@ -312,20 +300,13 @@ function updateAllMetrics() {
     // 3. Ahorros
     const totalAhorrado = NotaireState.metas.reduce((acc, curr) => acc + curr.actual, 0);
     const totalObjetivoMetas = NotaireState.metas.reduce((acc, curr) => acc + curr.objetivo, 0);
-    const pctTotalMetas = Math.round((totalAhorrado / totalObjetivoMetas) * 100);
+    const pctTotalMetas = totalObjetivoMetas > 0
+        ? Math.min(100, Math.round((totalAhorrado / totalObjetivoMetas) * 100))
+        : 0;
 
     setElemText('valTotalAhorrado', formatCOP(totalAhorrado));
     setElemText('valMetasActivasCount', NotaireState.metas.length);
     setElemText('valPorcentajeTotalMetas', `${pctTotalMetas}%`);
-
-    // 4. Saldo
-    const activosTotal = 12400000;
-    const pasivosTotal = 3650000;
-    const patrimonioNeto = activosTotal - pasivosTotal;
-    setElemText('valPatrimonioNeto', formatCOP(patrimonioNeto));
-    setElemText('valActivosTotal', formatCOP(activosTotal));
-    setElemText('valPasivosTotal', formatCOP(pasivosTotal));
-    setElemText('centerActivosTotal', formatCOP(activosTotal));
 
     // Refrescar listas dinámicas
     renderUltimosMovimientos();
@@ -464,7 +445,7 @@ function openModalRegistrarGasto() {
 
 function handleGuardarGasto(event) {
     event.preventDefault();
-    const monto = parseFloat(document.getElementById('gastoMonto').value);
+    const monto = parseFormattedAmount(document.getElementById('gastoMonto').value);
     const categoria = document.getElementById('gastoCategoria').value;
     const descripcion = document.getElementById('gastoDescripcion').value;
 
@@ -501,7 +482,7 @@ function openModalRegistrarIngreso() {
 
 function handleGuardarIngreso(event) {
     event.preventDefault();
-    const monto = parseFloat(document.getElementById('ingresoMonto').value);
+    const monto = parseFormattedAmount(document.getElementById('ingresoMonto').value);
     const categoria = document.getElementById('ingresoCategoria').value;
     const descripcion = document.getElementById('ingresoDescripcion').value;
 
@@ -539,8 +520,8 @@ function openModalNuevaMeta() {
 function handleGuardarNuevaMeta(event) {
     event.preventDefault();
     const nombre = document.getElementById('metaNombre').value;
-    const objetivo = parseFloat(document.getElementById('metaObjetivo').value);
-    const inicial = parseFloat(document.getElementById('metaInicial').value || 0);
+    const objetivo = parseFormattedAmount(document.getElementById('metaObjetivo').value);
+    const inicial = parseFormattedAmount(document.getElementById('metaInicial').value || 0);
     const fecha = document.getElementById('metaFecha').value;
     const icono = document.getElementById('metaIcono').value;
 
@@ -574,7 +555,7 @@ function openModalAportarMeta(metaId, metaNombre) {
 function handleGuardarAporteMeta(event) {
     event.preventDefault();
     const metaId = parseInt(document.getElementById('aporteMetaId').value);
-    const montoAporte = parseFloat(document.getElementById('aporteMonto').value);
+    const montoAporte = parseFormattedAmount(document.getElementById('aporteMonto').value);
 
     const meta = NotaireState.metas.find(m => m.id === metaId);
     if (meta) {
@@ -636,7 +617,7 @@ function openModalVerTodos(tipo) {
                     <div class="transaction-icon-box">${g.icono}</div>
                     <div class="transaction-info">
                         <span class="transaction-title">${escapeHtml(g.concepto)}</span>
-                        <span class="transaction-date">${g.categoria} &bull; ${g.fecha}</span>
+                        <span class="transaction-date">${escapeHtml(g.categoria)} &bull; ${escapeHtml(g.fecha)}</span>
                     </div>
                 </div>
                 <span class="transaction-amount-negative">-${formatCOP(g.monto)}</span>
@@ -657,21 +638,8 @@ function openModalVerTodos(tipo) {
             </div>
         `).join('');
     } else {
-        titleEl.textContent = 'Gestión de Cuentas Vincualdas';
-        container.innerHTML = `
-            <div class="transaction-row">
-                <div class="transaction-left"><div class="transaction-icon-box">🏛️</div><div class="transaction-info"><span class="transaction-title">Bancolombia Ahorros</span><span class="transaction-date">Cuenta activa</span></div></div>
-                <span class="transaction-amount-positive">$2.450.000</span>
-            </div>
-            <div class="transaction-row">
-                <div class="transaction-left"><div class="transaction-icon-box">📱</div><div class="transaction-info"><span class="transaction-title">Daviplata</span><span class="transaction-date">Bolsillo principal</span></div></div>
-                <span class="transaction-amount-positive">$800.000</span>
-            </div>
-            <div class="transaction-row">
-                <div class="transaction-left"><div class="transaction-icon-box">🟣</div><div class="transaction-info"><span class="transaction-title">Nequi</span><span class="transaction-date">Disponible</span></div></div>
-                <span class="transaction-amount-positive">$350.000</span>
-            </div>
-        `;
+        titleEl.textContent = 'Cuentas vinculadas';
+        container.innerHTML = '<p class="data-state data-state-empty">No hay cuentas vinculadas registradas.</p>';
     }
 
     openModal('modalVerTodos');
@@ -746,7 +714,7 @@ function handleGuardarEdicionGasto(event) {
     if (!g) return;
 
     const iconMap = { 'Alimentación': '🍔', 'Transporte': '🚌', 'Entretenimiento': '🎮', 'Servicios': '🏠', 'Otros': '🛒' };
-    g.monto = parseFloat(document.getElementById('editGastoMonto').value);
+    g.monto = parseFormattedAmount(document.getElementById('editGastoMonto').value);
     g.categoria = document.getElementById('editGastoCategoria').value;
     g.concepto = document.getElementById('editGastoDescripcion').value;
     g.icono = iconMap[g.categoria] || '💳';
@@ -756,8 +724,8 @@ function handleGuardarEdicionGasto(event) {
     showToast('¡Gasto actualizado correctamente!');
 }
 
-function eliminarGasto(id) {
-    if (!confirm('¿Eliminar este gasto?')) return;
+async function eliminarGasto(id) {
+    if (!await window.notaireConfirm('¿Eliminar este gasto?', { title: 'Eliminar gasto', confirmText: 'Eliminar' })) return;
     NotaireState.gastos = NotaireState.gastos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Gasto eliminado.');
@@ -782,7 +750,7 @@ function handleGuardarEdicionIngreso(event) {
     if (!i) return;
 
     const iconMap = { 'Salario': '💼', 'Freelance': '💻', 'Negocio': '🛍️', 'Intereses': '💰', 'Otros': '🟢' };
-    i.monto = parseFloat(document.getElementById('editIngresoMonto').value);
+    i.monto = parseFormattedAmount(document.getElementById('editIngresoMonto').value);
     i.fuente = document.getElementById('editIngresoFuente').value;
     i.concepto = document.getElementById('editIngresoDescripcion').value;
     i.icono = iconMap[i.fuente] || '💰';
@@ -792,8 +760,8 @@ function handleGuardarEdicionIngreso(event) {
     showToast('¡Ingreso actualizado correctamente!');
 }
 
-function eliminarIngreso(id) {
-    if (!confirm('¿Eliminar este ingreso?')) return;
+async function eliminarIngreso(id) {
+    if (!await window.notaireConfirm('¿Eliminar este ingreso?', { title: 'Eliminar ingreso', confirmText: 'Eliminar' })) return;
     NotaireState.ingresos = NotaireState.ingresos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Ingreso eliminado.');
@@ -818,8 +786,8 @@ function handleGuardarEdicionMeta(event) {
     if (!m) return;
 
     m.nombre = document.getElementById('editMetaNombre').value;
-    m.objetivo = parseFloat(document.getElementById('editMetaObjetivo').value);
-    m.actual = parseFloat(document.getElementById('editMetaActual').value);
+    m.objetivo = parseFormattedAmount(document.getElementById('editMetaObjetivo').value);
+    m.actual = parseFormattedAmount(document.getElementById('editMetaActual').value);
     m.fecha = document.getElementById('editMetaFecha').value;
 
     updateAllMetrics();
@@ -827,8 +795,8 @@ function handleGuardarEdicionMeta(event) {
     showToast('¡Meta actualizada correctamente!');
 }
 
-function eliminarMeta(id) {
-    if (!confirm('¿Eliminar esta meta de ahorro?')) return;
+async function eliminarMeta(id) {
+    if (!await window.notaireConfirm('¿Eliminar esta meta de ahorro?', { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     NotaireState.metas = NotaireState.metas.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Meta eliminada.');
@@ -839,6 +807,15 @@ if (typeof toggleSidebar === 'undefined') {
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
+        const mobileTrigger = document.getElementById('mobileMenuTrigger');
+        const backdrop = document.getElementById('mobileSidebarBackdrop');
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            const open = sidebar.classList.toggle('mobile-open');
+            backdrop?.classList.toggle('visible', open);
+            document.body.classList.toggle('sidebar-mobile-open', open);
+            mobileTrigger?.setAttribute('aria-expanded', String(open));
+            return;
+        }
         sidebar.classList.toggle('collapsed');
         localStorage.setItem('notaire_sidebar_collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
     }
