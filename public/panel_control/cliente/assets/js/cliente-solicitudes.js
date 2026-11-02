@@ -1,38 +1,49 @@
 (() => {
     const TYPES = { reporte_error: 'Reporte de error', solicitud_permiso: 'Solicitud', solicitud_soporte: 'Soporte / ayuda', otro: 'Otro' };
     const STATES = { abierta: 'Abierta', en_proceso: 'En proceso', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+    let solicitudesCargadas = false;
+    let solicitudEnCurso = null;
 
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('notaire_token') || ''}` });
 
     function setMessage(text, ok) {
         const box = document.getElementById('clienteSolMsg');
-        box.textContent = text;
+        box.textContent = window.translateText?.(text) || text;
         box.className = `cli-sol-msg ${ok ? 'ok' : 'error'}`;
     }
 
-    async function load() {
+    async function load(force = false) {
+        if (solicitudesCargadas && !force) return;
+        if (solicitudEnCurso) return solicitudEnCurso;
         const list = document.getElementById('clienteSolList');
         if (!list) return;
-        try {
-            const response = await fetch('/api/solicitudes', { headers: headers() });
-            const result = await response.json().catch(() => []);
-            if (!response.ok) throw new Error(result.error || 'No se pudieron cargar tus solicitudes');
-            list.innerHTML = result.length
-                ? result.map(item => `
+        solicitudEnCurso = (async () => {
+            try {
+                const response = await fetch('/api/solicitudes', { headers: headers() });
+                const result = await response.json().catch(() => []);
+                if (!response.ok) throw new Error(result.error || 'No se pudieron cargar tus solicitudes');
+                list.innerHTML = result.length
+                    ? result.map(item => `
                     <article class="cli-sol-item">
                         <header>
-                            <strong>${esc(item.asunto)}</strong>
+                            <strong data-user-content="true">${esc(item.asunto)}</strong>
                             <span class="cli-sol-badge ${esc(item.estado)}">${esc(STATES[item.estado] || item.estado)}</span>
                         </header>
                         <small>${esc(TYPES[item.tipo] || item.tipo)} · Prioridad ${esc(item.prioridad)} · ${esc(new Date(item.created_at).toLocaleString('es-CO'))}</small>
-                        <p>${esc(item.descripcion)}</p>
-                        ${item.respuesta ? `<p class="cli-sol-reply"><b>Respuesta:</b> ${esc(item.respuesta)}</p>` : ''}
+                        <p data-user-content="true">${esc(item.descripcion)}</p>
+                        ${item.respuesta ? `<p class="cli-sol-reply"><b>Respuesta:</b> <span data-user-content="true">${esc(item.respuesta)}</span></p>` : ''}
                     </article>`).join('')
-                : '<p>Aún no has enviado solicitudes.</p>';
-        } catch (error) {
-            list.innerHTML = `<p class="cli-sol-msg error">${esc(error.message)}</p>`;
-        }
+                    : '<div class="cli-sol-empty"><i class="fas fa-inbox" aria-hidden="true"></i><strong>Aún no has enviado solicitudes.</strong><p>Cuando envíes una, podrás seguir su estado y respuesta aquí.</p></div>';
+                solicitudesCargadas = true;
+            } catch (error) {
+                list.innerHTML = `<p class="cli-sol-msg error">${esc(error.message)}</p>`;
+            } finally {
+                solicitudEnCurso = null;
+                window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
+            }
+        })();
+        return solicitudEnCurso;
     }
 
     async function submit(event) {
@@ -54,7 +65,7 @@
             if (!response.ok) throw new Error(result.error || 'No se pudo enviar la solicitud');
             event.target.reset();
             setMessage('Solicitud enviada. Te responderemos pronto.', true);
-            await load();
+            await load(true);
         } catch (error) {
             setMessage(error.message, false);
         } finally {
@@ -64,7 +75,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clienteSolForm')?.addEventListener('submit', submit);
-        document.querySelector('a[data-target="view-solicitudes"]')?.addEventListener('click', load);
-        load();
+        document.querySelector('a[data-target="view-solicitudes"]')?.addEventListener('click', () => void load());
+        if (document.getElementById('view-solicitudes')?.classList.contains('active')) void load();
     });
 })();

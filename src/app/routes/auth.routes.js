@@ -152,7 +152,15 @@ router.post('/login', loginRateLimit, async (req, res) => {
         token: authData.session.access_token,
         refresh_token: authData.session.refresh_token,
         expires_at: authData.session.expires_at,
-        usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, id_rol: usuario.id_rol, rol, telefono: usuario.telefono }
+        usuario: {
+          id: usuario.id,
+          nombre: usuario.nombre,
+          email: usuario.email,
+          id_rol: usuario.id_rol,
+          rol,
+          telefono: usuario.telefono,
+          documento: authData.user.user_metadata?.documento || ''
+        }
       });
     }
 
@@ -221,10 +229,18 @@ router.post('/recover', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'El correo electrónico es obligatorio' });
 
   const redirectTo = process.env.PASSWORD_RESET_REDIRECT_URL || 'http://localhost:3000/auth/cambiar-password.html';
-  const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo });
-  if (error) console.error('Error en recuperación de contraseña:', error.message);
+  try {
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      console.error('Error en recuperación de contraseña:', error.message);
+      return res.status(502).json({ error: 'No se pudieron enviar las instrucciones. Inténtalo más tarde.' });
+    }
 
-  res.json({ mensaje: 'Si el correo está registrado, recibirás instrucciones para recuperar la contraseña.' });
+    res.json({ mensaje: 'Si el correo está registrado, recibirás instrucciones para recuperar la contraseña.' });
+  } catch (error) {
+    console.error('Error en recuperación de contraseña:', error.message);
+    res.status(502).json({ error: 'No se pudieron enviar las instrucciones. Inténtalo más tarde.' });
+  }
 });
 
 router.put('/password', verificarToken, async (req, res) => {
@@ -258,6 +274,7 @@ router.put('/me', verificarToken, async (req, res) => {
     const nombre = String(req.body.nombre || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const telefono = String(req.body.telefono || '').trim();
+    const documento = String(req.body.documento || '').trim();
 
     if (!nombre || !email) {
       return res.status(400).json({ error: 'Nombre y correo son obligatorios' });
@@ -274,8 +291,22 @@ router.put('/me', verificarToken, async (req, res) => {
     if (existente) return res.status(409).json({ error: 'El correo ya está registrado por otro usuario' });
 
     if (req.usuario.auth_id) {
-      const { error: authUpdateError } = await supabaseAuth.auth.admin.updateUserById(req.usuario.auth_id, { email });
+      const { data: authProfile, error: authProfileError } = await supabaseAuth.auth.admin.getUserById(req.usuario.auth_id);
+      if (authProfileError) throw authProfileError;
+
+      const userMetadata = {
+        ...(authProfile.user?.user_metadata || {}),
+        nombre,
+        telefono,
+        documento
+      };
+      const { error: authUpdateError } = await supabaseAuth.auth.admin.updateUserById(req.usuario.auth_id, {
+        email,
+        user_metadata: userMetadata
+      });
       if (authUpdateError) throw authUpdateError;
+    } else if (documento) {
+      return res.status(400).json({ error: 'No se pudo guardar el documento en esta cuenta. Contacta a soporte.' });
     }
 
     const { data, error } = await supabase
@@ -291,7 +322,7 @@ router.put('/me', verificarToken, async (req, res) => {
     if (req.usuario.email && req.usuario.email.toLowerCase() !== email) {
       void sendNotificationEmail({ to: req.usuario.email, subject: 'Tu correo fue cambiado', text: `El correo de tu cuenta Notaire cambió a ${email}. Si no fuiste tú, contacta de inmediato al equipo de soporte.` });
     }
-    res.json({ mensaje: 'Perfil actualizado', usuario: data });
+    res.json({ mensaje: 'Perfil actualizado', usuario: { ...data, documento } });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar el perfil', detalle: error.message });
   }

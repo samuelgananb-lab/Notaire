@@ -729,7 +729,7 @@ function saveBudgetConfig() {
         return;
     }
 
-    const total = Number(rawTotal);
+    const total = parseFormattedAmount(rawTotal);
     if (!Number.isFinite(total) || total <= 0) {
         showToast('Ingresa un presupuesto mensual mayor que cero.');
         return;
@@ -742,9 +742,7 @@ function saveBudgetConfig() {
 }
 
 function confirmLogout() {
-    if (confirm('¿Seguro que deseas cerrar sesión?')) {
-        window.location.href = '../../auth/login.html';
-    }
+    if (typeof window.logout === 'function') void window.logout();
 }
 
 /* ============================================================

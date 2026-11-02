@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -17,11 +17,215 @@ test('el dashboard cliente no carga el script administrativo', async () => {
     assert.match(html, /assets\/js\/cliente-dashboard\.js/);
 });
 
+test('gastos e ingresos muestran tablas separadas con filtros y acciones propias', async () => {
+    const [html, dashboard, movements] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/movimientos.js')
+    ]);
+    const makePanel = () => {
+        const filters = {
+            search: { value: '' },
+            from: { value: '' },
+            to: { value: '' }
+        };
+        const tbody = { innerHTML: '' };
+        const total = { textContent: '' };
+        return {
+            filters,
+            tbody,
+            total,
+            querySelector: selector => selector === '.financial-history-body'
+                ? tbody
+                : selector === '.financial-history-total'
+                    ? total
+                    : filters[selector.match(/data-history-filter="([^"]+)"/)?.[1]],
+            querySelectorAll: () => Object.values(filters)
+        };
+    };
+    const panels = { gasto: makePanel(), ingreso: makePanel() };
+    const filterFunction = movements.match(/function aplicarFiltros\(tipo = moduloActivo\) \{[\s\S]*?\n\}/)?.[0];
+    const renderFunction = movements.match(/function renderizarTablaFiltrada\(transacciones, tipo\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(filterFunction, 'Debe existir el filtrado por fecha y texto');
+    assert.ok(renderFunction, 'Debe existir el renderizado de la tabla');
+    const context = {
+        document: {
+            querySelector: selector => panels[selector.match(/data-financial-type="([^"]+)"/)?.[1]]
+        },
+        getFinancialHistoryPanel: type => panels[type],
+        transaccionesCargadas: {
+            gasto: [
+                { id: 1, tipo: 'gasto', fecha: '2026-11-01', categoria: 'Servicios', descripcion: 'Factura de agua', monto: 100 },
+                { id: 2, tipo: 'gasto', fecha: '2026-11-04', categoria: 'Transporte', descripcion: 'Taxi', monto: 200 }
+            ],
+            ingreso: [
+                { id: 3, tipo: 'ingreso', fecha: '2026-11-02', categoria: 'Honorarios', descripcion: 'Consulta', monto: 500 },
+                { id: 4, tipo: 'ingreso', fecha: '2026-11-05', categoria: 'Salario', descripcion: 'Pago mensual', monto: 1000 }
+            ]
+        },
+        escaparTextoCliente: value => String(value ?? '').replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character])),
+        formatCOP: value => `$${value}`,
+        moduloActivo: 'gasto'
+    };
+    vm.runInNewContext(`${filterFunction}\n${renderFunction}`, context);
+    panels.gasto.filters.search.value = 'servicios';
+    panels.gasto.filters.from.value = '2026-11-01';
+    panels.gasto.filters.to.value = '2026-11-03';
+    context.aplicarFiltros('gasto');
+    context.aplicarFiltros('ingreso');
+
+    assert.match(panels.gasto.tbody.innerHTML, /Factura de agua/);
+    assert.doesNotMatch(panels.gasto.tbody.innerHTML, /Taxi|Honorarios|Consulta/);
+    assert.match(panels.gasto.tbody.innerHTML, /2026-11-01/);
+    assert.match(panels.gasto.tbody.innerHTML, /data-type="gasto"/);
+    assert.match(panels.gasto.tbody.innerHTML, /btn-tx-edit/);
+    assert.match(panels.gasto.tbody.innerHTML, /btn-tx-delete/);
+    assert.equal(panels.gasto.total.textContent, '$100');
+    assert.match(panels.ingreso.tbody.innerHTML, /Honorarios/);
+    assert.match(panels.ingreso.tbody.innerHTML, /data-type="ingreso"/);
+    assert.doesNotMatch(panels.ingreso.tbody.innerHTML, /Factura de agua|Taxi/);
+    assert.equal(panels.ingreso.total.textContent, '$1500');
+    vm.runInNewContext(
+        movements.match(/function limpiarFiltros\(tipo = moduloActivo\) \{[\s\S]*?\n\}/)?.[0],
+        context
+    );
+    context.limpiarFiltros('gasto');
+    assert.equal(panels.gasto.filters.search.value, '');
+    assert.equal((panels.gasto.tbody.innerHTML.match(/<tr data-transaction=/g) || []).length, 2);
+    assert.equal(panels.gasto.total.textContent, '$300');
+    const expensesStart = html.indexOf('<div class="content-section" id="view-gastos">');
+    const incomeStart = html.indexOf('<div class="content-section" id="view-ingresos">');
+    const balanceStart = html.indexOf('<div class="content-section" id="view-saldo">');
+    const expensesView = html.slice(expensesStart, incomeStart);
+    const incomeView = html.slice(incomeStart, balanceStart);
+    for (const [view, type, bodyId, title] of [
+        [expensesView, 'gasto', 'tabla-detallada-body-gasto', 'Listado de Gastos'],
+        [incomeView, 'ingreso', 'tabla-detallada-body-ingreso', 'Listado de Ingresos']
+    ]) {
+        assert.equal((view.match(/class="card-box financial-history-panel"/g) || []).length, 1);
+        assert.match(view, new RegExp(`data-financial-type="${type}"`));
+        assert.match(view, new RegExp(`id="${bodyId}"`));
+        assert.match(view, new RegExp(title));
+        assert.equal((view.match(/data-history-filter="search"/g) || []).length, 1);
+        assert.equal((view.match(/data-history-filter="from"/g) || []).length, 1);
+        assert.equal((view.match(/data-history-filter="to"/g) || []).length, 1);
+        assert.doesNotMatch(view, /metrics-grid|two-column-grid|<canvas|listMayoresGastos|legend-list/);
+        assert.doesNotMatch(view, /section-actions-group|openModalRegistrar(?:Gasto|Ingreso)/);
+    }
+    assert.match(dashboard, /await Promise\.all\(tipos\.map\(tipo => cargarTablaMovimientos\(tipo\)\)\)/);
+    assert.match(movements, /fetchTransacciones\(monthKey \|\| null\)/);
+    assert.match(movements, /\.filter\(item => tipoDeMovimiento\(item\) === tipo\)/);
+    assert.match(movements, /abrirModalEdicion\(JSON\.parse\(this\.closest\('tr'\)\.dataset\.transaction\)\)/);
+    assert.match(movements, /eliminarMovimiento\(this\.dataset\.id, this\.dataset\.type\)/);
+    assert.match(html, /<input type="date" id="fechaMovimiento"[^>]*required>/);
+    assert.match(movements, /document\.getElementById\('fechaMovimiento'\)\.value = String\(item\.fecha \|\| ''\)\.slice\(0, 10\)/);
+    assert.match(movements, /fecha: fechaInput\?\.value/);
+    const editFunction = movements.match(/function abrirModalEdicion\(item\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(editFunction, 'Debe existir la edición de movimientos');
+    const fields = Object.fromEntries(['tipoMovimiento', 'montoMovimiento', 'categoriaMovimiento', 'descripcionMovimiento', 'fechaMovimiento']
+        .map(id => [id, { value: '' }]));
+    fields.modalMovimiento = { style: { setProperty() {} } };
+    const title = { textContent: '' };
+    const editContext = {
+        document: {
+            getElementById: id => fields[id],
+            querySelector: () => title
+        }
+    };
+    vm.runInNewContext(editFunction, editContext);
+    editContext.abrirModalEdicion({
+        id: 21, tipo: 'gasto', monto: 2500, categoria: 'Servicios',
+        descripcion: 'Factura', fecha: '2026-10-28T00:00:00.000Z'
+    });
+    assert.equal(fields.fechaMovimiento.value, '2026-10-28');
+    assert.equal(title.textContent, 'Editar Movimiento');
+    assert.match(movements, /function limpiarFiltros\(tipo = moduloActivo\)/);
+    assert.doesNotMatch(html + movements, /listUltimosMovimientos|listUltimosIngresos|modalVerTodos/);
+});
+
+test('el dashboard conserva Soporte y Configuración dentro del contenedor de vistas', async () => {
+    const [html, calculator, dashboard, dashboardExt, support, movements] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/scientific-calculator.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/assets/js/cliente-solicitudes.js'),
+        read('public/panel_control/cliente/assets/js/movimientos.js')
+    ]);
+
+    assert.equal((html.match(/id="calculatorHistoryList"/g) || []).length, 1);
+    assert.match(html, /id="calculatorHistoryList"[\s\S]*?<\/section>\s*<\/aside>\s*<\/div>\s*<\/div>\s*<!--[\s\S]*?-->\s*<div class="content-section" id="view-solicitudes">/);
+    assert.match(html, /id="view-solicitudes"[\s\S]*id="view-configuracion"/);
+    const startupHandler = dashboard.match(/document\.addEventListener\('DOMContentLoaded', \(\) => \{[\s\S]*?\n\}\);/)?.[0] || '';
+    assert.doesNotMatch(startupHandler, /cargarDatosFinancieros/);
+    assert.match(dashboard, /viewId === 'view-gastos' \|\| viewId === 'view-ingresos'[\s\S]*cargarDatosFinancieros\(viewId\)/);
+    assert.match(dashboard, /const validSavedView = Array\.from\(navLinks\)\.some\(link => link\.getAttribute\('data-target'\) === savedView\)/);
+    assert.doesNotMatch(dashboardExt, /function navigateTo\(/);
+    assert.match(movements, /function cargarTablaMovimientos\(tipo\)/);
+    assert.match(html, /id="view-gastos"[\s\S]*data-financial-type="gasto"[\s\S]*tabla-detallada-body-gasto/);
+    assert.match(html, /id="view-ingresos"[\s\S]*data-financial-type="ingreso"[\s\S]*tabla-detallada-body-ingreso/);
+    assert.doesNotMatch(movements, /btnGastos|btnIngresos|addEventListener\('click',\s*\(\)\s*=>\s*cambiarSeccion/);
+    assert.match(html, /id="view-gastos"[\s\S]*class="card-box financial-history-panel"[\s\S]*id="tabla-detallada-body-gasto"/);
+    assert.match(html, /id="view-ingresos"[\s\S]*class="card-box financial-history-panel"[\s\S]*id="tabla-detallada-body-ingreso"/);
+    assert.match(html, /data-history-filter="search"/);
+    assert.doesNotMatch(html, /modalVerTodos/);
+    assert.match(support, /document\.querySelector\('a\[data-target="view-solicitudes"\]'\)\?\.addEventListener\('click', \(\) => void load\(\)\)/);
+    assert.match(support, /view-solicitudes'\)\?\.classList\.contains\('active'\)\) void load\(\)/);
+    assert.match(calculator, /addEventListener\('click', \(\) => void loadCurrencyCatalog\(\)\)/);
+});
+
+test('el respaldo de tasas traduce los parámetros internos a la ruta de Frankfurter', async () => {
+    const calculator = await read('public/panel_control/cliente/assets/js/scientific-calculator.js');
+    const helperSource = calculator.match(/function getFrankfurterPath\(path\) \{[\s\S]*?\n    \}/)?.[0];
+    assert.ok(helperSource, 'Debe existir el adaptador de rutas de Frankfurter');
+    const getFrankfurterPath = vm.runInNewContext(`(${helperSource})`, { URL, URLSearchParams, encodeURIComponent });
+
+    assert.equal(getFrankfurterPath('/api/exchange-rates/currencies'), '/currencies');
+    assert.equal(getFrankfurterPath('/api/exchange-rates/rate?base=COP&quote=USD&date=2026-10-26&refresh=1'), '/rate/COP/USD?date=2026-10-26');
+    assert.throws(() => getFrankfurterPath('/api/exchange-rates/rate?base=CO&quote=USD&date=2026-10-26'), /códigos de moneda no son válidos/);
+    assert.throws(() => getFrankfurterPath('/api/exchange-rates/rate?base=COP&quote=USD'), /fecha de cotización no es válida/);
+});
+
+test('los importes se agrupan visualmente y se convierten a número antes de guardarse', async () => {
+    const [formatter, clientHtml, adminHtml] = await Promise.all([
+        read('public/assets/js/number-input-format.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/admin/dashboard.html')
+    ]);
+    const context = {
+        Intl,
+        Number,
+        String,
+        document: { addEventListener() {}, querySelectorAll: () => [] },
+        window: {}
+    };
+    vm.runInNewContext(formatter, context);
+
+    const input = {
+        value: '1234567,89',
+        selectionStart: 10,
+        matches: selector => selector === '[data-format-number]',
+        setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
+    };
+    context.window.formatAmountInput(input);
+
+    assert.equal(input.value, '1.234.567,89');
+    assert.equal(context.window.parseFormattedAmount(input.value), 1234567.89);
+    assert.equal(context.window.parseFormattedAmount('1.500.000'), 1500000);
+    assert.match(clientHtml, /number-input-format\.js/);
+    assert.match(adminHtml, /number-input-format\.js/);
+    assert.doesNotMatch(clientHtml + adminHtml, /type="number"/);
+});
+
 test('el dashboard conserva contenedores dinámicos sin metas demo', async () => {
     const html = await read('public/panel_control/cliente/dashboard.html');
-    assert.match(html, /id="containerGoalsGrid"/);
     assert.match(html, /id="metasGoalsGrid"/);
-    assert.match(html, /id="listaAhorrosRecientes"\><\/div>/);
+    assert.match(html, /id="listaAhorrosRecientes"/);
+    assert.match(html, /id="view-metas"[\s\S]*id="listaAhorrosRecientes"[\s\S]*id="cfgPresupuesto"/);
+    assert.doesNotMatch(html, /id="view-ahorros"|data-target="view-ahorros"/);
+    assert.equal((html.match(/id="cfgPresupuesto"/g) || []).length, 1);
     assert.doesNotMatch(html, /Viaje a Europa|Fondo de emergencia|Nueva Laptop|Casa propia/);
 });
 
@@ -34,10 +238,13 @@ test('el backend usa las tablas canónicas de Supabase', async () => {
 });
 
 test('el cliente tiene estados de carga y manejo de perfil persistente', async () => {
-    const clientScript = await read('public/panel_control/cliente/assets/js/cliente-dashboard.js');
-    assert.match(clientScript, /data-state-loading|Cargando/);
+    const [clientScript, movementsScript] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/movimientos.js')
+    ]);
+    assert.match(movementsScript, /financial-history-state">Cargando movimientos/);
+    assert.match(clientScript + movementsScript, /api\/transacciones|fetchTransacciones/);
     assert.match(clientScript, /api\/auth\/me/);
-    assert.match(clientScript, /api\/transacciones/);
 });
 
 test('el panel cliente carga movimientos y permite desplazarse en móvil', async () => {
@@ -45,7 +252,7 @@ test('el panel cliente carga movimientos y permite desplazarse en móvil', async
     const clientStyles = await read('public/panel_control/cliente/assets/css/cliente-dashboard.css');
 
     assert.doesNotMatch(clientScript, /cargarUltimosMovimientos\(\)/);
-    assert.match(clientScript, /cargarDatosFinancieros\(\);/);
+    assert.match(clientScript, /cargarDatosFinancieros\(viewId\)/);
     assert.match(clientStyles, /@media \(max-width: 768px\)[\s\S]*?overflow-y: auto/);
     assert.match(clientStyles, /#views-container \{ flex: none; overflow: visible; \}/);
 });
@@ -59,6 +266,40 @@ test('el login redirige según el rol recibido del backend', async () => {
     assert.doesNotMatch(loginScript, /const assignedRole = 'cliente'/);
 });
 
+test('el fondo animado del login no crea desbordamiento en móviles', async () => {
+    const loginStyles = await read('public/auth/assets/css/auth.css');
+    const loginHtml = await read('public/auth/login.html');
+
+    assert.match(loginStyles, /\.auth-page \.background-shapes \{[\s\S]*?overflow: clip;/);
+    assert.match(loginStyles, /body\.auth-page \{[\s\S]*?overflow-y: auto;/);
+    assert.match(loginHtml, /assets\/css\/auth\.css\?v=/);
+    assert.doesNotMatch(loginHtml, /assets\/css\/login\.css/);
+});
+
+test('el login informa si la API devuelve una respuesta vacía o no JSON', async () => {
+    const loginScript = await read('public/auth/assets/js/login.js');
+    const context = {
+        document: { addEventListener() {} },
+        window: { NotaireAuthScreens: {} }
+    };
+    vm.runInNewContext(loginScript, context);
+
+    await assert.rejects(
+        context.parseLoginResponse({ status: 500, text: async () => '' }),
+        /sin contenido \(HTTP 500\)/
+    );
+    await assert.rejects(
+        context.parseLoginResponse({ status: 502, text: async () => '<html>Gateway error</html>' }),
+        /respuesta no válida \(HTTP 502\)/
+    );
+
+    const data = await context.parseLoginResponse({
+        status: 401,
+        text: async () => '{"error":"Credenciales incorrectas"}'
+    });
+    assert.equal(data.error, 'Credenciales incorrectas');
+});
+
 test('el frontend usa la API del mismo origen', async () => {
     const scripts = [
         'public/auth/assets/js/login.js',
@@ -69,6 +310,261 @@ test('el frontend usa la API del mismo origen', async () => {
     ];
     const contents = await Promise.all(scripts.map(read));
     assert.doesNotMatch(contents.join('\n'), /http:\/\/localhost:3000/);
+});
+
+test('las peticiones simultáneas reutilizan transacciones y filtran el mes solicitado', async () => {
+    const apiScript = await read('public/panel_control/cliente/assets/js/api.js');
+    const calls = [];
+    const context = {
+        localStorage: { getItem: key => key === 'notaire_token' ? 'test-token' : null },
+        window: { location: {} },
+        fetch: async (url, config) => {
+            calls.push({ url, config });
+            await new Promise(resolve => setTimeout(resolve, 0));
+            return { ok: true, status: 200, json: async () => [] };
+        }
+    };
+    vm.runInNewContext(apiScript, context);
+
+    const [first, second] = await Promise.all([
+        context.fetchTransacciones('2026-10'),
+        context.fetchTransacciones('2026-10')
+    ]);
+
+    assert.deepEqual(Array.from(first), []);
+    assert.deepEqual(Array.from(second), []);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/api\/transacciones\?mes=2026-10$/);
+    assert.equal(calls[0].config.headers.Authorization, 'Bearer test-token');
+});
+
+test('la caché acelera pestañas repetidas y se invalida después de guardar un movimiento', async () => {
+    const apiScript = await read('public/panel_control/cliente/assets/js/api.js');
+    const calls = [];
+    const context = {
+        localStorage: { getItem: key => key === 'notaire_token' ? 'test-token' : null },
+        window: { location: {} },
+        fetch: async (url, config) => {
+            calls.push({ url, method: config.method });
+            return {
+                ok: true,
+                status: config.method === 'POST' ? 201 : 200,
+                json: async () => config.method === 'POST' ? { mensaje: 'creado' } : []
+            };
+        }
+    };
+    vm.runInNewContext(apiScript, context);
+
+    await context.fetchTransacciones('2026-10');
+    await context.fetchTransacciones('2026-10');
+    assert.equal(calls.length, 1);
+
+    await context.apiFetch('/transacciones', 'POST', { tipo: 'gasto', monto: 100 });
+    await context.fetchTransacciones('2026-10');
+    assert.equal(calls.length, 3);
+    assert.deepEqual(calls.map(call => call.method), ['GET', 'POST', 'GET']);
+});
+
+test('los cambios directos de movimientos y metas invalidan la caché del panel', async () => {
+    const [movements, dashboard] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/movimientos.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js')
+    ]);
+
+    assert.match(movements, /if \(!res\.ok\)[\s\S]*?invalidateApiCache\(\)/);
+    assert.match(movements, /if \(!response\.ok\) throw new Error\('Error al eliminar transacción'\);\s*invalidateApiCache\(\)/);
+    assert.equal((dashboard.match(/invalidateApiCache\(\)/g) || []).length, 5);
+});
+
+test('las paletas, el modo claro y los controles visuales aplican y persisten sus opciones', async () => {
+    const [script, html, styles, mobileStyles, requestsStyles, balanceScript] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/panel_control/cliente/assets/css/cliente-solicitudes.css'),
+        read('public/panel_control/cliente/assets/js/saldo.js')
+    ]);
+    const functionSource = script.match(/function setThemeSwatch\(themeName\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(functionSource, 'debe existir el manejador de selección de tema');
+
+    const selected = [];
+    const events = [];
+    const paletteNames = ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'];
+    const swatches = paletteNames.map(theme => ({
+        dataset: { theme },
+        active: false,
+        pressed: 'false',
+        classList: { toggle(_name, active) { this.owner.active = active; }, owner: null },
+        setAttribute(_name, value) { this.pressed = value; }
+    }));
+    swatches.forEach(swatch => { swatch.classList.owner = swatch; });
+    const context = {
+        document: {
+            documentElement: { setAttribute: (_name, value) => selected.push(value) },
+            querySelectorAll: () => swatches,
+            dispatchEvent: event => events.push(event.type)
+        },
+        localStorage: { setItem: (_key, value) => selected.push(value) },
+        Event: class { constructor(type) { this.type = type; } }
+    };
+    vm.runInNewContext(functionSource, context);
+
+    context.setThemeSwatch('gold');
+    assert.deepEqual(selected, ['gold', 'gold']);
+    assert.deepEqual(events, ['notaire:palettechange']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'gold'));
+    assert.deepEqual(swatches.map(swatch => swatch.pressed), paletteNames.map(theme => String(theme === 'gold')));
+
+    context.setThemeSwatch('teal');
+    assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'teal'));
+    context.setThemeSwatch('amber');
+    assert.equal(selected.length, 4);
+    assert.equal(events.length, 2);
+    context.setThemeSwatch('purple');
+    assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal', 'purple', 'purple']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'purple'));
+    for (const palette of ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black']) {
+        assert.match(html, new RegExp(`data-theme="${palette}"`));
+    }
+    assert.match(html, /data-theme="purple"[^>]*title="Notaire"/);
+    assert.match(styles, /html\[data-color-palette="emerald"\]/);
+    assert.match(styles, /html\[data-color-palette="rose"\]/);
+    assert.match(styles, /html\[data-color-palette="purple"\]/);
+    assert.match(styles, /html\[data-color-palette="gray"\]/);
+    assert.match(styles, /html\[data-color-palette="gold"\]/);
+    for (const palette of ['teal', 'orange', 'cyan', 'indigo', 'red']) {
+        assert.match(styles, new RegExp(`html\\[data-color-palette="${palette}"\\]`));
+        assert.match(styles, new RegExp(`html\\[data-theme="light"\\]\\[data-color-palette="${palette}"\\]`));
+        assert.match(styles, new RegExp(`\\.theme-swatch-${palette}`));
+    }
+    assert.match(html, /id="modalMovimiento" class="movement-modal-overlay"/);
+    assert.match(html, /id="formMovimiento" class="movement-form"/);
+    for (const id of ['tipoMovimiento', 'montoMovimiento', 'categoriaMovimiento', 'fechaMovimiento', 'descripcionMovimiento', 'btnCerrarModal']) {
+        assert.match(html, new RegExp(`id="${id}"`));
+    }
+    assert.match(styles, /\[data-theme="light"\] \.config-security-button/);
+    assert.match(styles, /\[data-theme="light"\] \.financial-history-filters input/);
+    assert.match(styles, /\[data-theme="light"\] \.movement-field input/);
+    assert.match(styles, /--color-input-bg: #ffffff/);
+    assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="black"\][\s\S]*--color-bg: #101216/);
+    assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="gray"\][\s\S]*--color-bg: #181d25/);
+    assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="gold"\]/);
+    assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="black"\]/);
+    assert.match(styles, /html\[data-theme="light"\] \.profile-name-text/);
+    assert.match(styles, /html\[data-theme="light"\] \.cal-event-pill/);
+    assert.match(styles, /html\[data-theme="light"\] \.hero-welcome-title span[\s\S]*-webkit-text-fill-color: var\(--color-primary\)/);
+    assert.match(styles, /--color-bg: #f3f5f8/);
+    assert.match(mobileStyles, /financial-history-filters \{ grid-template-columns: minmax\(0, 1fr\) auto/);
+    assert.match(styles, /\.theme-swatch-color\s*\{[^}]*width: 34px;[^}]*height: 34px;/s);
+    assert.match(styles, /\.theme-swatch-name\s*\{[^}]*font-size: 10\.5px;[^}]*white-space: nowrap;/s);
+    assert.match(mobileStyles, /\.theme-swatch-color \{ width: 32px; height: 32px; \}/);
+    assert.match(script, /color:var\(--color-text-main\);\">\$\{escapeHtmlExt\(evt\.titulo\)\}/);
+    assert.match(styles, /\.theme-swatch-gold/);
+    assert.match(styles, /\.theme-swatch-black/);
+    assert.match(styles, /html\[data-theme="light"\]\[data-color-palette="purple"\]/);
+    assert.match(styles, /--color-bg: #f3f5f8/);
+    assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="emerald"\]/);
+    assert.match(mobileStyles, /data-theme="light"[\s\S]*mobile-bottom-nav/);
+    assert.match(styles, /\.theme-swatch-purple/);
+    assert.match(styles, /--color-accent-orange: var\(--color-secondary\)/);
+    assert.match(styles, /#8c00ff/);
+    assert.doesNotMatch(`${styles}\n${mobileStyles}\n${requestsStyles}\n${html}`, /#8a2be2|#8b5cf6/);
+    assert.match(balanceScript, /notaire:palettechange/);
+    assert.match(balanceScript, /chartDona\.update\(\)/);
+    assert.match(script, /allowedThemes = \['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'\]/);
+    assert.match(script, /'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'\]\.includes\(savedTheme\)/);
+    assert.match(script, /setDisplayMode\(mode, el\)[\s\S]*data-theme', effectiveMode/);
+
+    const displayModeSource = script.match(/function setDisplayMode\(mode, el\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(displayModeSource, 'debe existir el manejador del modo de visualización');
+    const modes = ['dark', 'light', 'auto'].map(mode => ({
+        id: `themeOpt${mode[0].toUpperCase()}${mode.slice(1)}`,
+        active: false,
+        classList: { toggle(_name, active) { this.owner.active = active; }, owner: null }
+    }));
+    modes.forEach(mode => { mode.classList.owner = mode; });
+    const themeIcon = { className: '' };
+    const modeContext = {
+        document: {
+            documentElement: { setAttribute: (_name, value) => { modeContext.appliedTheme = value; } },
+            querySelectorAll: () => modes,
+            getElementById: () => ({ querySelector: () => themeIcon }),
+            dispatchEvent: event => { modeContext.lastEvent = event.type; }
+        },
+        localStorage: { setItem: (_key, value) => { modeContext.savedMode = value; } },
+        window: { matchMedia: () => ({ matches: true }) },
+        Event: class { constructor(type) { this.type = type; } }
+    };
+    vm.runInNewContext(displayModeSource, modeContext);
+    modeContext.setDisplayMode('light', modes[1]);
+    assert.equal(modeContext.appliedTheme, 'light');
+    assert.equal(modeContext.savedMode, 'light');
+    assert.deepEqual(modes.map(mode => mode.active), [false, true, false]);
+    modeContext.setDisplayMode('auto', modes[2]);
+    assert.equal(modeContext.appliedTheme, 'dark');
+    assert.equal(modeContext.savedMode, 'auto');
+    assert.equal(themeIcon.className, 'fas fa-sun');
+    assert.equal(modeContext.lastEvent, 'notaire:palettechange');
+});
+
+test('las pestañas secundarias cargan metas, ahorros y saldo al abrirse', async () => {
+    const [dashboard, metas, savings, balance, transactionRoute] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/metas.js'),
+        read('public/panel_control/cliente/assets/js/ahorros.js'),
+        read('public/panel_control/cliente/assets/js/saldo.js'),
+        read('src/app/routes/transacciones.routes.js')
+    ]);
+
+    assert.doesNotMatch(dashboard.slice(0, dashboard.indexOf('function sincronizarEstadoCliente')), /cargarMetasYAhorros/);
+    assert.doesNotMatch(metas, /DOMContentLoaded['"]\s*,\s*cargarMetasYAhorros/);
+    assert.doesNotMatch(savings, /DOMContentLoaded['"]\s*,\s*cargarVistaAhorros/);
+    assert.doesNotMatch(balance, /DOMContentLoaded['"]\s*,\s*cargarGraficoEvolucion/);
+    assert.match(dashboard, /view-metas.*cargarVistaMetasAhorros/);
+    assert.match(savings, /function cargarVistaMetasAhorros\(\)[\s\S]*cargarMetasYAhorros[\s\S]*cargarVistaAhorros/);
+    assert.match(transactionRoute, /query\.gte\('fecha', inicioMes\)\.lt\('fecha', inicioMesSiguiente\)/);
+});
+
+test('el resumen de saldo incluye la gráfica agregada y el anillo detalla sus valores', async () => {
+    const [balance, dashboardRoute, html, styles] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/saldo.js'),
+        read('src/app/server.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+
+    assert.match(dashboardRoute, /recentTransactions: recentResult\.data \|\| \[\]/);
+    assert.match(dashboardRoute, /ingresosMensuales/);
+    assert.match(dashboardRoute, /evolucion: createLiquidityTrend\(transacciones/);
+    assert.match(balance, /await getDashboardMetrics\(\)/);
+    assert.match(balance, /graficoEvolucion\.update\('none'\)/);
+    assert.match(balance, /saldoDonaLegend/);
+    assert.match(html, /id="saldo-dona-liquidez"/);
+    assert.match(html, /id="saldoDonaLegend"/);
+    assert.match(styles, /\.saldo-donut-center/);
+    assert.match(styles, /\.saldo-legend-item/);
+});
+
+test('calendario, listas nativas y selector de emojis respetan el tema y son accesibles', async () => {
+    const [clientHtml, adminHtml, clientCss, adminCss] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/admin/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/admin/assets/css/admin-dashboard.css')
+    ]);
+    for (const html of [clientHtml, adminHtml]) {
+        assert.match(html, /aria-pressed="true"/);
+        assert.match(html, /aria-label="Meta general"/);
+        assert.doesNotMatch(html, /data-emoji="✈️">✈️[\s\S]*data-emoji="✈️">✈️/);
+    }
+    assert.match(clientCss, /select option[\s\S]*background-color: var\(--color-card-bg\)/);
+    assert.match(clientCss, /\.notif-opt-label:has\(input:checked\)/);
+    assert.match(clientCss, /\.btn-cal-notif[\s\S]*linear-gradient/);
+    assert.match(adminCss, /select option[\s\S]*background-color: var\(--color-card-bg\)/);
+    assert.match(adminCss, /\.notif-opt-label:has\(input:checked\)/);
+    assert.match(adminCss, /\.btn-cal-notif[\s\S]*linear-gradient/);
 });
 
 test('el panel admin carga datos reales y no solo valores demo', async () => {
@@ -278,4 +774,923 @@ test('la seguridad incluye recuperación, cambio y renovación de sesión', asyn
     assert.match(authGuard, /\/api\/auth\/refresh/);
     assert.match(recovery, /\/api\/auth\/recover/);
     assert.match(passwordPage, /\/api\/auth\/password/);
+});
+
+test('recuperar contraseña comparte la identidad visual y completa el flujo de restablecimiento', async () => {
+    const [loginHtml, recoveryHtml, recoveryStyles, recoveryScript, passwordHtml, passwordScript, clientHtml, adminHtml, employeeHtml, authRoute, authGuard, clientLogout, adminLogout] = await Promise.all([
+        read('public/auth/login.html'),
+        read('public/auth/olvide-password.html'),
+        read('public/auth/assets/css/auth.css'),
+        read('public/auth/assets/js/olvide-password.js'),
+        read('public/auth/cambiar-password.html'),
+        read('public/auth/assets/js/cambiar-password.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/admin/dashboard.html'),
+        read('public/panel_control/empleado/dashboard.html'),
+        read('src/app/routes/auth.routes.js'),
+        read('public/assets/js/auth-guard.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/admin/assets/js/admin-dashboard-ext.js')
+    ]);
+
+    assert.match(loginHtml, /href="olvide-password\.html" class="forgot-link"/);
+    assert.match(recoveryHtml, /class="main-logo"/);
+    assert.match(recoveryHtml, /class="shape shape-3"/);
+    assert.match(recoveryHtml, /id="recoveryForm"/);
+    assert.match(recoveryHtml, /id="recoveryResult"/);
+    assert.match(recoveryHtml, /href="login\.html" class="back-link"/);
+    assert.match(recoveryStyles, /\.auth-page \.shape-1 \{[\s\S]*?radial-gradient/);
+    assert.match(recoveryStyles, /@keyframes auth-light-drift/);
+    assert.match(recoveryStyles, /\.auth-panel \{[\s\S]*?auth-panel-enter/);
+    assert.match(recoveryStyles, /backdrop-filter: blur\(28px\)/);
+    assert.match(recoveryScript, /\/api\/auth\/recover/);
+    assert.match(recoveryScript, /window\.NotaireAuthScreens\.recovery = initializeRecoveryScreen/);
+    assert.doesNotMatch(recoveryScript, /requestAnimationFrame|mousemove/);
+    assert.match(recoveryScript, /No se pudo conectar con el servidor/);
+    assert.match(authRoute, /if \(error\) \{[\s\S]*?status\(502\)\.json\(\{ error: 'No se pudieron enviar las instrucciones/);
+    assert.match(authRoute, /PASSWORD_RESET_REDIRECT_URL/);
+    assert.match(passwordHtml, /id="windParticles"/);
+    assert.match(passwordHtml, /assets\/js\/cambiar-password\.js/);
+    assert.match(passwordHtml, /<\/form>\s*<p class="form-status" id="formStatus"/);
+    assert.match(passwordScript, /getElementById\('formStatus'\)/);
+    assert.match(passwordScript, /queryParams\.get\('access_token'\)/);
+    assert.match(passwordScript, /hashParams\.get\('access_token'\)/);
+    assert.match(passwordScript, /Authorization: `Bearer \$\{recoveryToken\}`/);
+    assert.match(passwordScript, /sessionStorage\.removeItem\('notaire_password_reset_token'\)/);
+    assert.match(clientHtml, /onclick="openPasswordChangeDialog\(\)"/);
+    assert.match(adminHtml, /onclick="openPasswordChangeDialog\(\)"/);
+    assert.match(clientHtml + adminHtml + employeeHtml, /auth-guard\.js\?v=20261026-password-dialog1/);
+    assert.match(authGuard, /window\.openPasswordChangeDialog = function\(\)/);
+    assert.match(authGuard, /fetch\('\/api\/auth\/password'/);
+    assert.match(authGuard, /id = 'notaireAppDialog'/);
+    assert.match(authGuard, /dialog\.showModal\(\)/);
+    assert.match(clientLogout, /window\.logout\(\)/);
+    assert.match(adminLogout, /window\.logout\(\)/);
+    assert.doesNotMatch(clientLogout + adminLogout, /confirm\('¿Seguro que deseas cerrar sesión\?/);
+});
+
+test('todas las pantallas de autenticación reutilizan el fondo, el logo y la navegación compartida', async () => {
+    const [loginHtml, registerHtml, recoveryHtml, passwordHtml, authStyles, authApp, logo] = await Promise.all([
+        read('public/auth/login.html'),
+        read('public/auth/register.html'),
+        read('public/auth/olvide-password.html'),
+        read('public/auth/cambiar-password.html'),
+        read('public/auth/assets/css/auth.css'),
+        read('public/auth/assets/js/auth-app.js'),
+        read('public/auth/assets/img/notaire-auth-logo.svg')
+    ]);
+    const pages = [loginHtml, registerHtml, recoveryHtml, passwordHtml];
+    const authHtmlFiles = (await readdir(path.join(root, 'public', 'auth')))
+        .filter(file => file.endsWith('.html'))
+        .sort();
+    assert.deepEqual(authHtmlFiles, [
+        'cambiar-password.html',
+        'login.html',
+        'olvide-password.html',
+        'register.html'
+    ]);
+
+    for (const html of pages) {
+        assert.match(html, /<body class="auth-page">/);
+        assert.match(html, /id="authApp" class="[^"]*auth-container"[^>]*data-auth-screen=/);
+        assert.match(html, /id="authPanel" class="[^"]*auth-panel"/);
+        assert.match(html, /assets\/img\/notaire-auth-logo\.svg/);
+        assert.match(html, /assets\/css\/auth\.css\?v=/);
+        assert.match(html, /assets\/js\/auth-app\.js\?v=/);
+        assert.doesNotMatch(html, /assets\/css\/(?:login|register|olvide-password)\.css/);
+        assert.doesNotMatch(html, /<svg\b/);
+    }
+
+    assert.match(logo, /points="50,5 95,25 95,75 50,95 5,75 5,25"/);
+    assert.match(logo, /fill="#8C00FF"/);
+    assert.match(logo, />N<\/text>/);
+    assert.match(authStyles, /radial-gradient/);
+    assert.match(authStyles, /@keyframes auth-light-drift/);
+    assert.match(authStyles, /@keyframes auth-panel-enter/);
+    assert.match(authStyles, /@keyframes auth-panel-float/);
+    assert.match(authStyles, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(authStyles, /@media \(max-width: 520px\)/);
+    assert.match(authApp, /requestAnimationFrame\(drawFrame\)/);
+    assert.match(authApp, /glowRadius: 9 \+ Math\.random\(\) \* 15/);
+    assert.match(authApp, /createRadialGradient/);
+    assert.match(authApp, /const flash = pulse \*\* 12/);
+    assert.match(authApp, /speedY: \(Math\.random\(\) - \.5\) \* \.09/);
+    assert.match(authApp, /createLinearGradient/);
+    assert.match(authApp, /reduceMotion\.matches/);
+    assert.match(authApp, /currentPanel\.replaceWith\(document\.importNode\(nextPanel, true\)\)/);
+    assert.equal((authApp.match(/initializeBackground\(\);/g) || []).length, 1);
+    assert.match(authApp, /history\.pushState/);
+});
+
+test('elimina metas del resumen principal y registra las aportaciones recientes', async () => {
+    const [dashboard, savings, goalsRoute] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/js/ahorros.js'),
+        read('src/app/routes/metas.routes.js')
+    ]);
+
+    assert.match(dashboard, /async function eliminarMetaReal[\s\S]*?await cargarPanelInicio\(\)/);
+    assert.match(savings, /apiFetch\('\/metas\/aportes'\)/);
+    assert.doesNotMatch(savings, /catch\(\(\) => null\)/);
+    assert.match(goalsRoute, /router\.get\('\/aportes'/);
+    assert.match(goalsRoute, /\.from\('aportes_meta'\)[\s\S]*?\.order\('fecha', \{ ascending: false \}\)/);
+});
+
+test('guarda y recupera teléfono y documento del perfil del usuario', async () => {
+    const [dashboard, html, authRoute] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('src/app/routes/auth.routes.js')
+    ]);
+
+    assert.match(dashboard, /JSON\.stringify\(\{ nombre, email, telefono, documento \}\)/);
+    assert.match(dashboard, /documento: usuario\.documento \|\| ''/);
+    assert.match(authRoute, /documento: authData\.user\.user_metadata\?\.documento \|\| ''/);
+    assert.match(authRoute, /user_metadata: userMetadata/);
+    assert.match(authRoute, /documento\s*\n\s*\};/);
+    assert.match(html, /id="perfilTelefono"><\/div>/);
+    assert.match(html, /id="perfilDocumento"><\/div>/);
+});
+
+test('el idioma traduce etiquetas estáticas y el tema alterna sin manejadores duplicados', async () => {
+    const [i18n, dashboard] = await Promise.all([
+        read('public/assets/js/notaire-i18n.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js')
+    ]);
+
+    assert.match(i18n, /staticTextEnglish/);
+    assert.match(i18n, /translateStaticContent\(lang\)/);
+    assert.match(i18n, /'Progreso de metas': 'Goal progress'/);
+    assert.match(i18n, /'Ahorros recientes': 'Recent savings'/);
+    assert.match(i18n, /function getCurrentTheme\(\)[\s\S]*saved === 'dark'/);
+    assert.match(i18n, /const next = current === 'light' \? 'dark' : 'light'/);
+    assert.equal((i18n.match(/themeBtn\.addEventListener\('click'/g) || []).length, 1);
+    assert.doesNotMatch(dashboard, /initThemeToggle\(\)/);
+});
+
+test('la traducción del panel conserva los textos que escribió el usuario', async () => {
+    const i18n = await read('public/assets/js/notaire-i18n.js');
+    const nodes = [
+        { data: 'Inicio', parentElement: { closest: () => null } },
+        { data: 'Meta para vacaciones', parentElement: { closest: selector => selector.includes('[data-user-content="true"]') ? {} : null } }
+    ];
+    let index = 0;
+    const context = {
+        document: {
+            addEventListener() {},
+            body: {},
+            createTreeWalker: () => ({ nextNode: () => nodes[index++] || null }),
+            querySelectorAll: () => []
+        },
+        window: {}
+    };
+    vm.runInNewContext(i18n, context);
+
+    context.window.translateStaticContent('en');
+    assert.equal(nodes[0].data, 'Home');
+    assert.equal(nodes[1].data, 'Meta para vacaciones');
+});
+
+test('la página de ahorros muestra el tip solicitado y los emojis caben en una fila desplazable', async () => {
+    const [html, styles, i18n] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/assets/js/notaire-i18n.js')
+    ]);
+
+    assert.match(html, /Ahorros<\/span>/);
+    assert.match(html, /id="ahorroTipTitle">Tip Notaire<\/h4>/);
+    assert.match(html, /No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando\./);
+    assert.match(i18n, /tipText: 'No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando\.'/);
+    assert.match(html, /data-target="view-metas"[^>]*><i class="fas fa-piggy-bank"><\/i> <span>Ahorros<\/span>/);
+    assert.match(html, /data-nav="view-metas"><i class="fas fa-piggy-bank"><\/i><span>Ahorros<\/span>/);
+    assert.match(html, /fas fa-piggy-bank/);
+    assert.match(html, /class="tip-icon-glow" aria-hidden="true">💡<\/div>/);
+    assert.match(i18n, /tipTitle: 'Tip Notaire'/);
+    const budgetMarkup = html.match(/<div class="budget-categories-list"[\s\S]*?id="budgetCategoryAdd"/)?.[0] || '';
+    assert.match(budgetMarkup, /data-emoji="🏠"/);
+    assert.match(budgetMarkup, /data-emoji="🍽️"/);
+    assert.match(budgetMarkup, /class="budget-cat-edit"/);
+    assert.match(budgetMarkup, /class="budget-cat-emoji-picker"/);
+    assert.match(budgetMarkup, /class="budget-cat-name"[^>]*readonly/);
+    assert.match(budgetMarkup, /class="budget-cat-input"[^>]*readonly/);
+    assert.doesNotMatch(budgetMarkup, /budget-cat-track/);
+    assert.match(styles, /\.emoji-picker-row \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto/s);
+    assert.match(styles, /\*::-webkit-scrollbar-thumb \{[^}]*linear-gradient/s);
+    assert.match(styles, /\.tip-content h4 \{[^}]*text-align: center/);
+});
+
+test('el panel conecta tips, filtros y controles de soporte con estilos responsivos', async () => {
+    const [html, styles, mobileStyles, supportStyles, dashboard, goalsRoute] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/panel_control/cliente/assets/css/cliente-solicitudes.css'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('src/app/routes/metas.routes.js')
+    ]);
+
+    assert.match(html, /class="cal-tip-action"[^>]*onclick="openNotifSettings\(\)"/);
+    assert.match(styles, /\.cal-tip-action:focus-visible/);
+    const filters = Array.from(html.matchAll(/<div class="financial-history-filters">([\s\S]*?)<\/div>/g), match => match[1]);
+    assert.equal(filters.length, 2);
+    for (const [index, type] of ['gasto', 'ingreso'].entries()) {
+        const filter = filters[index];
+        assert.ok(filter.indexOf('data-history-filter="search"') < filter.indexOf(`limpiarFiltros('${type}')`));
+        assert.ok(filter.indexOf(`limpiarFiltros('${type}')`) < filter.indexOf('data-history-filter="from"'));
+    }
+    assert.match(mobileStyles, /\.financial-history-filters \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
+    assert.match(supportStyles, /\.cli-sol-form select \{[\s\S]*appearance: none;[\s\S]*color-scheme: dark;/);
+    assert.match(supportStyles, /html\[data-theme="light"\] \.cli-sol-form select \{ color-scheme: light; \}/);
+    assert.match(styles, /\.saldo-summary-item strong \{[\s\S]*font-variant-numeric: tabular-nums;[\s\S]*white-space: nowrap;/);
+    assert.match(dashboard, /result\.detalle/);
+    assert.match(goalsRoute, /PGRST202[\s\S]*metas_notificaciones_migration\.sql/);
+});
+
+test('actividad reciente muestra solo ingresos y gastos y elimina el acceso adicional a gastos', async () => {
+    const [html, homeScript, styles, server] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/inicio.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('src/app/server.js')
+    ]);
+
+    assert.match(html, /id="listaActividadReciente"/);
+    assert.doesNotMatch(html, /onclick="navigateTo\('view-gastos'\)">Ver gastos/);
+    assert.match(homeScript, /\.filter\(transaccion => \['ingreso', 'gasto'\]\.includes\(normalizarTipo\(transaccion\)\)\)/);
+    assert.match(homeScript, /transaction-title">\$\{esIngreso \? 'Ingreso' : 'Gasto'\}/);
+    assert.match(homeScript, /\.slice\(0, 5\)/);
+    assert.match(homeScript, /obtenerMovimientosRecientes\(dashboardData, normalizarTipo\)/);
+    assert.match(homeScript, /await fetchTransacciones\(\)/);
+    assert.match(homeScript, /No se pudieron cargar los movimientos recientes\./);
+    assert.match(server, /\.from\('transacciones'\)[\s\S]*?\.limit\(5\)/);
+    assert.match(styles, /\[data-theme="light"\] \.config-toggle-title/);
+    assert.match(styles, /\[data-theme="light"\] \.section-title-group h2/);
+    assert.match(styles, /\[data-theme="light"\] \.goal-title-text/);
+    assert.match(styles, /\[data-theme="light"\] \.month-title-select/);
+});
+
+test('actividad reciente se refresca al guardar o eliminar desde movimientos', async () => {
+    const movementsScript = await read('public/panel_control/cliente/assets/js/movimientos.js');
+    assert.equal(
+        (movementsScript.match(/if \(typeof cargarPanelInicio === 'function'\) await cargarPanelInicio\(\);/g) || []).length,
+        2
+    );
+});
+
+test('actividad reciente usa la API de transacciones cuando el resumen no incluye movimientos', async () => {
+    const homeScript = await read('public/panel_control/cliente/assets/js/inicio.js');
+    const helperSource = homeScript.match(/async function obtenerMovimientosRecientes\(dashboardData, normalizarTipo\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(helperSource);
+
+    let fallbackCalls = 0;
+    const fallbackTransactions = [
+        { id: 5, tipo: 'ingreso', monto: 2500 },
+        { id: 4, tipo: 'ahorro', monto: 300 },
+        { id: 3, tipo: 'gasto', monto: 800 }
+    ];
+    const obtener = vm.runInNewContext(`(${helperSource})`, {
+        fetchTransacciones: async () => {
+            fallbackCalls += 1;
+            return fallbackTransactions;
+        }
+    });
+    const tipo = transaction => transaction.tipo;
+
+    assert.deepEqual(
+        await obtener({ recentTransactions: [] }, tipo),
+        [fallbackTransactions[0], fallbackTransactions[2]]
+    );
+    assert.equal(fallbackCalls, 1);
+    assert.deepEqual(
+        await obtener({ recentTransactions: [fallbackTransactions[0]] }, tipo),
+        [fallbackTransactions[0]]
+    );
+    assert.equal(fallbackCalls, 1);
+});
+
+test('el logo y el avatar quedan centrados al colapsar el menú lateral', async () => {
+    const [html, styles] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+
+    assert.match(html, /<text x="50" y="50" dominant-baseline="central"[^>]*text-anchor="middle">N<\/text>/);
+    assert.match(styles, /\.sidebar\.collapsed \.brand-header \{[^}]*display: grid;[^}]*justify-items: center/s);
+    assert.match(styles, /\.sidebar\.collapsed \.brand-logo-hex \{[^}]*justify-self: center/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \{[^}]*display: grid;[^}]*place-items: center;[^}]*width: 100%;/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \.profile-avatar-circle \{[^}]*flex: 0 0 42px;[^}]*width: 42px;[^}]*height: 42px;/s);
+    assert.match(styles, /\.profile-avatar-circle \{[^}]*aspect-ratio: 1;/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-toggle-btn \{[^}]*margin: 0 auto/s);
+    assert.match(styles, /\.sidebar \{[^}]*transition: width 0\.42s cubic-bezier\(0\.22, 1, 0\.36, 1\)/s);
+});
+
+test('el panel cliente tiene centro de notificaciones, avisos periódicos y navegación priorizada', async () => {
+    const [html, notifications, mobileNav, mobileStyles, styles, preferenceService, eventNotifications, financeAlerts] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/assets/js/mobile-nav.js'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('src/app/services/notification-prefs.service.js'),
+        read('src/app/services/event-notifications.service.js'),
+        read('src/app/services/finance-alerts.service.js')
+    ]);
+
+    const destinations = [...html.matchAll(/data-target="(view-[^"]+)"/g)].map(match => match[1]);
+    assert.deepEqual(destinations.slice(0, 9), [
+        'view-inicio', 'view-gastos', 'view-ingresos', 'view-saldo', 'view-metas',
+        'view-calculadora', 'view-recordatorios', 'view-solicitudes', 'view-configuracion'
+    ]);
+    assert.match(html, /id="notificationBell"[\s\S]{0,300}fa-bell/);
+    assert.match(html, /id="notificationPanel"/);
+    assert.match(styles, /background-image: linear-gradient\(var\(--color-card-bg\), var\(--color-card-bg\)\)/);
+    assert.match(html, /id="togNotifDaily"/);
+    assert.match(html, /id="togNotifMonthly"/);
+    assert.match(notifications, /notaire_notification_center/);
+    assert.match(notifications, /dedupeKey: `daily:/);
+    assert.match(notifications, /dedupeKey: `monthly:/);
+    assert.match(notifications, /dedupeKey: `event:/);
+    assert.match(mobileNav, /view-calculadora/);
+    assert.match(mobileNav, /let lastSyncedView = null/);
+    assert.match(mobileNav, /if \(lastSyncedView === view\) return/);
+    assert.match(mobileNav, /container\.querySelectorAll\('\.content-section'\)\.forEach\(section =>/);
+    assert.doesNotMatch(mobileNav, /attributeFilter: \['class'\],[\s\S]{0,40}subtree: true/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.calculator-workspace \{ grid-template-columns: minmax\(0, 1fr\)/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.notification-panel \{ top: 68px/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.sidebar \{ z-index: 70; \}/);
+    assert.match(styles, /\.mobile-sidebar-backdrop \{ z-index: 65; \}/);
+    assert.match(mobileStyles, /\.mobile-bottom-nav/);
+    assert.match(mobileNav, /document\.getElementById\('mobileMenuTrigger'\)\?\.click\(\)/);
+    assert.match(preferenceService, /daily: bool\('daily'\)/);
+    assert.match(preferenceService, /monthly: bool\('monthly'\)/);
+    assert.match(notifications, /if \(!response\.ok\) throw new Error\(`El servidor respondió HTTP \$\{response\.status\}`\)/);
+    assert.match(notifications, /input\.checked = await requestBrowserNotifications\(\)/);
+    assert.match(eventNotifications, /evento\.fecha\}T\$\{String\(evento\.hora \|\| '08:00'\)\.slice\(0, 5\)\}:00-05:00/);
+    assert.match(eventNotifications, /T09:00:00-05:00/);
+    assert.match(financeAlerts, /timezone: 'America\/Bogota'/);
+    assert.match(financeAlerts, /\.lt\('fecha', endExclusive\)/);
+
+    const minutesUntilSource = eventNotifications.match(/function minutesUntil\(evento, now = Date\.now\(\)\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(minutesUntilSource);
+    const minutesUntil = vm.runInNewContext(`(${minutesUntilSource})`, { Date });
+    assert.equal(minutesUntil(
+        { fecha: '2026-10-27', hora: '08:00:00' },
+        Date.parse('2026-10-27T12:00:00.000Z')
+    ), 60);
+});
+
+test('las opciones de notificación reflejan permisos del navegador y errores de sincronización', async () => {
+    const notifications = await read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js');
+    const elements = new Map([
+        ['togNotifBrowser', { checked: false }],
+        ['togNotif24h', { checked: true }],
+        ['togNotif1h', { checked: true }],
+        ['togNotifGastos', { checked: true }],
+        ['togNotifSemanal', { checked: false }],
+        ['togNotifDaily', { checked: true }],
+        ['togNotifMonthly', { checked: true }]
+    ]);
+    const stored = new Map([['notaire_token', 'test-token']]);
+    const toasts = [];
+    const loggedErrors = [];
+    const notificationApi = {
+        permission: 'denied',
+        async requestPermission() { return this.permission; }
+    };
+    const context = {
+        document: {
+            addEventListener() {},
+            getElementById: id => elements.get(id) || null,
+            querySelectorAll: () => []
+        },
+        window: { Notification: notificationApi, getCurrentLang: () => 'es' },
+        Notification: notificationApi,
+        localStorage: {
+            getItem: key => stored.get(key) || null,
+            setItem: (key, value) => stored.set(key, value)
+        },
+        fetch: async () => ({ ok: false, status: 503 }),
+        showToast: message => toasts.push(message),
+        console: { error: (...args) => loggedErrors.push(args) }
+    };
+    vm.runInNewContext(notifications, context);
+
+    const normalizedEvent = vm.runInNewContext(
+        `normalizeCalendarEvent({ id: 1, fecha: '2026-10-27', hora: '08:00:00', notifonday: true })`,
+        context
+    );
+    assert.equal(normalizedEvent.hora, '08:00');
+    assert.equal(normalizedEvent.notifOnDay, true);
+
+    const browserToggle = elements.get('togNotifBrowser');
+    browserToggle.checked = true;
+    await vm.runInContext('toggleNotifBrowser(document.getElementById("togNotifBrowser"))', context);
+    assert.equal(browserToggle.checked, false);
+    assert.equal(JSON.parse(stored.get('notaire_notif_cfg')).browser, false);
+    assert.ok(!toasts.some(message => message.includes('activadas')));
+
+    notificationApi.permission = 'granted';
+    browserToggle.checked = true;
+    await vm.runInContext('toggleNotifBrowser(document.getElementById("togNotifBrowser"))', context);
+    assert.equal(browserToggle.checked, true);
+    assert.equal(JSON.parse(stored.get('notaire_notif_cfg')).browser, true);
+
+    await vm.runInContext('saveNotifConfig()', context);
+    assert.ok(toasts.some(message => message.includes('no se sincronizaron')));
+    assert.ok(loggedErrors.length > 0);
+});
+
+test('el presupuesto se sincroniza por cuenta y las cuentas nuevas empiezan en cero', async () => {
+    const [preferences, dashboard, dashboardExt, registration] = await Promise.all([
+        read('src/app/services/notification-prefs.service.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/auth/assets/js/register.js')
+    ]);
+
+    const normalizerSource = preferences.match(/function normalizeBudgetCategories\(value\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(normalizerSource, 'Debe existir normalización de categorías del presupuesto');
+    const normalizeBudgetCategories = vm.runInNewContext(`(${normalizerSource})`, { Array, Number, String });
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(normalizeBudgetCategories([
+            { id: ' food ', name: 'Alimentación', emoji: '🍽️', value: 123000, priority: 2 },
+            { id: '', name: 'Inválida', value: 10 }
+        ]))),
+        [{ id: 'food', name: 'Alimentación', emoji: '🍽️', value: 123000, priority: 2 }]
+    );
+    assert.match(preferences, /presupuesto_categorias: normalizeBudgetCategories\(source\.presupuesto_categorias\)/);
+    assert.match(dashboardExt, /async function saveBudgetConfig\(\)/);
+    assert.match(dashboardExt, /await persistirPreferencias\(\{[\s\S]*presupuesto_categorias: categories,[\s\S]*presupuesto_categorias_version: DEFAULT_BUDGET_CATEGORY_ORDER_VERSION/);
+    assert.match(dashboardExt, /presupuesto_categorias: legacyCategories/);
+    assert.match(dashboardExt, /hasSavedCategories && !saved && row\.dataset\.budgetCategory !== 'savings'/);
+    assert.match(dashboard, /id="cfgPresupuesto" value="0"/);
+    assert.equal((dashboard.match(/class="budget-cat-input" value="0"/g) || []).length, 5);
+    const categories = [...dashboard.matchAll(/data-budget-category="([^"]+)"/g)].map(match => match[1]);
+    assert.deepEqual(categories, ['services', 'food', 'transport', 'savings', 'entertainment']);
+    assert.match(registration, /localStorage\.removeItem\('notaire_presupuesto_categorias'\)/);
+});
+
+test('el dashboard restaura la vista activa después de recargar', async () => {
+    const [dashboard, registration] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/auth/assets/js/register.js')
+    ]);
+
+    assert.match(dashboard, /sessionStorage\.getItem\('notaire_cliente_active_view'\)/);
+    assert.match(dashboard, /sessionStorage\.setItem\('notaire_cliente_active_view', viewId\)/);
+    assert.match(dashboard, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
+    assert.match(registration, /sessionStorage\.removeItem\('notaire_cliente_active_view'\)/);
+});
+
+test('el calendario cambia de vista y el error de aporte solo muestra el límite', async () => {
+    const [html, calendar, dashboard, styles, register] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/auth/register.html')
+    ]);
+    const aporteError = dashboard.match(/function mostrarErrorAporte\(info\) \{[\s\S]*?\n\}/)?.[0] || '';
+
+    assert.match(html, /id="calendarMonthPicker"/);
+    assert.match(html, /id="calViewWeek"/);
+    assert.match(html, /id="calViewDay"/);
+    assert.match(html, /id="btnUpcomingAll"/);
+    assert.match(calendar, /CalendarState\.viewMode === 'week' \? 7 : 1/);
+    assert.match(calendar, /CalendarState\.upcomingExpanded \? upcoming\.length : 5/);
+    assert.match(styles, /\.calendar-month-grid\.is-day-view \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.calendar-month-grid\.is-day-view/);
+    assert.match(html, /<h3>Listado de Gastos<\/h3>[\s\S]*id="tabla-detallada-body-gasto"/);
+    assert.match(aporteError, /box\.textContent = message/);
+    assert.doesNotMatch(aporteError, /createElement|openModalRegistrarIngreso|aporte-error-actions/);
+    assert.match(register, /assets\/css\/auth\.css/);
+});
+
+test('el calendario guarda categorías compatibles y muestra los días en su propia franja', async () => {
+    const [html, calendar, route, migration, databaseGuide, styles, mobileStyles] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('src/app/routes/eventos.routes.js'),
+        read('src/database/eventos_calendario_tipo_migration.sql'),
+        read('docs/guia_base_de_datos.md'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css')
+    ]);
+
+    assert.match(route, /const EVENT_TYPES = new Set\(\['notarial', 'financiero', 'recordatorio', 'personal'\]\)/);
+    assert.match(route, /EVENT_TYPE_ALIASES\[tipo\] \|\| tipo \|\| 'notarial'/);
+    assert.match(route, /normalizeEventType\(tipo\)/);
+    assert.match(route, /eventos_calendario_tipo_check/);
+    assert.match(migration, /drop constraint if exists eventos_calendario_tipo_check/);
+    assert.match(migration, /check \(tipo in \('notarial', 'financiero', 'recordatorio', 'personal'\)\)\s+not valid/);
+    assert.match(databaseGuide, /eventos_calendario_tipo_migration\.sql/);
+    assert.match(html, /id="calendarWeekdays"[\s\S]*Dom[\s\S]*Lun[\s\S]*Sáb/);
+    assert.equal((html.match(/<option value="(?:purple|green|orange|blue)">/g) || []).length, 4);
+    for (const [type, emoji] of [['purple', '📅'], ['green', '💳'], ['orange', '🔔'], ['blue', '👤']]) {
+        assert.match(html, new RegExp(`<option value="${type}">${emoji}`));
+        assert.match(calendar, new RegExp(`icon: '${emoji}'`));
+    }
+    assert.doesNotMatch(html, /value="pink"|Cumpleaños|tog2FA|Autenticación 2FA/);
+    assert.doesNotMatch(html, /calendar-legend-tags|calendarMonthPicker"[^>]*type="month"/);
+    assert.match(calendar, /WEEKDAY_NAMES\[window\.getCurrentLang/);
+    assert.match(calendar, /calendarMonthApply/);
+    assert.match(calendar, /calendarEventError/);
+    assert.match(styles, /\.calendar-month-picker\[hidden\] \{ display: none; \}/);
+    assert.match(styles, /\.calendar-event-modal \{/);
+    assert.match(mobileStyles, /\.calendar-weekday-grid \{ grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+});
+
+test('el calendario muestra y administra pagos y compromisos con el flujo persistente existente', async () => {
+    const [html, reminders, styles, mobileStyles, i18n] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/recordatorios.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/assets/js/notaire-i18n.js')
+    ]);
+
+    assert.match(html, /id="lista-recordatorios"/);
+    assert.match(html, /id="calendarPaymentAdd"/);
+    assert.match(html, /id="modalRecordatorio"/);
+    assert.match(reminders, /calendarPaymentAdd'\)\?\.addEventListener\('click', abrirModalRecordatorio\)/);
+    assert.match(reminders, /void cargarRecordatorios\(\)/);
+    assert.match(reminders, /RECORDATORIOS_API_URL/);
+    assert.match(reminders, /cambiarEstadoRecordatorio/);
+    assert.match(reminders, /eliminarRecordatorio/);
+    assert.match(styles, /\.calendar-payment-row \{/);
+    assert.match(mobileStyles, /\.calendar-payment-row \{/);
+    assert.match(i18n, /'Controla tus vencimientos y marca los pagos realizados\.'/);
+    assert.match(i18n, /'Eliminar compromiso': 'Delete commitment'/);
+});
+
+test('las metas completadas se separan y las tres más avanzadas se destacan', async () => {
+    const [goals, dashboard, home, styles] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/metas.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/inicio.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+    const statsSource = goals.match(/function resumirMetas\(metas\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(statsSource);
+    const metaSource = goals.match(/function resumirMeta\(meta\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(metaSource);
+    const resumen = vm.runInNewContext(`${metaSource}\n${statsSource}\nresumirMetas`, { String, Number, Math });
+    const resumirMeta = vm.runInNewContext(`${metaSource}\nresumirMeta`, { String, Number, Math });
+    const results = resumen([
+        { id: 1, monto_actual: 90, monto_objetivo: 100, fecha_limite: '2027-01-01' },
+        { id: 2, monto_actual: 80, monto_objetivo: 100, fecha_limite: '2027-02-01' },
+        { id: 3, monto_actual: 70, monto_objetivo: 100, fecha_limite: '2027-03-01' },
+        { id: 4, monto_actual: 50, monto_objetivo: 100, fecha_limite: '2027-04-01' },
+        { id: 5, monto_actual: 100, monto_objetivo: 100, fecha_limite: '2027-05-01' }
+    ]);
+
+    assert.equal(results.activas.length, 4);
+    assert.equal(results.completadas.length, 1);
+    assert.equal(results.progresoPromedio, 78);
+    assert.deepEqual(Array.from(results.proximas, goal => goal.meta.id), [1, 2, 3]);
+    assert.equal(resumirMeta({ monto_actual: 25, monto_objetivo: 25 }).completada, true);
+    assert.match(dashboard, /id="valMetasCompletadas"/);
+    assert.match(dashboard, /id="valMetasEnProgreso"/);
+    assert.match(dashboard, /class="goal-status-counts"/);
+    assert.match(dashboard, /class="metric-card goal-status-card">[\s\S]*?ESTADO DE TUS METAS/);
+    assert.match(dashboard, /class="metric-card goal-savings-card"/);
+    assert.match(dashboard, /class="metric-card goal-average-card"/);
+    assert.match(dashboard, /class="goal-metric-icon is-savings"/);
+    assert.match(dashboard, /class="goal-metric-icon is-status"/);
+    assert.match(dashboard, /class="goal-metric-icon is-progress"/);
+    assert.match(dashboard, /class="config-card appearance-config-card">[\s\S]*?<h3>Apariencia<\/h3>/);
+    assert.match(dashboard, /Convierte tus planes en metas alcanzables/);
+    assert.match(goals, /goal-status-summary-item is-progress/);
+    assert.match(goals, /goal-status-summary-item is-completed/);
+    assert.match(home, /resumirMeta\(meta\)\.completada/);
+    assert.match(dashboard, /id="homeMetaStatus"/);
+    assert.doesNotMatch(dashboard, /Autenticación 2FA|tog2FA/);
+    assert.match(styles, /html\s*\{\s*font-size:\s*102%;\s*\}/);
+    assert.match(styles, /\.goal-status-card\s*\{/);
+    assert.match(styles, /#view-metas > \.metrics-grid \.goal-status-card::after \{ display: none; \}/);
+    assert.match(styles, /#view-metas > \.metrics-grid > \.metric-card \{[\s\S]*min-height: 164px/);
+    const mobileStyles = await read('public/panel_control/cliente/assets/css/cliente-mobile.css');
+    assert.match(mobileStyles, /#view-metas \.metrics-grid \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.doesNotMatch(mobileStyles, /#view-metas \.metrics-grid \.metric-card:first-child \{[^}]*background:/);
+    assert.match(styles, /\.theme-palette-section\s*\{/);
+    assert.match(styles, /\.appearance-config-card \.config-toggle-row\s*\{/);
+    assert.match(dashboard, /id="metasProximasGrid"/);
+    assert.match(goals, /class="goal-card\$\{goal\.completada \? ' is-completed' : ''\}"/);
+});
+
+test('las acciones de metas usan controles coherentes y accesibles sin iconos emoji', async () => {
+    const [goals, styles] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/metas.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+    assert.match(goals, /class="goal-card-actions"/);
+    assert.match(goals, /class="goal-card-icon-action"[^>]*aria-label="\$\{english \? 'Edit goal' : 'Editar meta'\}"/);
+    assert.match(goals, /class="goal-card-icon-action is-danger"[^>]*aria-label="\$\{english \? 'Delete goal' : 'Eliminar meta'\}"/);
+    assert.doesNotMatch(goals, /class="btn-delete-goal"/);
+    assert.match(styles, /\.goal-card-icon-action \{[\s\S]*?border-radius: 12px/);
+});
+
+test('la calculadora científica evalúa operaciones y funciones trigonométricas sin eval', async () => {
+    const [calculator, html, i18n, styles] = await Promise.all([
+        read('public/panel_control/cliente/assets/js/scientific-calculator.js'),
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/assets/js/notaire-i18n.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+    assert.match(html, /<h2>CALCULADORA<\/h2>/);
+    const keypadMarkup = html.match(/<div class="calculator-keypad"[\s\S]*?<\/div>/)?.[0] || '';
+    assert.equal((keypadMarkup.match(/class="calculator-key(?:\s|")/g) || []).length, 48);
+    assert.match(keypadMarkup, /data-action="second"/);
+    assert.match(keypadMarkup, /data-action="memory-clear"/);
+    assert.match(keypadMarkup, /data-action="memory-add"/);
+    assert.match(keypadMarkup, /data-action="memory-subtract"/);
+    assert.match(keypadMarkup, /data-action="memory-recall"/);
+    assert.match(keypadMarkup, /data-transform="nth-root"/);
+    assert.match(keypadMarkup, /data-value="sinh\("/);
+    assert.match(keypadMarkup, /data-action="random"/);
+    assert.match(html, /class="calculator-history card-box"[\s\S]*id="calculatorHistoryList"/);
+    assert.match(html, /class="calculator-side-panel"[\s\S]*id="currencyConverterTitle"[\s\S]*id="calculatorHistoryList"/);
+    assert.match(html, /id="currencyFrom"/);
+    assert.match(html, /id="currencyTo"/);
+    assert.match(html, /id="currencySwap"/);
+    assert.match(html, /id="currencyAmountFrom"/);
+    assert.match(html, /id="currencyAmountTo"/);
+    assert.match(calculator, /\/api\/exchange-rates\/currencies/);
+    assert.match(calculator, /\/api\/exchange-rates\/rate\?\$\{params\}/);
+    assert.match(calculator, /new URLSearchParams\(\{ base, quote, date: localRateDate\(\) \}\)/);
+    assert.match(calculator, /fetchCurrencyData/);
+    assert.match(calculator, /https:\/\/api\.frankfurter\.dev\/v2/);
+    assert.match(calculator, /externalPath === '\/currencies' && Array\.isArray\(data\)/);
+    assert.match(calculator, /code: currency\.iso_code/);
+    assert.match(calculator, /formatToParts\(1234\.5\)/);
+    assert.match(html, /id="calculatorMemoryIndicator"/);
+    assert.match(styles, /\.calculator-keypad \{[\s\S]*grid-template-columns: repeat\(8, minmax\(0, 1fr\)\);[\s\S]*grid-template-rows: repeat\(6, minmax\(44px, 1fr\)\)/);
+    assert.match(styles, /@media \(max-width: 1000px\)[\s\S]*?\.calculator-workspace \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.match(i18n, /'view-calculadora': 'CALCULADORA'/);
+    const elements = new Map();
+    const inverseTrigButton = {
+        dataset: { label: 'sin', altLabel: 'sin⁻¹' },
+        textContent: 'sin',
+        setAttribute(name, value) { this.attributes[name] = value; },
+        attributes: {}
+    };
+    const makeElement = () => ({
+        textContent: '',
+        dataset: {},
+        tagName: 'DIV',
+        attributes: {},
+        listeners: {},
+        classList: {
+            add(value) { this[value] = true; },
+            remove(value) { delete this[value]; }
+        },
+        addEventListener(type, handler) { this.listeners[type] = handler; },
+        setAttribute(name, value) { this.attributes[name] = value; },
+        append() {},
+        replaceChildren() {},
+        querySelectorAll(selector) {
+            return selector === '[data-alt-value]' ? [inverseTrigButton] : [];
+        }
+    });
+    for (const id of ['scientificCalculator', 'calculatorExpression', 'calculatorResult', 'calculatorKeypad', 'calculatorAngleMode', 'calculatorHistoryList', 'calculatorClearHistory']) {
+        elements.set(id, makeElement());
+    }
+    const storage = new Map();
+    const context = {
+        document: {
+            getElementById: id => elements.get(id),
+            createElement: () => makeElement(),
+            addEventListener() {}
+        },
+        window: {},
+        localStorage: {
+            getItem: key => storage.get(key) || null,
+            setItem: (key, value) => storage.set(key, value)
+        },
+        console
+    };
+    vm.runInNewContext(calculator, context);
+
+    const keypad = elements.get('calculatorKeypad');
+    const result = elements.get('calculatorResult');
+    const press = dataset => {
+        const button = {
+            dataset,
+            textContent: dataset.label || '',
+            setAttribute(name, value) { this.attributes[name] = value; },
+            attributes: {}
+        };
+        keypad.listeners.click({ target: { closest: () => button } });
+        return button;
+    };
+    const enter = value => press({ value });
+
+    enter('2');
+    enter('+');
+    assert.equal(result.textContent, '');
+    enter('3');
+    enter('*');
+    enter('4');
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '14');
+    assert.equal(JSON.parse(storage.values().next().value).length, 1);
+
+    press({ action: 'clear' });
+    enter('sin(');
+    enter('3');
+    enter('0');
+    enter(')');
+    press({ action: 'equals' });
+    assert.equal(Number(result.textContent).toFixed(2), '0.50');
+
+    press({ action: 'clear' });
+    enter('2');
+    enter('-');
+    enter('3');
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '-1');
+    assert.equal(JSON.parse(storage.values().next().value).length, 3);
+
+    const calculateTokens = tokens => {
+        press({ action: 'clear' });
+        tokens.forEach(token => enter(token));
+        press({ action: 'equals' });
+        return result.textContent;
+    };
+    assert.equal(calculateTokens(['ln(', '3', '6']), '3.58351893846');
+    assert.equal(calculateTokens(['log(', '1', '0', '0']), '2');
+    assert.equal(calculateTokens(['sqrt(', '8', '1']), '9');
+    assert.equal(calculateTokens(['cos(', '9', '0']), '0');
+    assert.equal(calculateTokens(['tan(', '4', '5']), '1');
+    assert.equal(calculateTokens(['asin(', '0', '.', '5']), '30');
+    assert.equal(calculateTokens(['acos(', '0', '.', '5']), '60');
+    assert.equal(calculateTokens(['atan(', '1']), '45');
+    assert.equal(calculateTokens(['abs(', '-', '5']), '5');
+    assert.equal(calculateTokens(['5', '!']), '120');
+    assert.equal(calculateTokens(['2', '^', '3']), '8');
+    assert.equal(calculateTokens(['2', '^', '-', '2']), '0.25');
+    assert.equal(calculateTokens(['-', '2', '^', '2']), '-4');
+    assert.equal(calculateTokens(['2', '(', '3', '+', '4', ')']), '14');
+    assert.equal(calculateTokens(['2', 'pi']), '6.28318530718');
+    assert.equal(calculateTokens(['e', '^', '1']), '2.71828182846');
+    assert.equal(calculateTokens(['5', '0', '%']), '0.5');
+    assert.equal(calculateTokens(['sinh(', '0']), '0');
+    assert.equal(calculateTokens(['cosh(', '0']), '1');
+    assert.equal(calculateTokens(['tanh(', '0']), '0');
+    assert.equal(calculateTokens(['asinh(', '1']), '0.88137358702');
+    assert.equal(calculateTokens(['acosh(', '1']), '0');
+    assert.equal(calculateTokens(['atanh(', '0']), '0');
+    assert.equal(calculateTokens(['powten(', '3']), '1000');
+    assert.equal(calculateTokens(['exp(', '1']), '2.71828182846');
+    assert.equal(calculateTokens(['1', 'e', '3']), '1000');
+    assert.equal(calculateTokens(['3', 'e', '-', '2']), '0.03');
+    assert.equal(calculateTokens(['2', '7', '^', '(', '1', '/', '3', ')']), '3');
+    press({ action: 'clear' });
+    press({ action: 'second' });
+    assert.equal(inverseTrigButton.textContent, 'sin⁻¹');
+    press({ value: 'sin(', altValue: 'asin(' });
+    enter('0.5');
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '30');
+    press({ action: 'second' });
+    assert.equal(inverseTrigButton.textContent, 'sin');
+    assert.equal(calculateTokens(['1', '2']), '12');
+    press({ action: 'delete' });
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '1');
+    const angleButton = elements.get('calculatorAngleMode');
+    angleButton.listeners.click();
+    assert.equal(calculateTokens(['sin(', 'pi', '/', '2']), '1');
+    angleButton.listeners.click();
+    assert.equal(calculateTokens(['tan(', '9', '0']), 'Resultado no definido');
+
+    press({ action: 'clear' });
+    enter('9');
+    press({ action: 'sign' });
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '-9');
+
+    press({ action: 'clear' });
+    enter('4');
+    press({ transform: 'reciprocal' });
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '0.25');
+
+    press({ action: 'clear' });
+    enter('3');
+    press({ transform: 'square' });
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '9');
+
+    press({ action: 'clear' });
+    press({ action: 'random' });
+    press({ action: 'equals' });
+    assert.ok(Number(result.textContent) >= 0 && Number(result.textContent) < 1);
+
+    press({ action: 'clear' });
+    enter('2');
+    enter('+');
+    enter('3');
+    press({ action: 'memory-add' });
+    press({ action: 'clear' });
+    press({ action: 'memory-recall' });
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '5');
+    press({ action: 'memory-clear' });
+
+    press({ action: 'clear' });
+    enter('2');
+    enter('7');
+    press({ transform: 'nth-root' });
+    enter('3');
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '3');
+
+    press({ action: 'clear' });
+    enter('3');
+    press({ action: 'ee' });
+    enter('2');
+    press({ action: 'equals' });
+    assert.equal(result.textContent, '300');
+
+    elements.get('calculatorClearHistory').listeners.click();
+    assert.deepEqual(JSON.parse(storage.values().next().value), []);
+    assert.doesNotMatch(calculator, /\beval\s*\(/);
+});
+
+test('el presupuesto permite agregar, editar y priorizar categorías', async () => {
+    const [html, dashboard, styles] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
+    ]);
+    assert.match(html, /id="budgetCategoryAdd"[^>]*>[\s\S]*Agregar categoría/);
+    assert.match(html, /class="budget-cat-name"/);
+    assert.match(html, /class="budget-cat-priority"/);
+    assert.match(html, /Elige la prioridad, pulsa el emoji para cambiarlo y usa Editar para modificar el nombre o monto\./);
+    assert.match(dashboard, /function createBudgetCategoryRow\(category\)/);
+    assert.match(dashboard, /function populateBudgetEmojiPicker\(row\)/);
+    assert.match(dashboard, /function initializeBudgetCategoryRow\(row/);
+    assert.match(dashboard, /category\.emoji/);
+    assert.match(dashboard, /notaire_presupuesto_categorias/);
+    assert.match(dashboard, /priority: Number\(row\.querySelector\('\.budget-cat-priority'\)/);
+    assert.match(dashboard, /budget-cat-remove/);
+    assert.match(styles, /\.budget-category-add \{/);
+    assert.match(styles, /\.budget-cat-priority \{/);
+    assert.match(styles, /\.budget-cat-emoji-picker\[hidden\] \{ display: none; \}/);
+    assert.match(styles, /\.budget-cat-emoji-picker \{[^}]*background-image: linear-gradient\(var\(--color-card-bg\), var\(--color-card-bg\)\)/);
+    assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?html, body \{ overflow-y: auto; \}/);
+    assert.match(styles, /#views-container \{[\s\S]*?min-height: 0;[\s\S]*?overflow-y: scroll;/);
+    assert.match(styles, /#views-container::-webkit-scrollbar \{ width: 9px; \}/);
+    assert.match(dashboard, /categoryTotalBaseline/);
+    assert.match(dashboard, /syncBudgetTotalFromCategories/);
+    assert.match(dashboard, /event\.target\.matches\('\.budget-cat-input'\)\) syncBudgetTotalFromCategories\(\)/);
+    assert.match(dashboard, /removeButton\.closest\('\.budget-cat-row'\)\?\.remove\(\);\s*syncBudgetTotalFromCategories\(\)/);
+
+    const adjustmentFunction = dashboard.match(/function calculateBudgetTotalAfterCategoryChange\(currentBudget, categoryTotal, previousCategoryTotal\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(adjustmentFunction);
+    const calculateAdjustedBudget = vm.runInNewContext(`${adjustmentFunction}; calculateBudgetTotalAfterCategoryChange`);
+    assert.equal(calculateAdjustedBudget(1500000, 1300100, 1300000), 1500100);
+    assert.equal(calculateAdjustedBudget(1500000, 1299900, 1300000), 1499900);
+    assert.equal(calculateAdjustedBudget(50, 0, 100), 0);
+});
+
+test('el botón de tema alterna repetidamente entre oscuro y claro', async () => {
+    const i18n = await read('public/assets/js/notaire-i18n.js');
+    const attributes = new Map();
+    const values = new Map([['notaire_theme', 'dark'], ['notaire_lang', 'es']]);
+    const themeButton = {
+        innerHTML: '',
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; }
+    };
+    const context = {
+        document: {
+            documentElement: {
+                setAttribute(name, value) { attributes.set(name, value); },
+                getAttribute(name) { return attributes.get(name) || null; }
+            },
+            addEventListener() {},
+            dispatchEvent() {},
+            getElementById: id => id === 'themeToggleBtn' ? themeButton : null,
+            querySelectorAll: () => []
+        },
+        localStorage: {
+            getItem: key => values.get(key) || null,
+            setItem: (key, value) => values.set(key, value)
+        },
+        window: { matchMedia: () => ({ matches: true }) },
+        Event: class {},
+        setInterval() {}
+    };
+    vm.runInNewContext(i18n, context);
+
+    context.window.toggleTheme();
+    assert.equal(attributes.get('data-theme'), 'light');
+    assert.equal(values.get('notaire_theme'), 'light');
+    context.window.toggleTheme();
+    assert.equal(attributes.get('data-theme'), 'dark');
+    assert.equal(values.get('notaire_theme'), 'dark');
+    assert.match(themeButton.innerHTML, /fa-moon/);
 });

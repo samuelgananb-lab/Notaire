@@ -2,9 +2,32 @@ import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
+import { getPrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 router.use(verificarToken);
+
+const EVENT_TYPE_ALIASES = {
+  purple: 'notarial',
+  green: 'financiero',
+  orange: 'recordatorio',
+  blue: 'personal',
+  pink: 'personal',
+  cumpleanos: 'personal',
+  pago: 'financiero'
+};
+const EVENT_TYPES = new Set(['notarial', 'financiero', 'recordatorio', 'personal']);
+
+function normalizeEventType(tipo) {
+  const normalized = EVENT_TYPE_ALIASES[tipo] || tipo || 'notarial';
+  return EVENT_TYPES.has(normalized) ? normalized : null;
+}
+
+async function sendEventEmail(usuario, subject, text) {
+  const prefs = await getPrefs(usuario.auth_id);
+  if (!prefs.email) return;
+  await sendNotificationEmail({ to: usuario.email, subject, text });
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -23,22 +46,29 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { titulo, tipo, fecha, hora, nota, notif24h, notif1h, notifOnDay } = req.body;
-    if (!titulo || !fecha) return res.status(400).json({ error: 'Título y fecha son obligatorios' });
+    if (typeof titulo !== 'string' || !titulo.trim() || !fecha) {
+      return res.status(400).json({ error: 'Título y fecha son obligatorios' });
+    }
+    const tipoPersistido = normalizeEventType(tipo);
+    if (!tipoPersistido) return res.status(400).json({ error: 'El tipo de evento no es válido' });
     const fechaHora = `${fecha}T${hora || '08:00'}:00`;
-    const tipos = { purple: 'notarial', green: 'financiero', orange: 'recordatorio', blue: 'personal', pink: 'cumpleanos' };
-    const tipoPersistido = tipos[tipo] || tipo || 'notarial';
     const { data, error } = await supabase.from('eventos_calendario').insert([{
-      usuario_id: req.usuario.id, titulo, tipo: tipoPersistido, fecha_hora: fechaHora, fecha, hora: hora || null,
+      usuario_id: req.usuario.id, titulo: titulo.trim(), tipo: tipoPersistido, fecha_hora: fechaHora, fecha, hora: hora || null,
       nota: nota || null, notif24h: notif24h !== false, notif1h: notif1h !== false, notifonday: notifOnDay === true
     }]).select('*').single();
     if (error) throw error;
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: 'Evento agregado al calendario',
-      text: `Hola ${req.usuario.nombre || ''},\n\nSe agregó "${data.titulo}" a tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
-    });
+    void sendEventEmail(
+      req.usuario,
+      'Evento agregado al calendario',
+      `Hola ${req.usuario.nombre || ''},\n\nSe agregó "${data.titulo}" a tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
+    );
     res.status(201).json({ mensaje: 'Evento creado', evento: data });
   } catch (error) {
+    if (error.code === '23514' && error.constraint === 'eventos_calendario_tipo_check') {
+      return res.status(409).json({
+        error: 'La base de datos necesita la actualización de tipos del calendario. Aplica la migración eventos_calendario_tipo_migration.sql.'
+      });
+    }
     res.status(500).json({ error: 'Error al crear evento', detalle: error.message });
   }
 });
@@ -46,10 +76,17 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { titulo, tipo, fecha, hora, nota, notif24h, notif1h, notifOnDay } = req.body;
-    const tipos = { purple: 'notarial', green: 'financiero', orange: 'recordatorio', blue: 'personal', pink: 'cumpleanos' };
     const payload = {};
-    if (titulo !== undefined) payload.titulo = titulo;
-    if (tipo !== undefined) payload.tipo = tipos[tipo] || tipo;
+    if (titulo !== undefined) {
+      if (typeof titulo !== 'string' || !titulo.trim()) {
+        return res.status(400).json({ error: 'El título del evento no puede estar vacío' });
+      }
+      payload.titulo = titulo.trim();
+    }
+    if (tipo !== undefined) {
+      payload.tipo = normalizeEventType(tipo);
+      if (!payload.tipo) return res.status(400).json({ error: 'El tipo de evento no es válido' });
+    }
     if (fecha !== undefined || hora !== undefined) {
       const { data: actual, error: lookupError } = await supabase
         .from('eventos_calendario')
@@ -70,9 +107,18 @@ router.put('/:id', async (req, res) => {
       payload.notifonday_sent = false;
     }
     if (nota !== undefined) payload.nota = nota || null;
-    if (notif24h !== undefined) payload.notif24h = notif24h === true;
-    if (notif1h !== undefined) payload.notif1h = notif1h === true;
-    if (notifOnDay !== undefined) payload.notifonday = notifOnDay === true;
+    if (notif24h !== undefined) {
+      payload.notif24h = notif24h === true;
+      if (notif24h === true) payload.notif24_sent = false;
+    }
+    if (notif1h !== undefined) {
+      payload.notif1h = notif1h === true;
+      if (notif1h === true) payload.notif1h_sent = false;
+    }
+    if (notifOnDay !== undefined) {
+      payload.notifonday = notifOnDay === true;
+      if (notifOnDay === true) payload.notifonday_sent = false;
+    }
 
     const { data, error } = await supabase
       .from('eventos_calendario')
@@ -83,11 +129,11 @@ router.put('/:id', async (req, res) => {
       .single();
 
     if (error) throw error;
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: 'Evento actualizado',
-      text: `Hola ${req.usuario.nombre || ''},\n\nSe actualizó el evento "${data.titulo}" de tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
-    });
+    void sendEventEmail(
+      req.usuario,
+      'Evento actualizado',
+      `Hola ${req.usuario.nombre || ''},\n\nSe actualizó el evento "${data.titulo}" de tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
+    );
     res.json({ mensaje: 'Evento actualizado', evento: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar evento', detalle: error.message });
@@ -103,11 +149,11 @@ router.delete('/:id', async (req, res) => {
     .select('id, titulo, fecha, hora')
     .single();
   if (error) return res.status(500).json({ error: 'Error al eliminar evento', detalle: error.message });
-  void sendNotificationEmail({
-    to: req.usuario.email,
-    subject: 'Evento eliminado del calendario',
-    text: `Hola ${req.usuario.nombre || ''},\n\nSe eliminó el evento "${data.titulo}" de tu calendario notarial.\nFecha: ${data.fecha || 'No especificada'} ${data.hora || ''}\n\nNotaire`
-  });
+  void sendEventEmail(
+    req.usuario,
+    'Evento eliminado del calendario',
+    `Hola ${req.usuario.nombre || ''},\n\nSe eliminó el evento "${data.titulo}" de tu calendario notarial.\nFecha: ${data.fecha || 'No especificada'} ${data.hora || ''}\n\nNotaire`
+  );
   res.json({ mensaje: 'Evento eliminado' });
 });
 

@@ -103,7 +103,7 @@ async function updateTramiteStatus(select) {
             body: JSON.stringify({ estado: select.value })
         });
     } catch (error) {
-        window.alert(error.message);
+        void window.notaireAlert(error.message, { title: 'No se pudo actualizar' });
         await loadAdminTramites();
     } finally {
         select.disabled = false;
@@ -111,11 +111,11 @@ async function updateTramiteStatus(select) {
 }
 
 async function deleteTramite(id) {
-    if (!window.confirm('¿Eliminar este trámite?')) return;
+    if (!await window.notaireConfirm('¿Eliminar este trámite?', { title: 'Eliminar trámite', confirmText: 'Eliminar' })) return;
     try {
         await tramiteRequest(`${ADMIN_TRAMITES_URL}/${encodeURIComponent(id)}`, { method: 'DELETE' });
         await loadAdminTramites();
-    } catch (error) { window.alert(error.message); }
+    } catch (error) { void window.notaireAlert(error.message, { title: 'No se pudo eliminar' }); }
 }
 
 function openNewTramite() {
@@ -141,7 +141,7 @@ async function createTramite(event) {
         });
         document.getElementById('modalNuevoTramite').classList.remove('active');
         await loadAdminTramites();
-    } catch (error) { window.alert(error.message); }
+    } catch (error) { void window.notaireAlert(error.message, { title: 'No se pudo crear' }); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

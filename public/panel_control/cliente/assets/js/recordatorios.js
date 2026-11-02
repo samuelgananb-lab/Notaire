@@ -3,8 +3,23 @@ const RECORDATORIOS_API_URL = '/api/recordatorios';
 document.addEventListener('DOMContentLoaded', () => {
     const calendarioLink = document.querySelector('#sidebarMenu a[data-target="view-recordatorios"]');
     calendarioLink?.addEventListener('click', () => cargarRecordatorios());
+    document.getElementById('calendarPaymentAdd')?.addEventListener('click', abrirModalRecordatorio);
     configurarFormularioRecordatorios();
+    void cargarRecordatorios();
 });
+
+function abrirModalRecordatorio() {
+    const form = document.getElementById('formRecordatorio');
+    const modal = document.getElementById('modalRecordatorio');
+    form?.reset();
+    const dateInput = document.getElementById('fechaRecordatorio');
+    if (dateInput) {
+        const today = new Date();
+        dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+    if (modal) modal.style.display = 'flex';
+    document.getElementById('tituloRecordatorio')?.focus();
+}
 
 async function cargarRecordatorios() {
     const token = localStorage.getItem('notaire_token');
@@ -21,7 +36,7 @@ async function cargarRecordatorios() {
         if (!container) return;
 
         if (!Array.isArray(lista) || lista.length === 0) {
-            container.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">No tienes compromisos financieros programados.</p>';
+            container.innerHTML = '<div class="calendar-payments-empty">No tienes compromisos financieros programados.</div>';
             return;
         }
 
@@ -29,21 +44,24 @@ async function cargarRecordatorios() {
             const pagado = recordatorio.estado === 'pagado';
             const estado = pagado ? 'pendiente' : 'pagado';
             return `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:14px 18px; border-radius:8px; border-left:4px solid ${pagado ? '#22c55e' : '#eab308'};">
-                    <div>
-                        <strong style="color:${pagado ? '#888' : '#fff'}; display:block; ${pagado ? 'text-decoration:line-through;' : ''}">${escapeRecordatorio(recordatorio.titulo)}</strong>
-                        <small style="color:#aaa;">Vence: ${escapeRecordatorio(recordatorio.fecha_vencimiento || 'N/A')}</small>
+                <article class="calendar-payment-row${pagado ? ' is-paid' : ''}">
+                    <div class="calendar-payment-details">
+                        <strong data-user-content="true">${escapeRecordatorio(recordatorio.titulo)}</strong>
+                        <span>Vence: <time data-user-content="true">${escapeRecordatorio(recordatorio.fecha_vencimiento || 'N/A')}</time></span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-weight:bold; color:${pagado ? '#22c55e' : '#fff'};">${formatRecordatorioCurrency(recordatorio.monto)}</span>
-                        <button type="button" onclick="cambiarEstadoRecordatorio('${recordatorio.id}', '${estado}')" style="background:${pagado ? '#22c55e22' : '#eab30822'}; color:${pagado ? '#22c55e' : '#eab308'}; border:1px solid currentColor; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:.8em;">${pagado ? 'Pagado' : 'Pendiente'}</button>
-                        <button type="button" onclick="eliminarRecordatorio('${recordatorio.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;">🗑️</button>
-                    </div>
-                </div>
+                    <strong class="calendar-payment-amount">${formatRecordatorioCurrency(recordatorio.monto)}</strong>
+                    <button type="button" class="calendar-payment-status${pagado ? ' is-paid' : ''}" aria-label="${pagado ? 'Marcar como pendiente' : 'Marcar como pagado'}" onclick="cambiarEstadoRecordatorio('${recordatorio.id}', '${estado}')">${pagado ? 'Pagado' : 'Pendiente'}</button>
+                    <button type="button" class="calendar-payment-delete" aria-label="Eliminar compromiso" title="Eliminar compromiso" onclick="eliminarRecordatorio('${recordatorio.id}')">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
+                </article>
             `;
         }).join('');
     } catch (error) {
         console.error('Error al cargar recordatorios:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudieron cargar los compromisos' });
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 
@@ -66,7 +84,7 @@ function configurarFormularioRecordatorios() {
                 },
                 body: JSON.stringify({
                     titulo: document.getElementById('tituloRecordatorio').value,
-                    monto: Number(document.getElementById('montoRecordatorio').value),
+                    monto: parseFormattedAmount(document.getElementById('montoRecordatorio').value),
                     fecha_vencimiento: fecha
                 })
             });
@@ -86,7 +104,7 @@ function configurarFormularioRecordatorios() {
             document.getElementById('modalRecordatorio').style.display = 'none';
             await cargarRecordatorios();
         } catch (error) {
-            window.alert(`Detalle del error: ${error.message}`);
+            void window.notaireAlert(error.message, { title: 'No se pudo guardar el compromiso' });
         }
     });
 }
@@ -108,11 +126,12 @@ async function cambiarEstadoRecordatorio(id, estado) {
         await cargarRecordatorios();
     } catch (error) {
         console.error('Error al actualizar estado:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudo actualizar el compromiso' });
     }
 }
 
 async function eliminarRecordatorio(id) {
-    if (!window.confirm('¿Eliminar este compromiso financiero?')) return;
+    if (!await window.notaireConfirm('¿Eliminar este compromiso financiero?', { title: 'Eliminar compromiso', confirmText: 'Eliminar' })) return;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
 
@@ -125,6 +144,7 @@ async function eliminarRecordatorio(id) {
         await cargarRecordatorios();
     } catch (error) {
         console.error('Error al eliminar recordatorio:', error);
+        void window.notaireAlert(error.message, { title: 'No se pudo eliminar el compromiso' });
     }
 }
 

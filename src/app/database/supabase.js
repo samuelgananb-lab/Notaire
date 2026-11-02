@@ -6,8 +6,16 @@ dotenv.config();
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Faltan las variables de entorno de Supabase en el archivo .env');
+const missingSupabaseVariables = [
+  !supabaseUrl && 'SUPABASE_URL',
+  !supabaseServiceKey && 'SUPABASE_SERVICE_ROLE_KEY'
+].filter(Boolean);
+
+if (missingSupabaseVariables.length) {
+  throw new Error(
+    `Faltan estas variables de entorno de Supabase: ${missingSupabaseVariables.join(', ')}. ` +
+    'Configúralas en .env; consulta .env.example. No uses valores de ejemplo.'
+  );
 }
 
 const authOptions = {

@@ -3,16 +3,13 @@ async function cargarVistaAhorros() {
         const token = localStorage.getItem('notaire_token');
         if (!token) return;
 
-        const headers = { Authorization: `Bearer ${token}` };
         const [resMetas, resAportes] = await Promise.all([
-            fetch('/api/metas', { headers }),
-            fetch('/api/metas/aportes', { headers }).catch(() => null)
+            fetchMetas(),
+            apiFetch('/metas/aportes')
         ]);
 
-        if (!resMetas.ok) throw new Error('Error al obtener metas');
-
-        const metasRespuesta = await resMetas.json();
-        const aportesRespuesta = resAportes && resAportes.ok ? await resAportes.json() : [];
+        const metasRespuesta = resMetas;
+        const aportesRespuesta = resAportes;
         const metas = Array.isArray(metasRespuesta) ? metasRespuesta : [];
         const aportes = Array.isArray(aportesRespuesta) ? aportesRespuesta : [];
 
@@ -54,7 +51,7 @@ async function cargarVistaAhorros() {
             return `
                 <div class="transaction-row">
                     <div class="transaction-left">
-                        <div class="transaction-icon-box" style="background: rgba(16, 185, 129, 0.15);">&#128154;</div>
+                        <div class="transaction-icon-box" style="background: rgba(var(--color-primary-rgb), 0.15);">&#128154;</div>
                         <div class="transaction-info">
                             <span class="transaction-title">${escaparTextoAhorros(nombreMeta)}</span>
                             <span class="transaction-date">${escaparTextoAhorros(fecha)}</span>
@@ -68,7 +65,16 @@ async function cargarVistaAhorros() {
         console.error('Error actualizando la vista de Ahorros:', error);
         const aportesList = document.getElementById('listaAhorrosRecientes');
         if (aportesList) aportesList.innerHTML = '<p class="data-state data-state-error">No se pudieron cargar los aportes.</p>';
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
+}
+
+async function cargarVistaMetasAhorros() {
+    await Promise.all([
+        typeof cargarMetasYAhorros === 'function' ? cargarMetasYAhorros() : Promise.resolve(),
+        cargarVistaAhorros()
+    ]);
 }
 
 function escaparTextoAhorros(valor) {
@@ -80,5 +86,3 @@ function escaparTextoAhorros(valor) {
         "'": '&#39;'
     }[caracter]));
 }
-
-document.addEventListener('DOMContentLoaded', cargarVistaAhorros);

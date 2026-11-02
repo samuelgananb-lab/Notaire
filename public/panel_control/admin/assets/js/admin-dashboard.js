@@ -445,7 +445,7 @@ function openModalRegistrarGasto() {
 
 function handleGuardarGasto(event) {
     event.preventDefault();
-    const monto = parseFloat(document.getElementById('gastoMonto').value);
+    const monto = parseFormattedAmount(document.getElementById('gastoMonto').value);
     const categoria = document.getElementById('gastoCategoria').value;
     const descripcion = document.getElementById('gastoDescripcion').value;
 
@@ -482,7 +482,7 @@ function openModalRegistrarIngreso() {
 
 function handleGuardarIngreso(event) {
     event.preventDefault();
-    const monto = parseFloat(document.getElementById('ingresoMonto').value);
+    const monto = parseFormattedAmount(document.getElementById('ingresoMonto').value);
     const categoria = document.getElementById('ingresoCategoria').value;
     const descripcion = document.getElementById('ingresoDescripcion').value;
 
@@ -520,8 +520,8 @@ function openModalNuevaMeta() {
 function handleGuardarNuevaMeta(event) {
     event.preventDefault();
     const nombre = document.getElementById('metaNombre').value;
-    const objetivo = parseFloat(document.getElementById('metaObjetivo').value);
-    const inicial = parseFloat(document.getElementById('metaInicial').value || 0);
+    const objetivo = parseFormattedAmount(document.getElementById('metaObjetivo').value);
+    const inicial = parseFormattedAmount(document.getElementById('metaInicial').value || 0);
     const fecha = document.getElementById('metaFecha').value;
     const icono = document.getElementById('metaIcono').value;
 
@@ -555,7 +555,7 @@ function openModalAportarMeta(metaId, metaNombre) {
 function handleGuardarAporteMeta(event) {
     event.preventDefault();
     const metaId = parseInt(document.getElementById('aporteMetaId').value);
-    const montoAporte = parseFloat(document.getElementById('aporteMonto').value);
+    const montoAporte = parseFormattedAmount(document.getElementById('aporteMonto').value);
 
     const meta = NotaireState.metas.find(m => m.id === metaId);
     if (meta) {
@@ -714,7 +714,7 @@ function handleGuardarEdicionGasto(event) {
     if (!g) return;
 
     const iconMap = { 'Alimentación': '🍔', 'Transporte': '🚌', 'Entretenimiento': '🎮', 'Servicios': '🏠', 'Otros': '🛒' };
-    g.monto = parseFloat(document.getElementById('editGastoMonto').value);
+    g.monto = parseFormattedAmount(document.getElementById('editGastoMonto').value);
     g.categoria = document.getElementById('editGastoCategoria').value;
     g.concepto = document.getElementById('editGastoDescripcion').value;
     g.icono = iconMap[g.categoria] || '💳';
@@ -724,8 +724,8 @@ function handleGuardarEdicionGasto(event) {
     showToast('¡Gasto actualizado correctamente!');
 }
 
-function eliminarGasto(id) {
-    if (!confirm('¿Eliminar este gasto?')) return;
+async function eliminarGasto(id) {
+    if (!await window.notaireConfirm('¿Eliminar este gasto?', { title: 'Eliminar gasto', confirmText: 'Eliminar' })) return;
     NotaireState.gastos = NotaireState.gastos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Gasto eliminado.');
@@ -750,7 +750,7 @@ function handleGuardarEdicionIngreso(event) {
     if (!i) return;
 
     const iconMap = { 'Salario': '💼', 'Freelance': '💻', 'Negocio': '🛍️', 'Intereses': '💰', 'Otros': '🟢' };
-    i.monto = parseFloat(document.getElementById('editIngresoMonto').value);
+    i.monto = parseFormattedAmount(document.getElementById('editIngresoMonto').value);
     i.fuente = document.getElementById('editIngresoFuente').value;
     i.concepto = document.getElementById('editIngresoDescripcion').value;
     i.icono = iconMap[i.fuente] || '💰';
@@ -760,8 +760,8 @@ function handleGuardarEdicionIngreso(event) {
     showToast('¡Ingreso actualizado correctamente!');
 }
 
-function eliminarIngreso(id) {
-    if (!confirm('¿Eliminar este ingreso?')) return;
+async function eliminarIngreso(id) {
+    if (!await window.notaireConfirm('¿Eliminar este ingreso?', { title: 'Eliminar ingreso', confirmText: 'Eliminar' })) return;
     NotaireState.ingresos = NotaireState.ingresos.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Ingreso eliminado.');
@@ -786,8 +786,8 @@ function handleGuardarEdicionMeta(event) {
     if (!m) return;
 
     m.nombre = document.getElementById('editMetaNombre').value;
-    m.objetivo = parseFloat(document.getElementById('editMetaObjetivo').value);
-    m.actual = parseFloat(document.getElementById('editMetaActual').value);
+    m.objetivo = parseFormattedAmount(document.getElementById('editMetaObjetivo').value);
+    m.actual = parseFormattedAmount(document.getElementById('editMetaActual').value);
     m.fecha = document.getElementById('editMetaFecha').value;
 
     updateAllMetrics();
@@ -795,8 +795,8 @@ function handleGuardarEdicionMeta(event) {
     showToast('¡Meta actualizada correctamente!');
 }
 
-function eliminarMeta(id) {
-    if (!confirm('¿Eliminar esta meta de ahorro?')) return;
+async function eliminarMeta(id) {
+    if (!await window.notaireConfirm('¿Eliminar esta meta de ahorro?', { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     NotaireState.metas = NotaireState.metas.filter(x => x.id !== id);
     updateAllMetrics();
     showToast('Meta eliminada.');

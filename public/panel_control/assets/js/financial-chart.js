@@ -1,5 +1,15 @@
 (function () {
-    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthNames = {
+        es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    };
+
+    function currentMonthNames() {
+        const language = typeof localStorage !== 'undefined' && localStorage.getItem('notaire_lang') === 'en'
+            ? 'en'
+            : 'es';
+        return monthNames[language];
+    }
 
     const realCurrentMonthKey = (now = new Date()) => {
         const parts = new Intl.DateTimeFormat('en-CA', {
@@ -108,7 +118,7 @@
         for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
             const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
             const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
-            months.push({ key, label: monthNames[monthDate.getMonth()] });
+            months.push({ key, label: currentMonthNames()[monthDate.getMonth()] });
             monthlyChanges.set(key, 0);
         }
 

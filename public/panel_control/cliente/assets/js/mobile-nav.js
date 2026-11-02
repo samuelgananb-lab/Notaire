@@ -2,7 +2,9 @@
     const nav = document.getElementById('mobileBottomNav');
     if (!nav) return;
 
-    const MORE_TARGETS = ['view-ingresos', 'view-metas', 'view-recordatorios', 'view-configuracion'];
+    const MORE_TARGETS = ['view-ingresos', 'view-calculadora', 'view-recordatorios', 'view-solicitudes', 'view-configuracion'];
+    let resizeTimer = null;
+    let lastSyncedView = null;
 
     function currentView() {
         return document.querySelector('.content-section.active')?.id || 'view-inicio';
@@ -15,7 +17,12 @@
             const active = target === view || (target === 'more' && MORE_TARGETS.includes(view));
             btn.classList.toggle('active', active);
         });
-        window.setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
+        if (lastSyncedView === view) return;
+        const viewChanged = lastSyncedView !== null;
+        lastSyncedView = view;
+        if (!viewChanged) return;
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
     }
 
     nav.addEventListener('click', event => {
@@ -34,10 +41,11 @@
 
     const container = document.getElementById('views-container');
     if (container) {
-        new MutationObserver(syncActive).observe(container, {
-            attributes: true,
-            attributeFilter: ['class'],
-            subtree: true
+        container.querySelectorAll('.content-section').forEach(section => {
+            new MutationObserver(syncActive).observe(section, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
         });
     }
     syncActive();

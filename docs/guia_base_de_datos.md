@@ -220,7 +220,9 @@ Las claves foráneas de `metas`, `aportes_meta`, `transacciones`, `tramites_nota
 | `supabase_auth_migration.sql` | Agrega `usuarios.auth_id` y habilita RLS para metas, aportes, transacciones, recordatorios y patrimonio. Las políticas aceptan que el UUID del token corresponda a `usuarios.auth_id` o a `usuarios.id`. Requiere que esas tablas ya existan. |
 | `supabase_rls.sql` | Otra definición de políticas para esas cinco tablas. Compara directamente `auth.uid()` con `usuario_id`; esta regla no es equivalente a la compatibilidad `auth_id` de la migración anterior. Elige y verifica deliberadamente una estrategia antes de ejecutarla. |
 | `recordatorios_notificaciones_migration.sql` | Añade dos banderas de envío a `recordatorios`; presupone que la tabla existe. |
+| `metas_notificaciones_migration.sql` | Añade banderas para avisos de vencimiento y la función `registrar_aporte_meta`, que registra atómicamente los aportes sin superar el objetivo. Requiere `metas` y `aportes_meta`; aplícala antes de habilitar aportes de metas con la nueva API. |
 | `eventos_calendario_migration.sql` | Añade fecha, hora, fecha-hora, nota y preferencias de aviso; crea un índice por usuario y fecha. Presupone que la tabla existe. |
+| `eventos_calendario_tipo_migration.sql` | Reemplaza la restricción anterior de tipo por las cuatro categorías del calendario (`notarial`, `financiero`, `recordatorio`, `personal`) y normaliza alias visuales y cumpleaños existentes a una de ellas. Ejecuta los nuevos tipos bajo la restricción desde su aplicación, sin validar de nuevo filas históricas. |
 | `eventos_notificaciones_migration.sql` | Añade banderas de envío y estado a `eventos_calendario`; presupone que la tabla existe. |
 | `tramites_migration.sql` | Crea trámites, índices y una política RLS. La política actual permite todas las operaciones a cualquier usuario autenticado; véase la advertencia de seguridad más abajo. |
 | `auditoria_migration.sql` | Crea auditoría, índices y una política para que administradores autenticados lean registros. La comprobación de administrador compara `usuarios.id` con `auth.uid()`, no consulta `auth_id`. |
@@ -238,6 +240,7 @@ Para una base que ya tenga las tablas base, el orden orientativo es:
 4. Ejecutar `roles_migration.sql` si se necesita agregar o corregir el rol `empleado`.
 5. Ejecutar `tramites_migration.sql` y `auditoria_migration.sql` para esos módulos.
 6. Elegir una sola estrategia de políticas de propietario y revisar las políticas de auditoría y trámites antes de habilitar el acceso de usuarios.
+7. Ejecutar `metas_notificaciones_migration.sql` después de crear `metas` y `aportes_meta`, antes de desplegar la API que registra aportes.
 
 Las migraciones con `add column if not exists` pueden repetirse para las columnas, pero eso no garantiza que todas las operaciones sean idempotentes o que el esquema resultante sea seguro. Usa primero un entorno de prueba, respalda los datos y valida las políticas con cuentas de distintos roles.
 
@@ -251,7 +254,7 @@ Las migraciones con `add column if not exists` pueden repetirse para las columna
 
 ### Variables de conexión
 
-El backend Supabase requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el entorno del servidor. El adaptador opcional SQL Server lee `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_NAME`, `DB_PORT`, `DB_ENCRYPT` y `DB_TRUST_SERVER_CERTIFICATE`. No copies valores reales a esta guía; documenta únicamente nombres de variables y usa `.env.example` con marcadores no secretos.
+El backend Supabase requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el entorno del servidor. Los avisos por correo requieren además `RESEND_API_KEY` y `MAIL_FROM`, configurados con un remitente/dominio válido en Resend; sin ellos, el servidor omite los envíos. El adaptador opcional SQL Server lee `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_NAME`, `DB_PORT`, `DB_ENCRYPT` y `DB_TRUST_SERVER_CERTIFICATE`. No copies valores reales a esta guía; documenta únicamente nombres de variables y usa `.env.example` con marcadores no secretos.
 
 ### Comprobación del esquema remoto
 

@@ -7,19 +7,52 @@ const NotaireState = {
     presupuestoTotal: 0
 };
 
-let chartClienteIngresos = null;
+let dashboardMetricsCache = null;
+let dashboardMetricsPromise = null;
+let dashboardMetricsPromiseKey = null;
+let dashboardMetricsRequestId = 0;
+const DASHBOARD_METRICS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getDashboardMetrics() {
+    const cacheKey = window.NotaireFinancialChart?.monthQuery() || '';
+    if (dashboardMetricsCache?.key === cacheKey && dashboardMetricsCache.expiresAt > Date.now()) {
+        return Promise.resolve(dashboardMetricsCache.value);
+    }
+    if (dashboardMetricsPromise && dashboardMetricsPromiseKey === cacheKey) return dashboardMetricsPromise;
+    const requestId = dashboardMetricsRequestId;
+    const request = fetchDashboardMetrics()
+        .then(data => {
+            if (requestId === dashboardMetricsRequestId) {
+                dashboardMetricsCache = { key: cacheKey, value: data, expiresAt: Date.now() + DASHBOARD_METRICS_CACHE_TTL_MS };
+            }
+            return data;
+        })
+        .finally(() => {
+            if (dashboardMetricsPromise === request) {
+                dashboardMetricsPromise = null;
+                dashboardMetricsPromiseKey = null;
+            }
+        });
+    dashboardMetricsPromise = request;
+    dashboardMetricsPromiseKey = cacheKey;
+    return request;
+}
+
+function invalidateDashboardMetricsCache() {
+    dashboardMetricsCache = null;
+    dashboardMetricsPromise = null;
+    dashboardMetricsPromiseKey = null;
+    dashboardMetricsRequestId += 1;
+}
 
 sincronizarEstadoCliente();
 
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initSidebar();
-    initThemeToggle();
     initGlobalSearch();
     initMovimientoModal();
     cargarResumenDashboard();
-    cargarDatosFinancieros();
-    cargarMetasYAhorros();
 });
 
 function sincronizarEstadoCliente() {
@@ -30,7 +63,9 @@ function sincronizarEstadoCliente() {
             NotaireState.user = {
                 ...NotaireState.user,
                 nombre: usuario.nombre || usuario.email?.split('@')[0] || 'Usuario',
-                email: usuario.email || ''
+                email: usuario.email || '',
+                telefono: usuario.telefono || '',
+                documento: usuario.documento || ''
             };
         } catch (error) {
             console.error('Error al sincronizar el estado de usuario:', error);
@@ -55,14 +90,14 @@ function showToast(message) {
     const toast = document.getElementById('toastNotification');
     const messageElement = document.getElementById('toastMessage');
     if (!toast) return;
-    if (messageElement) messageElement.textContent = message;
+    if (messageElement) messageElement.textContent = window.translateText?.(message) || message;
     toast.classList.add('show');
     window.setTimeout(() => toast.classList.remove('show'), 3200);
 }
 
 function setDataState(container, message, type = 'empty') {
     if (!container) return;
-    container.innerHTML = `<p class="data-state data-state-${type}">${escaparTextoCliente(message)}</p>`;
+    container.innerHTML = `<p class="data-state data-state-${type}">${escaparTextoCliente(window.translateText?.(message) || message)}</p>`;
 }
 
 function setFormLoading(form, loading) {
@@ -70,7 +105,8 @@ function setFormLoading(form, loading) {
     form.querySelectorAll('button[type="submit"]').forEach(button => {
         button.disabled = loading;
         button.dataset.originalText ??= button.textContent;
-        button.textContent = loading ? 'Guardando...' : button.dataset.originalText;
+        const text = loading ? 'Guardando...' : button.dataset.originalText;
+        button.textContent = window.translateText?.(text) || text;
     });
 }
 
@@ -119,7 +155,10 @@ function openModalEditarMeta(id, nombre, objetivo, actual, fecha) {
     };
     Object.entries(values).forEach(([fieldId, value]) => {
         const field = document.getElementById(fieldId);
-        if (field) field.value = value ?? '';
+        if (field) {
+            field.value = value ?? '';
+            window.formatAmountInput?.(field);
+        }
     });
     openModal('modalEditarMeta');
 }
@@ -131,8 +170,8 @@ async function handleGuardarEdicionMeta(event) {
     const id = document.getElementById('editMetaId')?.value;
     const payload = {
         nombre: document.getElementById('editMetaNombre')?.value.trim(),
-        monto_objetivo: Number(document.getElementById('editMetaObjetivo')?.value),
-        monto_actual: Number(document.getElementById('editMetaActual')?.value),
+        monto_objetivo: parseFormattedAmount(document.getElementById('editMetaObjetivo')?.value),
+        monto_actual: parseFormattedAmount(document.getElementById('editMetaActual')?.value),
         fecha_limite: document.getElementById('editMetaFecha')?.value
     };
     if (!token || !id || !payload.nombre || !Number.isFinite(payload.monto_objetivo) || payload.monto_objetivo <= 0 || !Number.isFinite(payload.monto_actual) || payload.monto_actual < 0) {
@@ -149,6 +188,7 @@ async function handleGuardarEdicionMeta(event) {
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo actualizar la meta');
+        invalidateApiCache();
         closeModal('modalEditarMeta');
         await actualizarVistaCliente();
         showToast('Meta actualizada correctamente');
@@ -160,7 +200,7 @@ async function handleGuardarEdicionMeta(event) {
 }
 
 async function eliminarMetaReal(id, nombre) {
-    if (!window.confirm(`¿Eliminar la meta "${nombre}"?`)) return;
+    if (!await window.notaireConfirm(`¿Eliminar la meta "${nombre}"?`, { title: 'Eliminar meta', confirmText: 'Eliminar' })) return;
     const token = localStorage.getItem('notaire_token');
     if (!token) return;
 
@@ -171,6 +211,7 @@ async function eliminarMetaReal(id, nombre) {
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo eliminar la meta');
+        invalidateApiCache();
         await actualizarVistaCliente();
         showToast('Meta eliminada correctamente');
     } catch (error) {
@@ -178,18 +219,41 @@ async function eliminarMetaReal(id, nombre) {
     }
 }
 
-function openModalAportarMeta(metaId, metaNombre) {
+function openModalAportarMeta(metaId, metaNombre, objetivo = 0, actual = 0) {
     const id = document.getElementById('aporteMetaId');
     const name = document.getElementById('aporteMetaNombre');
     const amount = document.getElementById('aporteMonto');
     if (id) id.value = metaId;
     if (name) name.value = metaNombre;
     if (amount) amount.value = '';
+    const remaining = Math.max(0, Number(objetivo) - Number(actual));
+    const objetivoInput = document.getElementById('aporteMetaObjetivo');
+    const actualInput = document.getElementById('aporteMetaActual');
+    const remainingLabel = document.getElementById('aporteDisponible');
+    if (objetivoInput) objetivoInput.value = String(Number(objetivo) || 0);
+    if (actualInput) actualInput.value = String(Number(actual) || 0);
+    if (amount) {
+        amount.max = String(remaining);
+        amount.disabled = remaining <= 0;
+    }
+    if (remainingLabel) {
+        const english = window.getCurrentLang?.() === 'en';
+        remainingLabel.textContent = remaining > 0
+            ? `${english ? 'Remaining to reach the goal: ' : 'Máximo disponible para completar la meta: '}${formatCOP(remaining)}`
+            : (english ? 'This goal is already complete.' : 'Esta meta ya alcanzó su monto objetivo.');
+    }
+    const submit = document.querySelector('#modalAportarMeta button[type="submit"]');
+    if (submit) submit.disabled = remaining <= 0;
+    const errorBox = document.getElementById('aporteError');
+    if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+    }
     openModal('modalAportarMeta');
 }
 
-function openModalAbono(metaId, metaNombre) {
-    openModalAportarMeta(metaId, metaNombre);
+function openModalAbono(metaId, metaNombre, objetivo, actual) {
+    openModalAportarMeta(metaId, metaNombre, objetivo, actual);
 }
 
 function openModalPerfil() {
@@ -218,7 +282,7 @@ async function handleGuardarIngreso(event) {
 async function guardarTransaccion(event, tipo, montoId, categoriaId, descripcionId, fechaId) {
     event.preventDefault();
     const token = localStorage.getItem('notaire_token');
-    const monto = Number(document.getElementById(montoId)?.value);
+    const monto = parseFormattedAmount(document.getElementById(montoId)?.value);
     const categoria = document.getElementById(categoriaId)?.value;
     const descripcion = document.getElementById(descripcionId)?.value.trim();
     const fecha = document.getElementById(fechaId)?.value;
@@ -237,8 +301,9 @@ async function guardarTransaccion(event, tipo, montoId, categoriaId, descripcion
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo guardar el movimiento');
+        invalidateApiCache();
         closeModal(tipo === 'gasto' ? 'modalRegistrarGasto' : 'modalRegistrarIngreso');
-        actualizarVistaCliente();
+        await actualizarVistaCliente();
         showToast('Movimiento guardado correctamente');
     } catch (error) {
         showToast(error.message);
@@ -265,7 +330,7 @@ async function handleGuardarPerfil(event) {
         const response = await fetch('/api/auth/me', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ nombre, email, telefono })
+            body: JSON.stringify({ nombre, email, telefono, documento })
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo actualizar el perfil');
@@ -276,6 +341,12 @@ async function handleGuardarPerfil(event) {
         const iniciales = nombre.split(/\s+/).map(parte => parte[0]).join('').slice(0, 2).toUpperCase();
         document.getElementById('sidebarUserName')?.replaceChildren(document.createTextNode(nombre));
         document.getElementById('sidebarAvatarInitials')?.replaceChildren(document.createTextNode(iniciales));
+        const configNombre = document.getElementById('configNombre');
+        const configEmail = document.getElementById('configEmail');
+        const configTelefono = document.getElementById('configTelefono');
+        if (configNombre) configNombre.textContent = nombre;
+        if (configEmail) configEmail.textContent = email || (window.translateText?.('Sin correo') || 'Sin correo');
+        if (configTelefono) configTelefono.textContent = telefono || (window.translateText?.('Sin teléfono') || 'Sin teléfono');
         closeModal('modalPerfil');
         showToast('Perfil actualizado correctamente');
     } catch (error) {
@@ -285,27 +356,10 @@ async function handleGuardarPerfil(event) {
     }
 }
 
-async function openModalVerTodos(tipo) {
-    const token = localStorage.getItem('notaire_token');
-    const container = document.getElementById('verTodosContentList');
-    const title = document.getElementById('verTodosTitle');
-    if (!container || !token) return;
-    const response = await fetch('/api/transacciones', { headers: { Authorization: `Bearer ${token}` } });
-    const movimientos = response.ok ? await response.json() : [];
-    const lista = movimientos.filter(item => tipo === 'ingresos' ? item.tipo === 'ingreso' : item.tipo === 'gasto');
-    if (title) title.textContent = tipo === 'ingresos' ? 'Historial de ingresos' : 'Historial de gastos';
-    container.innerHTML = lista.length ? lista.map(item => `
-        <div class="transaction-row">
-            <div class="transaction-left"><div class="transaction-icon-box">${item.tipo === 'ingreso' ? '💼' : '🧾'}</div>
-            <div class="transaction-info"><span class="transaction-title">${escaparTextoCliente(item.descripcion || item.categoria)}</span><span class="transaction-date">${escaparTextoCliente(item.fecha || '')}</span></div></div>
-            <span class="${item.tipo === 'ingreso' ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${item.tipo === 'ingreso' ? '+' : '-'}${formatCOP(item.monto)}</span>
-        </div>`).join('') : '<p class="no-data">No hay movimientos registrados.</p>';
-    openModal('modalVerTodos');
-}
-
 function confirmLogout() {
     localStorage.removeItem('notaire_token');
     localStorage.removeItem('notaire_user');
+    sessionStorage.removeItem('notaire_cliente_active_view');
     window.location.href = '../../auth/login.html';
 }
 
@@ -313,11 +367,18 @@ function escaparTextoCliente(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 }
 
-function actualizarVistaCliente() {
-    cargarResumenDashboard();
-    cargarDatosFinancieros();
-    cargarMetasYAhorros();
-    if (typeof cargarVistaAhorros === 'function') cargarVistaAhorros();
+async function actualizarVistaCliente() {
+    const actualizaciones = [
+        cargarResumenDashboard(),
+        cargarDatosFinancieros()
+    ];
+    if (typeof cargarVistaMetasAhorros === 'function') {
+        actualizaciones.push(cargarVistaMetasAhorros());
+    }
+    if (typeof cargarPanelInicio === 'function') {
+        actualizaciones.push(cargarPanelInicio());
+    }
+    await Promise.all(actualizaciones);
 }
 
 function updateAllMetrics() {
@@ -333,14 +394,21 @@ function initNavigation() {
             navigateTo(link.getAttribute('data-target'));
         });
     });
+
+    const savedView = sessionStorage.getItem('notaire_cliente_active_view');
+    const validSavedView = Array.from(navLinks).some(link => link.getAttribute('data-target') === savedView);
+    navigateTo(validSavedView ? savedView : 'view-inicio');
 }
 
 function navigateTo(viewId) {
+    const targetSection = document.getElementById(viewId);
+    if (!targetSection) return;
+
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.querySelectorAll('#sidebarMenu li').forEach(item => item.classList.remove('active'));
 
-    const targetSection = document.getElementById(viewId);
-    if (targetSection) targetSection.classList.add('active');
+    targetSection.classList.add('active');
+    sessionStorage.setItem('notaire_cliente_active_view', viewId);
 
     const activeLink = document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`);
     if (activeLink) activeLink.parentElement.classList.add('active');
@@ -351,13 +419,20 @@ function navigateTo(viewId) {
         headerTitle.textContent = text.toUpperCase();
     }
 
-    if (viewId === 'view-ingresos' && chartClienteIngresos) {
-        window.setTimeout(() => chartClienteIngresos.resize(), 100);
+    if (viewId === 'view-gastos' || viewId === 'view-ingresos') {
+        void cargarDatosFinancieros(viewId);
     }
-
-    if (viewId === 'view-ingresos' && chartClienteIngresos) {
-        window.setTimeout(() => chartClienteIngresos.resize(), 100);
+    if (viewId === 'view-saldo') {
+        const saldoSection = document.getElementById('seccion-saldo');
+        if (saldoSection) saldoSection.style.display = 'block';
+        void cargarVistaSaldo();
     }
+    if (viewId === 'view-metas' && typeof cargarVistaMetasAhorros === 'function') {
+        void cargarVistaMetasAhorros();
+    }
+    if (viewId === 'view-recordatorios' && typeof renderCalendar === 'function') renderCalendar();
+    if (viewId === 'view-configuracion' && typeof refreshConfigDisplay === 'function') refreshConfigDisplay();
+    if (viewId === 'view-inicio' && typeof cargarPanelInicio === 'function') void cargarPanelInicio();
 }
 
 function initSidebar() {
@@ -418,27 +493,6 @@ function closeMobileSidebar() {
     document.getElementById('mobileMenuTrigger')?.setAttribute('aria-expanded', 'false');
 }
 
-function initThemeToggle() {
-    const themeBtn = document.getElementById('themeToggleBtn');
-    if (!themeBtn) return;
-
-    const currentTheme = localStorage.getItem('notaire_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    updateThemeIcon(themeBtn, currentTheme);
-
-    themeBtn.addEventListener('click', () => {
-        const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('notaire_theme', newTheme);
-        updateThemeIcon(themeBtn, newTheme);
-    });
-}
-
-function updateThemeIcon(button, theme) {
-    const icon = button.querySelector('i');
-    if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-}
-
 function initGlobalSearch() {
     const searchInput = document.getElementById('globalSearchInput');
     if (!searchInput) return;
@@ -480,14 +534,18 @@ async function handleGuardarNuevaMeta(event) {
 
     const payload = {
         nombre: document.getElementById('metaNombre')?.value.trim(),
-        monto_objetivo: Number(document.getElementById('metaObjetivo')?.value),
-        monto_actual: Number(document.getElementById('metaInicial')?.value || 0),
+        monto_objetivo: parseFormattedAmount(document.getElementById('metaObjetivo')?.value),
+        monto_actual: parseFormattedAmount(document.getElementById('metaInicial')?.value || 0),
         fecha_limite: document.getElementById('metaFecha')?.value,
         icono: document.getElementById('metaIcono')?.value || '🎯'
     };
 
     if (!payload.nombre || !Number.isFinite(payload.monto_objetivo) || payload.monto_objetivo <= 0) {
         showToast('Completa un nombre y un monto objetivo válido');
+        return;
+    }
+    if (!Number.isFinite(payload.monto_actual) || payload.monto_actual < 0 || payload.monto_actual > payload.monto_objetivo) {
+        showToast('El ahorro inicial no puede superar el monto objetivo de la meta.');
         return;
     }
 
@@ -502,9 +560,9 @@ async function handleGuardarNuevaMeta(event) {
             throw new Error(resultado.detalle || resultado.error || 'No se pudo crear la meta');
         }
 
+        invalidateApiCache();
         closeModal('modalNuevaMeta');
-        if (typeof cargarMetasYAhorros === 'function') await cargarMetasYAhorros();
-        if (typeof cargarVistaAhorros === 'function') await cargarVistaAhorros();
+        if (typeof cargarVistaMetasAhorros === 'function') await cargarVistaMetasAhorros();
         if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
         showToast('¡Meta de ahorro creada con éxito!');
     } catch (error) {
@@ -517,8 +575,21 @@ async function handleGuardarAporteMeta(event) {
     event.preventDefault();
     const token = localStorage.getItem('notaire_token');
     const metaId = document.getElementById('aporteMetaId')?.value;
-    const monto = Number(document.getElementById('aporteMonto')?.value);
+    const monto = parseFormattedAmount(document.getElementById('aporteMonto')?.value);
     if (!token || !metaId || !Number.isFinite(monto) || monto <= 0) return;
+    const objetivo = Number(document.getElementById('aporteMetaObjetivo')?.value || 0);
+    const actual = Number(document.getElementById('aporteMetaActual')?.value || 0);
+    const restante = Math.max(0, objetivo - actual);
+    if (monto > restante) {
+        mostrarErrorAporte({
+            codigo: 'META_LIMITE',
+            montoMaximo: restante,
+            error: restante > 0
+                ? `Solo puedes aportar ${formatCOP(restante)} para completar esta meta.`
+                : 'Esta meta ya alcanzó su monto objetivo.'
+        });
+        return;
+    }
 
     try {
         const response = await fetch('/api/metas/aportar', {
@@ -531,11 +602,20 @@ async function handleGuardarAporteMeta(event) {
             mostrarErrorAporte(result);
             return;
         }
-        if (!response.ok) throw new Error(result.error || 'No se pudo registrar el aporte');
+        if (response.status === 422 && result.codigo === 'META_LIMITE') {
+            mostrarErrorAporte(result);
+            return;
+        }
+        if (!response.ok) {
+            const details = [result.error, result.detalle]
+                .filter((message, index, messages) => typeof message === 'string' && message.trim() && messages.indexOf(message) === index)
+                .join(': ');
+            throw new Error(details || 'No se pudo registrar el aporte');
+        }
 
+        invalidateApiCache();
         closeModal('modalAportarMeta');
-        if (typeof cargarMetasYAhorros === 'function') await cargarMetasYAhorros();
-        if (typeof cargarVistaAhorros === 'function') await cargarVistaAhorros();
+        if (typeof cargarVistaMetasAhorros === 'function') await cargarVistaMetasAhorros();
         if (typeof cargarPanelInicio === 'function') await cargarPanelInicio();
         showToast('¡Aporte registrado con éxito!');
     } catch (error) {
@@ -546,33 +626,12 @@ async function handleGuardarAporteMeta(event) {
 
 function mostrarErrorAporte(info) {
     const box = document.getElementById('aporteError');
-    if (!box) return showToast(info.error);
-    box.textContent = '';
-    const msg = document.createElement('p');
-    msg.textContent = info.error;
-    box.appendChild(msg);
-
-    const actions = document.createElement('div');
-    actions.className = 'aporte-error-actions';
-    if (info.saldoDisponible > 0) {
-        const abonar = document.createElement('button');
-        abonar.type = 'button';
-        abonar.textContent = `Abonar ${formatCOP(info.saldoDisponible)}`;
-        abonar.onclick = () => {
-            document.getElementById('aporteMonto').value = info.saldoDisponible;
-            box.hidden = true;
-        };
-        actions.appendChild(abonar);
-    }
-    const ingreso = document.createElement('button');
-    ingreso.type = 'button';
-    ingreso.textContent = 'Registrar un ingreso';
-    ingreso.onclick = () => {
-        closeModal('modalAportarMeta');
-        if (typeof openModalRegistrarIngreso === 'function') openModalRegistrarIngreso();
-    };
-    actions.appendChild(ingreso);
-    box.appendChild(actions);
+    const english = window.getCurrentLang?.() === 'en';
+    const message = typeof info?.error === 'string' && info.error.trim()
+        ? info.error
+        : (english ? 'The contribution could not be completed.' : 'No se pudo completar el aporte.');
+    if (!box) return showToast(message);
+    box.textContent = message;
     box.hidden = false;
 }
 
@@ -583,7 +642,7 @@ async function cargarResumenDashboard() {
     }
 
     try {
-        const data = await fetchDashboardMetrics();
+        const data = await getDashboardMetrics();
         if (data) {
             renderMetrics(data);
         }
@@ -592,122 +651,14 @@ async function cargarResumenDashboard() {
     }
 }
 
-async function cargarDatosFinancieros() {
-    const token = localStorage.getItem('notaire_token');
-    if (!token) return;
-
-    try {
-        setDataState(document.getElementById('listUltimosMovimientos'), 'Cargando gastos...', 'loading');
-        setDataState(document.getElementById('listUltimosIngresos'), 'Cargando ingresos...', 'loading');
-        setDataState(document.getElementById('listMayoresGastos'), 'Cargando categorías...', 'loading');
-        const response = await fetch('/api/transacciones', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Error al obtener transacciones');
-        const respuesta = await response.json();
-        const transacciones = Array.isArray(respuesta) ? respuesta : [];
-        const canvasIngresos = document.getElementById('chartEvolucionIngresos');
-        if (canvasIngresos && typeof Chart !== 'undefined' && window.NotaireFinancialChart) {
-            const serieIngresos = window.NotaireFinancialChart.createMonthlyTotals(transacciones);
-            chartClienteIngresos?.destroy();
-            chartClienteIngresos = new Chart(
-                canvasIngresos.getContext('2d'),
-                window.NotaireFinancialChart.createConfig(serieIngresos.labels, serieIngresos.values, formatCOP, 'Ingresos')
-            );
-        } else if (canvasIngresos) {
-            console.error('No se pudo inicializar la gráfica de ingresos: faltan Chart.js o NotaireFinancialChart.');
-        }
-        const monthKey = window.NotaireFinancialChart?.currentMonthKey();
-        const delMes = window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.filterTransactionsByMonth(transacciones, monthKey)
-            : transacciones.filter(item => String(item.fecha || '').slice(0, 7) === monthKey);
-        const tipoMovimiento = item => window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.getTransactionType(item)
-            : String(item.tipo || item.tipo_registro || '').toLowerCase();
-        const gastos = delMes.filter(item => tipoMovimiento(item) === 'gasto');
-        const ingresos = delMes.filter(item => tipoMovimiento(item) === 'ingreso');
-        const totalGastos = gastos.reduce((total, item) => total + Number(item.monto || 0), 0);
-        const totalIngresos = ingresos.reduce((total, item) => total + Number(item.monto || 0), 0);
-        const mayorIngreso = ingresos.reduce((mayor, item) => Math.max(mayor, Number(item.monto || 0)), 0);
-        const actualizar = (id, value) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        };
-        actualizar('valGastadoEsteMes', formatCOP(totalGastos));
-        actualizar('centerGastosTotal', formatCOP(totalGastos));
-        actualizar('valTotalIngresos', formatCOP(totalIngresos));
-        actualizar('centerIngresosTotal', formatCOP(totalIngresos));
-        actualizar('valMayorIngreso', formatCOP(mayorIngreso));
-        const promedioMensual = window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.averageMonthlyTotal(transacciones, 'ingreso')
-            : totalIngresos;
-        actualizar('valPromedioMensual', formatCOP(promedioMensual));
-        const presupuesto = Number(localStorage.getItem('notaire_presupuesto') || 0);
-        const presupuestoMensual = window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.calculateBudgetPosition(presupuesto, totalGastos)
-            : { hasBudget: presupuesto > 0, available: presupuesto - totalGastos, percentUsed: presupuesto > 0 ? (totalGastos / presupuesto) * 100 : null };
-        actualizar('valPresupuestoTotal', presupuestoMensual.hasBudget ? formatCOP(presupuesto) : 'Sin presupuesto');
-        actualizar('valPresupuestoPct', presupuestoMensual.hasBudget ? `${Math.round(presupuestoMensual.percentUsed)}% utilizado` : 'Sin presupuesto');
-        renderTransacciones('listUltimosMovimientos', gastos, false);
-        renderTransacciones('listUltimosIngresos', ingresos, true);
-        renderGastosPorCategoria(gastos, totalGastos);
-        renderLeyenda('legendGastosCategorias', gastos, 'gasto');
-        renderLeyenda('legendIngresosFuentes', ingresos, 'ingreso');
-    } catch (error) {
-        console.error('Error al cargar datos financieros:', error);
-        setDataState(document.getElementById('listUltimosMovimientos'), 'No se pudieron cargar los gastos.', 'error');
-        setDataState(document.getElementById('listUltimosIngresos'), 'No se pudieron cargar los ingresos.', 'error');
-        setDataState(document.getElementById('listMayoresGastos'), 'No se pudieron cargar las categorías.', 'error');
-        showToast('No se pudieron cargar los movimientos');
-    }
-}
-
-function renderTransacciones(containerId, transacciones, sonIngresos) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const lista = transacciones.slice(0, 5);
-    container.innerHTML = lista.length ? lista.map(item => `
-        <div class="transaction-row">
-            <div class="transaction-left"><div class="transaction-icon-box">${sonIngresos ? '💼' : '🧾'}</div>
-            <div class="transaction-info"><span class="transaction-title">${escaparTextoCliente(item.descripcion || item.categoria || 'Movimiento')}</span>
-            <span class="transaction-date">${escaparTextoCliente(item.fecha || '')} · ${escaparTextoCliente(item.categoria || '')}</span></div></div>
-            <span class="${sonIngresos ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${sonIngresos ? '+' : '-'}${formatCOP(item.monto)}</span>
-        </div>`).join('') : '<p class="data-state data-state-empty">No hay registros este mes.</p>';
-}
-
-function renderGastosPorCategoria(gastos, totalGastos) {
-    const container = document.getElementById('listMayoresGastos');
-    if (!container) return;
-    const categorias = {};
-    gastos.forEach(item => {
-        const categoria = item.categoria || 'Otros';
-        categorias[categoria] = (categorias[categoria] || 0) + Number(item.monto || 0);
-    });
-    const lista = Object.entries(categorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    container.innerHTML = lista.length ? lista.map(([categoria, monto]) => {
-        const porcentaje = totalGastos ? Math.round((monto / totalGastos) * 100) : 0;
-        return `<div class="category-progress-item"><div class="category-info-row"><span class="category-name-icon">${escaparTextoCliente(categoria)}</span><div class="category-amount-pct"><span class="category-amount">${formatCOP(monto)}</span><span class="category-pct">${porcentaje}%</span></div></div><div class="progress-track-bg"><div class="progress-fill-bar" style="width: ${porcentaje}%; background: #10b981;"></div></div></div>`;
-    }).join('') : '<p class="data-state data-state-empty">No hay gastos registrados este mes.</p>';
-}
-
-function renderLeyenda(containerId, transacciones, tipo) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const movimientos = transacciones.filter(item => (
-        String(item.tipo || item.tipo_registro || '').toLowerCase() === tipo
-    ));
-    const total = movimientos.reduce((sum, item) => sum + Number(item.monto || 0), 0);
-    const grupos = {};
-    movimientos.forEach(item => {
-        const clave = item.categoria || 'Otros';
-        grupos[clave] = (grupos[clave] || 0) + Number(item.monto || 0);
-    });
-    const colores = ['#f59e0b', '#8b5cf6', '#06b6d4', '#10b981', '#3b82f6'];
-    const lista = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
-    container.innerHTML = lista.length ? lista.map(([nombre, monto], index) => {
-        const porcentaje = total ? Math.round((monto / total) * 100) : 0;
-        return `<div class="legend-item"><span class="legend-dot" style="background: ${colores[index % colores.length]};"></span> ${escaparTextoCliente(nombre)} ${porcentaje}%</div>`;
-    }).join('') : '<span class="data-state data-state-empty">Sin registros este mes.</span>';
+async function cargarDatosFinancieros(viewId = document.querySelector('.content-section.active')?.id) {
+    const activeView = viewId || document.querySelector('.content-section.active')?.id;
+    const tipos = activeView === 'view-gastos'
+        ? ['gasto']
+        : activeView === 'view-ingresos'
+            ? ['ingreso']
+            : ['gasto', 'ingreso'];
+    await Promise.all(tipos.map(tipo => cargarTablaMovimientos(tipo)));
 }
 
 const loadDashboardData = cargarResumenDashboard;

@@ -78,10 +78,10 @@ async function updateAdminUserRole(select) {
         const user = adminUsers.find(item => String(item.id) === String(userId));
         if (user) user.rol = result.usuario?.rol || select.value;
         select.dataset.currentRole = select.value;
-        window.alert('Rol actualizado correctamente.');
+        void window.notaireAlert('Rol actualizado correctamente.', { title: 'Usuario actualizado' });
     } catch (error) {
         select.value = previousRole;
-        window.alert(error.message);
+        void window.notaireAlert(error.message, { title: 'No se pudo actualizar el rol' });
     } finally {
         select.disabled = false;
     }

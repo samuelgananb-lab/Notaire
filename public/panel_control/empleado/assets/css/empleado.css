@@ -274,3 +274,12 @@ select.emp-input option { background: #16112e; color: #fff; }
     .emp-cal-day { min-height: 58px; padding: 4px; }
     .emp-cal-chip { display: none; }
 }
+
+select,
+input[type="date"],
+input[type="time"] { color-scheme: dark; }
+select option { color: var(--text); background-color: var(--card); }
+[data-theme="light"] select,
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="time"] { color-scheme: light; }
+[data-theme="light"] select option { color: #172033; background-color: #f1f4f8; }

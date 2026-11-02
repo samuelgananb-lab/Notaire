@@ -3,7 +3,7 @@ import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { sendNotificationEmail } from '../services/event-notifications.service.js';
 import { checkBudgetAlert } from '../services/finance-alerts.service.js';
-import { calculateFinancialSummary, monthReferenceDate } from '../services/financial-summary.service.js';
+import { calculateFinancialSummary, createLiquidityTrend, monthReferenceDate } from '../services/financial-summary.service.js';
 
 const router = Router();
 
@@ -38,12 +38,27 @@ function validarMovimiento({ tipo, monto, categoria }) {
 // GET: Obtener transacciones del usuario
 router.get('/', verificarToken, async (req, res) => {
   try {
-    const data = await consultarTodasLasFilas(() => supabase
-      .from('transacciones')
-      .select('*')
-      .eq('usuario_id', req.usuario.id)
-      .order('fecha', { ascending: false })
-      .order('id', { ascending: false }), 'transacciones');
+    const mes = String(req.query.mes || '');
+    if (mes && !/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) {
+      return res.status(400).json({ error: 'El mes debe tener el formato AAAA-MM' });
+    }
+
+    const inicioMes = mes ? `${mes}-01` : null;
+    const [year, month] = mes.split('-').map(Number);
+    const inicioMesSiguiente = mes
+      ? new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10)
+      : null;
+
+    const data = await consultarTodasLasFilas(() => {
+      let query = supabase
+        .from('transacciones')
+        .select('*')
+        .eq('usuario_id', req.usuario.id)
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: false });
+      if (inicioMes) query = query.gte('fecha', inicioMes).lt('fecha', inicioMesSiguiente);
+      return query;
+    }, 'transacciones');
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener transacciones', detalle: error.message });
@@ -69,7 +84,8 @@ router.get('/resumen-saldo', verificarToken, async (req, res) => {
         .order('id', { ascending: true }), 'metas')
     ]);
     const totalAhorrado = metas.reduce((sum, meta) => sum + Number(meta.monto_actual || 0), 0);
-    const summary = calculateFinancialSummary(transacciones, [], monthReferenceDate(req.query.mes), totalAhorrado);
+    const referenceDate = monthReferenceDate(req.query.mes);
+    const summary = calculateFinancialSummary(transacciones, [], referenceDate, totalAhorrado);
 
     res.json({
       totalIngresos: summary.ingresosAcumulados,
@@ -78,7 +94,8 @@ router.get('/resumen-saldo', verificarToken, async (req, res) => {
       saldoDisponible: summary.liquidez,
       liquidez: summary.liquidez,
       movimientoTotal: summary.movimientoTotal,
-      movimientoMes: summary.movimientoMes
+      movimientoMes: summary.movimientoMes,
+      evolucion: createLiquidityTrend(transacciones, referenceDate)
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al calcular saldo', detalle: error.message });

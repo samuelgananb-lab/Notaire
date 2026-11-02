@@ -1,3 +1,18 @@
+async function obtenerMovimientosRecientes(dashboardData, normalizarTipo) {
+    const movimientos = Array.isArray(dashboardData?.recentTransactions)
+        ? dashboardData.recentTransactions
+        : [];
+    const movimientosValidos = movimientos.filter(movimiento =>
+        ['ingreso', 'gasto'].includes(normalizarTipo(movimiento))
+    );
+    if (movimientosValidos.length || typeof fetchTransacciones !== 'function') return movimientosValidos;
+
+    const respuesta = await fetchTransacciones();
+    return Array.isArray(respuesta)
+        ? respuesta.filter(movimiento => ['ingreso', 'gasto'].includes(normalizarTipo(movimiento)))
+        : [];
+}
+
 async function cargarPanelInicio() {
     try {
         const token = localStorage.getItem('notaire_token');
@@ -43,30 +58,21 @@ async function cargarPanelInicio() {
         if (elementoPerfilEmail && usuarioGuardado) elementoPerfilEmail.value = JSON.parse(usuarioGuardado).email || '';
         if (textoSaludo) textoSaludo.textContent = saludo;
 
-        const headers = { Authorization: `Bearer ${token}` };
-        const [resTrans, resMetas] = await Promise.all([
-            fetch('/api/transacciones', { headers }),
-            fetch('/api/metas', { headers })
-        ]);
-
-        if (!resTrans.ok || !resMetas.ok) throw new Error('Error al obtener datos');
-
-        const transaccionesRespuesta = await resTrans.json();
-        const metasRespuesta = await resMetas.json();
-        const transacciones = Array.isArray(transaccionesRespuesta) ? transaccionesRespuesta : [];
-        const metas = Array.isArray(metasRespuesta) ? metasRespuesta : [];
-        const mesActual = window.NotaireFinancialChart?.currentMonthKey();
-        const transaccionesMes = window.NotaireFinancialChart
-            ? window.NotaireFinancialChart.filterTransactionsByMonth(transacciones, mesActual)
-            : transacciones.filter(transaccion => String(transaccion.fecha || '').slice(0, 7) === mesActual);
+        const dashboardData = await getDashboardMetrics();
+        const metas = Array.isArray(dashboardData?.metas) ? dashboardData.metas : [];
         const normalizarTipo = transaccion => window.NotaireFinancialChart
             ? window.NotaireFinancialChart.getTransactionType(transaccion)
             : String(transaccion.tipo || transaccion.tipo_registro || '').toLowerCase();
-        const sumarTipo = tipo => transaccionesMes
-            .filter(transaccion => normalizarTipo(transaccion) === tipo)
-            .reduce((total, transaccion) => total + (Number(transaccion.monto) || 0), 0);
-        const ingresosMes = sumarTipo('ingreso');
-        const gastosMes = sumarTipo('gasto');
+        let transacciones = [];
+        let errorMovimientosRecientes = false;
+        try {
+            transacciones = await obtenerMovimientosRecientes(dashboardData, normalizarTipo);
+        } catch (error) {
+            errorMovimientosRecientes = true;
+            console.error('No se pudieron cargar los movimientos recientes:', error);
+        }
+        const ingresosMes = Number(dashboardData?.ingresosMes) || 0;
+        const gastosMes = Number(dashboardData?.gastosMes) || 0;
 
         let ahorrosTotales = 0;
         let sumaPorcentajes = 0;
@@ -77,6 +83,8 @@ async function cargarPanelInicio() {
             sumaPorcentajes += Math.min((actual / objetivo) * 100, 100);
         });
 
+        const metasCompletadas = metas.filter(meta => typeof resumirMeta === 'function' && resumirMeta(meta).completada).length;
+        const metasActivas = metas.length - metasCompletadas;
         const pctPromedioMetas = metas.length > 0
             ? Math.round(sumaPorcentajes / metas.length)
             : 0;
@@ -89,8 +97,17 @@ async function cargarPanelInicio() {
         actualizarTexto('kpiIngresosMes', moneda(ingresosMes));
         actualizarTexto('kpiGastosMes', moneda(gastosMes));
         actualizarTexto('kpiAhorrosTotales', moneda(ahorrosTotales));
-        actualizarTexto('kpiMetasActivas', `${metas.length} metas (${pctPromedioMetas}% promedio)`);
-        actualizarTexto('kpiMetasPromedio', `${pctPromedioMetas}% promedio`);
+        const idiomaIngles = window.getCurrentLang?.() === 'en';
+        actualizarTexto('kpiMetasActivas', String(metasActivas));
+        actualizarTexto('kpiMetasPromedio', idiomaIngles
+            ? `${pctPromedioMetas}% average progress`
+            : `${pctPromedioMetas}% progreso promedio`);
+        const homeMetaStatus = document.getElementById('homeMetaStatus');
+        if (homeMetaStatus) {
+            homeMetaStatus.innerHTML = `
+                <span class="goal-status-summary-item is-progress"><strong>${metasActivas}</strong> ${idiomaIngles ? 'in progress' : 'en progreso'}</span>
+                <span class="goal-status-summary-item is-completed"><strong>${metasCompletadas}</strong> ${idiomaIngles ? 'completed' : 'terminadas'}</span>`;
+        }
 
         const escaparHtml = valor => String(valor ?? '').replace(/[&<>"']/g, caracter => ({
             '&': '&amp;',
@@ -102,24 +119,22 @@ async function cargarPanelInicio() {
 
         const contActividad = document.getElementById('listaActividadReciente');
         if (contActividad) {
-            const ultimasTransacciones = [...transacciones]
-                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                .slice(0, 4);
+            const ultimasTransacciones = transacciones
+                .filter(transaccion => ['ingreso', 'gasto'].includes(normalizarTipo(transaccion)))
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || Number(b.id) - Number(a.id))
+                .slice(0, 5);
 
             contActividad.innerHTML = ultimasTransacciones.length === 0
-                ? '<p style="color: #888; padding: 12px 0;">No hay movimientos recientes.</p>'
+                ? `<p style="color: #888; padding: 12px 0;">${errorMovimientosRecientes ? 'No se pudieron cargar los movimientos recientes.' : 'No hay movimientos recientes.'}</p>`
                 : ultimasTransacciones.map(transaccion => {
                     const esIngreso = normalizarTipo(transaccion) === 'ingreso';
                     const monto = Number.parseFloat(transaccion.monto) || 0;
-                    const concepto = transaccion.descripcion || transaccion.categoria || 'Movimiento';
-                    const categoria = transaccion.categoria || '';
                     return `
                         <div class="transaction-row">
                             <div class="transaction-left">
                                 <div class="transaction-icon-box">${esIngreso ? '&#128188;' : '&#129529;'}</div>
                                 <div class="transaction-info">
-                                    <span class="transaction-title">${escaparHtml(concepto)}</span>
-                                    <span class="transaction-date">${escaparHtml(transaccion.fecha || '')}${categoria ? ` • ${escaparHtml(categoria)}` : ''}</span>
+                                    <span class="transaction-title">${esIngreso ? 'Ingreso' : 'Gasto'}</span>
                                 </div>
                             </div>
                             <span class="${esIngreso ? 'transaction-amount-positive' : 'transaction-amount-negative'}">${esIngreso ? '+' : '-'}${moneda(monto)}</span>
@@ -144,16 +159,18 @@ async function cargarPanelInicio() {
                                 <span class="home-goal-icon">${icono}</span>
                                 <div class="home-goal-info">
                                     <span class="home-goal-name">${escaparHtml(nombre)}</span>
-                                    <div class="home-goal-bar"><div class="home-goal-fill" style="width: ${porcentaje}%; background: #10b981;"></div></div>
+                                    <div class="home-goal-bar"><div class="home-goal-fill" style="width: ${porcentaje}%; background: var(--color-primary);"></div></div>
                                 </div>
                             </div>
-                            <span class="home-goal-pct" style="color: #10b981;">${porcentaje}%</span>
+                            <span class="home-goal-pct" style="color: var(--color-primary);">${porcentaje}%</span>
                         </div>
                     `;
                 }).join('');
         }
     } catch (err) {
         console.error('Error al actualizar el panel de inicio:', err);
+    } finally {
+        window.translateStaticContent?.(window.getCurrentLang?.() || 'es');
     }
 }
 

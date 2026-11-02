@@ -1,7 +1,9 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initializeRegisterScreen() {
+    const eventController = new AbortController();
+    const listenerOptions = { signal: eventController.signal };
     const formRegistro = document.getElementById('formRegistro') || document.getElementById('registerForm') || document.querySelector('form');
 
-    if (!formRegistro) return;
+    if (!formRegistro) return () => eventController.abort();
 
     const passwordInput = document.getElementById('password');
     const meterBars = document.querySelectorAll('#passwordMeter span');
@@ -14,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         meterBars.forEach((bar, index) => {
             bar.style.background = index < score ? (score < 3 ? '#f59e0b' : '#10b981') : 'rgba(255,255,255,.13)';
         });
-    });
+    }, listenerOptions);
 
     formRegistro.addEventListener('submit', async event => {
         event.preventDefault();
@@ -63,6 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.refresh_token) localStorage.setItem('notaire_refresh_token', data.refresh_token);
             if (data.expires_at) localStorage.setItem('notaire_expires_at', String(data.expires_at));
             localStorage.setItem('notaire_user', JSON.stringify(data.usuario));
+            localStorage.removeItem('notaire_presupuesto');
+            localStorage.removeItem('notaire_presupuesto_categorias');
+            localStorage.removeItem('notaire_budget_account_id');
+            localStorage.removeItem('notaire_budget_alert');
+            sessionStorage.removeItem('notaire_cliente_active_view');
             localStorage.setItem('user_role', data.usuario.rol || 'cliente');
             localStorage.setItem('user_email', data.usuario.email);
             document.cookie = `user_role=${data.usuario.rol || 'cliente'}; path=/; max-age=86400`;
@@ -75,13 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.querySelector('span').textContent = 'Crear cuenta';
             }
         }
-    });
-});
+    }, listenerOptions);
 
-function togglePassword(inputId, toggleElement) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-
-    input.type = input.type === 'password' ? 'text' : 'password';
-    toggleElement?.querySelector('i')?.classList.toggle('fa-eye-slash');
+    return () => eventController.abort();
 }
+
+window.NotaireAuthScreens = window.NotaireAuthScreens || {};
+window.NotaireAuthScreens.register = initializeRegisterScreen;
