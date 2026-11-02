@@ -5315,3 +5315,138 @@ select option {
     #views-container::-webkit-scrollbar-track { background: rgba(var(--color-card-rgb), .65); border-radius: 999px; }
     #views-container::-webkit-scrollbar-thumb { background: var(--color-primary); border: 2px solid rgba(var(--color-card-rgb), .65); border-radius: 999px; }
 }
+
+#view-metas > .metrics-grid {
+    align-items: stretch;
+    gap: 18px;
+    margin-top: 20px;
+}
+
+#view-metas > .metrics-grid > .metric-card {
+    position: relative;
+    min-width: 0;
+    min-height: 164px;
+    overflow: hidden;
+    padding: 21px 23px;
+    border-color: rgba(var(--color-primary-rgb), .26);
+    border-radius: 20px;
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(var(--color-primary-rgb), .12), transparent 49%),
+        linear-gradient(145deg, rgba(var(--color-card-rgb), .98), rgba(var(--color-sidebar-rgb), .96));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .16), inset 0 1px rgba(255, 255, 255, .035);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+#view-metas > .metrics-grid > .metric-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(var(--color-primary-rgb), .48);
+    box-shadow: 0 17px 38px rgba(0, 0, 0, .22), 0 0 22px rgba(var(--color-primary-rgb), .08);
+}
+
+[data-theme="light"] #view-metas > .metrics-grid > .metric-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(var(--color-primary-rgb), .08), transparent 49%),
+        linear-gradient(145deg, #fff, #f7f8fc);
+    box-shadow: 0 10px 24px rgba(31, 48, 75, .08), inset 0 1px #fff;
+}
+
+#view-metas > .metrics-grid .goal-metric-header {
+    display: flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .075em;
+}
+
+.goal-metric-icon {
+    display: grid;
+    width: 35px;
+    height: 35px;
+    flex: 0 0 35px;
+    place-items: center;
+    color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), .13);
+    border: 1px solid rgba(var(--color-primary-rgb), .2);
+    border-radius: 12px;
+    font-size: 14px;
+    transition: transform .2s ease, background .2s ease;
+}
+
+#view-metas > .metrics-grid > .metric-card:hover .goal-metric-icon {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(var(--color-primary-rgb), .2);
+}
+
+#view-metas > .metrics-grid .goal-savings-card .metric-value,
+#view-metas > .metrics-grid .goal-average-card .metric-value {
+    color: var(--color-text-main);
+    font-size: clamp(29px, 3vw, 36px);
+    letter-spacing: -.035em;
+    line-height: 1.05;
+}
+
+#view-metas > .metrics-grid .goal-savings-card .metric-card-body,
+#view-metas > .metrics-grid .goal-average-card .metric-card-body {
+    margin: 0 0 7px;
+}
+
+#view-metas > .metrics-grid .goal-savings-card .metric-trend-badge {
+    margin-top: 0;
+    padding: 5px 10px;
+    font-size: 11px;
+}
+
+#view-metas > .metrics-grid .goal-status-card {
+    gap: 13px;
+    border-color: rgba(var(--color-primary-rgb), .3);
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(var(--color-primary-rgb), .17), transparent 50%),
+        linear-gradient(145deg, rgba(var(--color-card-rgb), .98), rgba(var(--color-sidebar-rgb), .96));
+}
+
+[data-theme="light"] #view-metas > .metrics-grid .goal-status-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(var(--color-primary-rgb), .09), transparent 50%),
+        linear-gradient(145deg, #fff, #f7f8fc);
+}
+
+#view-metas > .metrics-grid .goal-status-card::after { display: none; }
+#view-metas > .metrics-grid .goal-status-card .metric-card-header { margin: 0; }
+#view-metas > .metrics-grid .goal-status-counts { gap: 10px; }
+#view-metas > .metrics-grid .goal-status-count {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 70px;
+    gap: 5px 10px;
+    padding: 11px 12px;
+    border-radius: 15px;
+}
+#view-metas > .metrics-grid .goal-status-count strong { font-size: 29px; }
+#view-metas > .metrics-grid .goal-status-count span { font-size: 11px; }
+#view-metas > .metrics-grid .goal-status-count.is-progress strong { color: var(--color-primary); }
+#view-metas > .metrics-grid .goal-status-count.is-completed strong { color: #10b981; }
+
+#view-metas > .metrics-grid .goal-average-card .progress-track-bg {
+    height: 8px;
+    margin-top: 10px !important;
+    background: rgba(var(--color-primary-rgb), .13);
+}
+#view-metas > .metrics-grid .goal-average-card .progress-fill-bar {
+    min-width: 0;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)) !important;
+    box-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+@media (max-width: 768px) {
+    #view-metas > .metrics-grid { gap: 12px; margin-top: 16px; }
+    #view-metas > .metrics-grid > .metric-card { min-height: 142px; padding: 18px; border-radius: 17px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #view-metas > .metrics-grid > .metric-card,
+    #view-metas > .metrics-grid .goal-metric-icon { transition: none; }
+}

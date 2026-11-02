@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-calendar-payments">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-calendar-payments">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261102-goals-cards">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261102-goals-cards">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
     <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
 </head>
@@ -356,13 +356,19 @@
 
                     <!-- Stats rápidos -->
                     <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">TOTAL AHORRADO</div>
+                        <div class="metric-card goal-savings-card">
+                            <div class="metric-card-header goal-metric-header">
+                                <span>TOTAL AHORRADO</span>
+                                <span class="goal-metric-icon is-savings" aria-hidden="true"><i class="fas fa-piggy-bank"></i></span>
+                            </div>
                             <div class="metric-card-body"><div class="metric-value" id="valTotalAhorradoMetas">$0</div></div>
                             <div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> +15.3%</span></div>
                         </div>
                         <div class="metric-card goal-status-card">
-                            <div class="metric-card-header">ESTADO DE TUS METAS</div>
+                            <div class="metric-card-header goal-metric-header">
+                                <span>ESTADO DE TUS METAS</span>
+                                <span class="goal-metric-icon is-status" aria-hidden="true"><i class="fas fa-bullseye"></i></span>
+                            </div>
                             <div class="goal-status-counts">
                                 <div class="goal-status-count is-progress">
                                     <strong id="valMetasEnProgreso">0</strong>
@@ -374,8 +380,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PROGRESO PROMEDIO</div>
+                        <div class="metric-card goal-average-card">
+                            <div class="metric-card-header goal-metric-header">
+                                <span>PROGRESO PROMEDIO</span>
+                                <span class="goal-metric-icon is-progress" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+                            </div>
                             <div class="metric-card-body"><div class="metric-value" id="valMetasAvgPct">0%</div></div>
                             <div><div class="progress-track-bg" style="margin-top: 10px;"><div class="progress-fill-bar" style="width: 0%; background: var(--color-primary);"></div></div></div>
                         </div>

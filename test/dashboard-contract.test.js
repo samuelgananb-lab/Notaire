@@ -1322,6 +1322,11 @@ test('las metas completadas se separan y las tres más avanzadas se destacan', a
     assert.match(dashboard, /id="valMetasEnProgreso"/);
     assert.match(dashboard, /class="goal-status-counts"/);
     assert.match(dashboard, /class="metric-card goal-status-card">[\s\S]*?ESTADO DE TUS METAS/);
+    assert.match(dashboard, /class="metric-card goal-savings-card"/);
+    assert.match(dashboard, /class="metric-card goal-average-card"/);
+    assert.match(dashboard, /class="goal-metric-icon is-savings"/);
+    assert.match(dashboard, /class="goal-metric-icon is-status"/);
+    assert.match(dashboard, /class="goal-metric-icon is-progress"/);
     assert.match(dashboard, /class="config-card appearance-config-card">[\s\S]*?<h3>Apariencia<\/h3>/);
     assert.match(dashboard, /Convierte tus planes en metas alcanzables/);
     assert.match(goals, /goal-status-summary-item is-progress/);
@@ -1331,6 +1336,11 @@ test('las metas completadas se separan y las tres más avanzadas se destacan', a
     assert.doesNotMatch(dashboard, /Autenticación 2FA|tog2FA/);
     assert.match(styles, /html\s*\{\s*font-size:\s*102%;\s*\}/);
     assert.match(styles, /\.goal-status-card\s*\{/);
+    assert.match(styles, /#view-metas > \.metrics-grid \.goal-status-card::after \{ display: none; \}/);
+    assert.match(styles, /#view-metas > \.metrics-grid > \.metric-card \{[\s\S]*min-height: 164px/);
+    const mobileStyles = await read('public/panel_control/cliente/assets/css/cliente-mobile.css');
+    assert.match(mobileStyles, /#view-metas \.metrics-grid \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.doesNotMatch(mobileStyles, /#view-metas \.metrics-grid \.metric-card:first-child \{[^}]*background:/);
     assert.match(styles, /\.theme-palette-section\s*\{/);
     assert.match(styles, /\.appearance-config-card \.config-toggle-row\s*\{/);
     assert.match(dashboard, /id="metasProximasGrid"/);
