@@ -277,7 +277,10 @@ test('el fondo animado del login no crea desbordamiento en móviles', async () =
 
 test('el login informa si la API devuelve una respuesta vacía o no JSON', async () => {
     const loginScript = await read('public/auth/assets/js/login.js');
-    const context = { document: { addEventListener() {} } };
+    const context = {
+        document: { addEventListener() {} },
+        window: { NotaireAuthScreens: {} }
+    };
     vm.runInNewContext(loginScript, context);
 
     await assert.rejects(
@@ -798,13 +801,13 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     assert.match(recoveryStyles, /id="windParticles"|#windParticles/);
     assert.match(recoveryStyles, /recovery-card[\s\S]*?backdrop-filter: blur\(35px\)/);
     assert.match(recoveryScript, /\/api\/auth\/recover/);
-    assert.match(recoveryScript, /card\.addEventListener\('mousemove'/);
-    assert.match(recoveryScript, /card\.addEventListener\('mouseleave'/);
+    assert.match(recoveryScript, /window\.NotaireAuthScreens\.recovery = initializeRecoveryScreen/);
+    assert.doesNotMatch(recoveryScript, /requestAnimationFrame|mousemove/);
     assert.match(recoveryScript, /No se pudo conectar con el servidor/);
     assert.match(authRoute, /if \(error\) \{[\s\S]*?status\(502\)\.json\(\{ error: 'No se pudieron enviar las instrucciones/);
     assert.match(authRoute, /PASSWORD_RESET_REDIRECT_URL/);
     assert.match(passwordHtml, /id="windParticles"/);
-    assert.match(passwordHtml, /assets\/js\/olvide-password\.js/);
+    assert.match(passwordHtml, /assets\/js\/cambiar-password\.js/);
     assert.match(passwordHtml, /<\/form>\s*<p class="form-status" id="formStatus"/);
     assert.match(passwordScript, /getElementById\('formStatus'\)/);
     assert.match(passwordScript, /queryParams\.get\('access_token'\)/);
@@ -821,6 +824,44 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     assert.match(clientLogout, /window\.logout\(\)/);
     assert.match(adminLogout, /window\.logout\(\)/);
     assert.doesNotMatch(clientLogout + adminLogout, /confirm\('¿Seguro que deseas cerrar sesión\?/);
+});
+
+test('todas las pantallas de autenticación reutilizan el fondo, el logo y la navegación compartida', async () => {
+    const [loginHtml, registerHtml, recoveryHtml, passwordHtml, authStyles, authApp, logo] = await Promise.all([
+        read('public/auth/login.html'),
+        read('public/auth/register.html'),
+        read('public/auth/olvide-password.html'),
+        read('public/auth/cambiar-password.html'),
+        read('public/auth/assets/css/auth.css'),
+        read('public/auth/assets/js/auth-app.js'),
+        read('public/auth/assets/img/notaire-auth-logo.svg')
+    ]);
+    const pages = [loginHtml, registerHtml, recoveryHtml, passwordHtml];
+
+    for (const html of pages) {
+        assert.match(html, /<body class="auth-page">/);
+        assert.match(html, /id="authApp" class="[^"]*auth-container"[^>]*data-auth-screen=/);
+        assert.match(html, /id="authPanel" class="[^"]*auth-panel"/);
+        assert.match(html, /assets\/img\/notaire-auth-logo\.svg/);
+        assert.match(html, /assets\/css\/auth\.css\?v=/);
+        assert.match(html, /assets\/js\/auth-app\.js\?v=/);
+        assert.doesNotMatch(html, /<svg\b/);
+    }
+
+    assert.match(logo, /points="50,5 95,25 95,75 50,95 5,75 5,25"/);
+    assert.match(logo, /fill="#8C00FF"/);
+    assert.match(logo, />N<\/text>/);
+    assert.match(authStyles, /radial-gradient/);
+    assert.match(authStyles, /@keyframes auth-light-drift/);
+    assert.match(authStyles, /@keyframes auth-panel-enter/);
+    assert.match(authStyles, /@keyframes auth-panel-float/);
+    assert.match(authStyles, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(authStyles, /@media \(max-width: 520px\)/);
+    assert.match(authApp, /requestAnimationFrame\(drawFrame\)/);
+    assert.match(authApp, /reduceMotion\.matches/);
+    assert.match(authApp, /currentPanel\.replaceWith\(document\.importNode\(nextPanel, true\)\)/);
+    assert.equal((authApp.match(/initializeBackground\(\);/g) || []).length, 1);
+    assert.match(authApp, /history\.pushState/);
 });
 
 test('elimina metas del resumen principal y registra las aportaciones recientes', async () => {

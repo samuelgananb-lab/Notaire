@@ -1,37 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // 1. Efecto de Viento (Canvas Particles)
-    const canvas = document.getElementById('windParticles');
-    const ctx = canvas ? canvas.getContext('2d') : null;
-    let width, height, particles = [];
-
-    if (canvas && ctx) {
-        function resize() {
-            width = window.innerWidth; height = window.innerHeight;
-            canvas.width = width; canvas.height = height;
-            particles = [];
-            for(let i=0; i<80; i++) ps();
-        }
-        function ps() {
-            particles.push({
-                x: Math.random() * width, y: Math.random() * height,
-                s: Math.random() * 1.5 + 0.5, vx: Math.random() * 3 + 2,
-                o: Math.random() * 0.3 + 0.05
-            });
-        }
-        function draw() {
-            ctx.clearRect(0,0,width,height);
-            particles.forEach(p => {
-                p.x += p.vx; if(p.x > width + 50) p.x = -50;
-                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 15, p.y);
-                ctx.strokeStyle = `rgba(255,255,255,${p.o})`; ctx.lineWidth = p.s; ctx.stroke();
-            });
-            requestAnimationFrame(draw);
-        }
-        window.addEventListener('resize', resize); resize(); draw();
-    }
-
-    // 2. Interactividad Formulario
+function initializeLoginScreen() {
+    const eventController = new AbortController();
+    const listenerOptions = { signal: eventController.signal };
     const loginForm = document.getElementById('loginForm');
     const togglePass = document.getElementById('togglePassword');
     const passInput = document.getElementById('password');
@@ -47,18 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
     };
 
-    window.addEventListener('pageshow', resetLoginState);
+    window.addEventListener('pageshow', resetLoginState, listenerOptions);
 
     if (togglePass && passInput) {
         togglePass.addEventListener('click', () => {
             const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passInput.setAttribute('type', type);
             togglePass.classList.toggle('fa-eye-slash');
-        });
+        }, listenerOptions);
     }
 
     if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
+        loginForm.addEventListener('submit', async e => {
             e.preventDefault();
             const btn = loginBtn;
             if (!btn || btn.disabled) return;
@@ -118,20 +87,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.clearTimeout(timeoutId);
                 resetLoginState();
             }
-        });
+        }, listenerOptions);
     }
 
-    // 3. Efecto 3D Card
-    const card = document.querySelector('.login-card');
-    if (card) {
-        card.addEventListener('mousemove', (e) => {
-            const x = (window.innerWidth / 2 - e.pageX) / 25;
-            const y = (window.innerHeight / 2 - e.pageY) / 25;
-            card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-        });
-    }
+    return () => eventController.abort();
+}
 
-});
+window.NotaireAuthScreens = window.NotaireAuthScreens || {};
+window.NotaireAuthScreens.login = initializeLoginScreen;
 
 async function parseLoginResponse(response) {
     const body = await response.text();

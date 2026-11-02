@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initializeRecoveryScreen() {
+    const eventController = new AbortController();
+    const listenerOptions = { signal: eventController.signal };
     const form = document.getElementById('recoveryForm');
     const submitBtn = document.getElementById('submitBtn');
 
@@ -47,60 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('loading');
             }
-        });
+        }, listenerOptions);
     }
 
-    const canvas = document.getElementById('windParticles');
-    const context = canvas?.getContext('2d');
-    const card = document.querySelector('.recovery-card');
+    return () => eventController.abort();
+}
 
-    if (canvas && context) {
-        let width = 0;
-        let height = 0;
-        let particles = [];
-
-        function resizeCanvas() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-            particles = Array.from({ length: 80 }, () => ({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                speed: Math.random() * 3 + 2,
-                size: Math.random() * 1.5 + 0.5,
-                opacity: Math.random() * 0.3 + 0.05
-            }));
-        }
-
-        function animateParticles() {
-            context.clearRect(0, 0, width, height);
-            particles.forEach(particle => {
-                particle.x += particle.speed;
-                if (particle.x > width + 50) particle.x = -50;
-                context.beginPath();
-                context.moveTo(particle.x, particle.y);
-                context.lineTo(particle.x - 15, particle.y);
-                context.strokeStyle = `rgba(255, 255, 255, ${particle.opacity})`;
-                context.lineWidth = particle.size;
-                context.stroke();
-            });
-            window.requestAnimationFrame(animateParticles);
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        animateParticles();
-    }
-
-    if (card) {
-        card.addEventListener('mousemove', event => {
-            const x = (window.innerWidth / 2 - event.pageX) / 25;
-            const y = (window.innerHeight / 2 - event.pageY) / 25;
-            card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-        });
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = '';
-        });
-    }
-});
+window.NotaireAuthScreens = window.NotaireAuthScreens || {};
+window.NotaireAuthScreens.recovery = initializeRecoveryScreen;

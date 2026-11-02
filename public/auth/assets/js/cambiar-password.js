@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initializeChangePasswordScreen() {
+    const eventController = new AbortController();
+    const listenerOptions = { signal: eventController.signal };
     const form = document.getElementById('changePasswordForm');
     const button = document.getElementById('changePasswordBtn');
     const status = document.getElementById('formStatus');
@@ -83,5 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
             button.classList.remove('loading');
             if (buttonLabel) buttonLabel.textContent = 'Actualizar contraseña';
         }
-    });
-});
+    }, listenerOptions);
+
+    return () => eventController.abort();
+}
+
+window.NotaireAuthScreens = window.NotaireAuthScreens || {};
+window.NotaireAuthScreens['change-password'] = initializeChangePasswordScreen;

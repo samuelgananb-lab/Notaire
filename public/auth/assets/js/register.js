@@ -1,7 +1,9 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initializeRegisterScreen() {
+    const eventController = new AbortController();
+    const listenerOptions = { signal: eventController.signal };
     const formRegistro = document.getElementById('formRegistro') || document.getElementById('registerForm') || document.querySelector('form');
 
-    if (!formRegistro) return;
+    if (!formRegistro) return () => eventController.abort();
 
     const passwordInput = document.getElementById('password');
     const meterBars = document.querySelectorAll('#passwordMeter span');
@@ -14,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         meterBars.forEach((bar, index) => {
             bar.style.background = index < score ? (score < 3 ? '#f59e0b' : '#10b981') : 'rgba(255,255,255,.13)';
         });
-    });
+    }, listenerOptions);
 
     formRegistro.addEventListener('submit', async event => {
         event.preventDefault();
@@ -80,8 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.querySelector('span').textContent = 'Crear cuenta';
             }
         }
-    });
-});
+    }, listenerOptions);
+
+    return () => eventController.abort();
+}
+
+window.NotaireAuthScreens = window.NotaireAuthScreens || {};
+window.NotaireAuthScreens.register = initializeRegisterScreen;
 
 function togglePassword(inputId, toggleElement) {
     const input = document.getElementById(inputId);
