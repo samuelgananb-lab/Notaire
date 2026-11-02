@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-panel-finishes">
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-history-menu-mobile">
     <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-panel-finishes">
     <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261105-panel-finishes">
     <script src="../../assets/js/password-toggle.js?v=20261102-password-eye2"></script>
@@ -777,6 +777,13 @@
                                     <button type="button" id="calculatorClearHistory" class="calculator-history-clear" aria-label="Borrar historial" title="Borrar historial"><i class="fas fa-trash-can"></i></button>
                                 </div>
                                 <div id="calculatorHistoryList" class="calculator-history-list" aria-live="polite"></div>
+                                <button type="button" id="calculatorHistoryMore" class="calculator-history-more" aria-expanded="false" aria-controls="calculatorHistoryMorePanel" hidden>
+                                    <span id="calculatorHistoryMoreLabel"></span><i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <div id="calculatorHistoryMorePanel" class="calculator-history-more-panel" hidden>
+                                    <div class="calculator-history-more-heading">Operaciones anteriores</div>
+                                    <div id="calculatorHistoryMoreList" class="calculator-history-more-list" aria-label="Operaciones anteriores"></div>
+                                </div>
                             </section>
                         </aside>
                     </div>
@@ -1400,12 +1407,12 @@
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261105-calendar-payments"></script>
-    <script src="assets/js/scientific-calculator.js?v=20261102-rate-fix5"></script>
+    <script src="assets/js/scientific-calculator.js?v=20261105-history-menu"></script>
     <script src="assets/js/saldo.js?v=20261105-panel-finishes"></script>
     <script src="assets/js/inicio.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
     <script src="assets/js/cliente-solicitudes.js?v=20261105-panel-finishes"></script>
-    <script src="../../assets/js/notaire-i18n.js?v=20261105-panel-finishes"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261105-history-menu"></script>
 </body>
 
 </html>
