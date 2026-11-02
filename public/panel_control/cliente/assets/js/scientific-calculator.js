@@ -12,6 +12,7 @@
     const historyMoreLabel = document.getElementById('calculatorHistoryMoreLabel');
     const historyMorePanel = document.getElementById('calculatorHistoryMorePanel');
     const historyMoreList = document.getElementById('calculatorHistoryMoreList');
+    const historyCloseButton = document.getElementById('calculatorHistoryClose');
     const memoryIndicator = document.getElementById('calculatorMemoryIndicator');
     const maxHistoryItems = 10;
     const visibleHistoryItems = 3;
@@ -93,20 +94,8 @@
 
     function setHistoryMenuOpen(isOpen) {
         if (!historyMoreButton || !historyMorePanel) return;
-        if (isOpen) {
-            const cardBounds = historyMorePanel.parentElement?.getBoundingClientRect?.();
-            if (cardBounds && Number.isFinite(window.innerHeight)) {
-                const spaceAbove = cardBounds.top - 4;
-                const spaceBelow = window.innerHeight - cardBounds.bottom - 4;
-                const opensAbove = spaceAbove > spaceBelow;
-                historyMorePanel.dataset.placement = opensAbove ? 'above' : 'below';
-                historyMorePanel.style.maxHeight = `${Math.max(80, Math.min(280, Math.floor(Math.max(spaceAbove, spaceBelow))))}px`;
-            }
-        } else {
-            delete historyMorePanel.dataset.placement;
-            historyMorePanel.style.maxHeight = '';
-        }
-        historyMorePanel.hidden = !isOpen;
+        historyMorePanel.dataset.open = String(isOpen);
+        historyMorePanel.setAttribute('aria-hidden', String(!isOpen));
         historyMoreButton.setAttribute('aria-expanded', String(isOpen));
         const icon = historyMoreButton.querySelector('i');
         if (icon) {
@@ -837,11 +826,16 @@
     });
 
     historyMoreButton?.addEventListener('click', () => {
-        setHistoryMenuOpen(historyMorePanel.hidden);
+        setHistoryMenuOpen(historyMorePanel.dataset.open !== 'true');
+    });
+
+    historyCloseButton?.addEventListener('click', () => {
+        setHistoryMenuOpen(false);
+        historyMoreButton?.focus();
     });
 
     document.addEventListener('click', event => {
-        if (historyMorePanel?.hidden || historyMoreButton?.contains(event.target) || historyMorePanel?.contains(event.target)) return;
+        if (historyMorePanel?.dataset.open !== 'true' || historyMoreButton?.contains(event.target) || historyMorePanel?.contains(event.target)) return;
         setHistoryMenuOpen(false);
     });
 
@@ -858,7 +852,7 @@
 
     document.addEventListener('keydown', event => {
         if (!document.getElementById('view-calculadora')?.classList.contains('active')) return;
-        if (event.key === 'Escape' && historyMorePanel && !historyMorePanel.hidden) {
+        if (event.key === 'Escape' && historyMorePanel?.dataset.open === 'true') {
             setHistoryMenuOpen(false);
             historyMoreButton?.focus();
             return;
