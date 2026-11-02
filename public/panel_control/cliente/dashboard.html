@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark" data-color-palette="purple">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
     <title>Notaire - Panel del Cliente</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css">
-    <script src="../../assets/js/auth-guard.js"></script>
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-panel-finishes">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-panel-finishes">
+    <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261105-panel-finishes">
+    <script src="../../assets/js/password-toggle.js?v=20261102-password-eye2"></script>
+    <script src="../../assets/js/auth-guard.js?v=20261105-panel-finishes"></script>
 </head>
 
 <body>
@@ -25,40 +29,55 @@
             <div class="sidebar-top-section">
                 <div class="brand-header">
                     <svg class="brand-logo-hex" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="#7c3aed" />
-                        <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="#6d28d9" />
-                        <text x="50" y="70" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold" fill="white" text-anchor="middle">N</text>
+                        <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="var(--color-primary)" />
+                        <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="var(--color-primary-hover)" />
+                        <text x="50" y="50" dominant-baseline="central" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold" fill="white" text-anchor="middle">N</text>
                     </svg>
                     <span class="brand-title">NOTAIRE</span>
+                    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Colapsar menú" aria-label="Colapsar menú" aria-expanded="true">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
 
                 <nav class="sidebar-nav">
                     <ul id="sidebarMenu">
-                        <li class="active"><a href="#" data-target="view-inicio"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
-                        <li><a href="#" data-target="view-gastos"><i class="fas fa-receipt"></i> <span>Gastos</span></a></li>
-                        <li><a href="#" data-target="view-ingresos"><i class="fas fa-chart-line"></i> <span>Ingresos</span></a></li>
-                        <li><a href="#" data-target="view-ahorros"><i class="fas fa-piggy-bank"></i> <span>Ahorros</span></a></li>
-                        <li><a href="#" data-target="view-saldo"><i class="fas fa-scale-balanced"></i> <span>Saldo</span></a></li>
-                        <li><a href="#" data-target="view-metas"><i class="fas fa-bullseye"></i> <span>Metas</span></a></li>
-                        <li><a href="#" data-target="view-recordatorios"><i class="fas fa-calendar-alt"></i> <span>Calendario</span></a></li>
-                        <li><a href="#" data-target="view-configuracion"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="panel">Panel</span></li>
+                        <li class="active"><a href="#" data-target="view-inicio" title="Inicio"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="finanzas">Finanzas</span></li>
+                        <li><a href="#" data-target="view-saldo" title="Saldo"><i class="fas fa-scale-balanced"></i> <span>Saldo</span></a></li>
+                        <li><a href="#" data-target="view-ingresos" title="Ingresos"><i class="fas fa-chart-line"></i> <span>Ingresos</span></a></li>
+                        <li><a href="#" data-target="view-gastos" title="Gastos"><i class="fas fa-receipt"></i> <span>Gastos</span></a></li>
+                        <li><a href="#" data-target="view-metas" title="Ahorros"><i class="fas fa-piggy-bank"></i> <span>Ahorros</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="planificacion">Planificación</span></li>
+                        <li><a href="#" data-target="view-recordatorios" title="Calendario"><i class="fas fa-calendar-alt"></i> <span>Calendario</span></a></li>
+                        <li><a href="#" data-target="view-calculadora" title="Calculadora"><i class="fas fa-calculator"></i> <span>Calculadora</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="cuenta">Cuenta</span></li>
+                        <li><a href="#" data-target="view-solicitudes" title="Soporte"><i class="fas fa-life-ring"></i> <span>Soporte</span></a></li>
+                        <li><a href="#" data-target="view-configuracion" title="Configuración"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
                     </ul>
                 </nav>
             </div>
 
             <div class="sidebar-profile" onclick="openModalPerfil()" title="Ver perfil de usuario">
                 <div class="profile-avatar-circle" id="sidebarAvatarCircle">
-                    <span>SG</span>
+                    <span id="sidebarAvatarInitials">US</span>
                 </div>
                 <div class="profile-info">
-                    <span class="profile-name-text" id="sidebarUserName">Samuel Gañán</span>
+                    <span class="profile-name-text" id="sidebarUserName">Usuario</span>
                     <span class="profile-action-link"><i class="fas fa-user-gear"></i> Ver perfil</span>
                 </div>
             </div>
         </aside>
 
+        <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop" aria-hidden="true"></div>
+
         <main class="main-content">
+            <button class="mobile-menu-trigger" id="mobileMenuTrigger" type="button" aria-label="Abrir menú" aria-expanded="false"><i class="fas fa-bars"></i></button>
             <header class="top-header">
+                <div class="mobile-brand" aria-hidden="true">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="var(--color-primary)" /><text x="50" y="70" font-family="'Outfit', sans-serif" font-size="55" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>
+                    <span>NOTAIRE</span>
+                </div>
                 <div class="header-title-box">
                     <h1 id="headerDynamicTitle">PANEL PRINCIPAL</h1>
                 </div>
@@ -70,6 +89,19 @@
                     </div>
 
                     <div class="header-actions">
+                        <div class="notification-center" id="notificationCenter">
+                            <button class="icon-btn-action notification-bell" id="notificationBell" type="button" aria-label="Abrir notificaciones" aria-expanded="false" aria-controls="notificationPanel" title="Notificaciones">
+                                <i class="fas fa-bell"></i><span class="notification-count" id="notificationCount" hidden>0</span>
+                            </button>
+                            <section class="notification-panel" id="notificationPanel" aria-label="Centro de notificaciones" hidden>
+                                <header class="notification-panel-header">
+                                    <div><strong>Notificaciones</strong><span id="notificationSummary">Todo al día</span></div>
+                                    <button type="button" id="markNotificationsRead" class="notification-mark-read">Marcar leídas</button>
+                                </header>
+                                <div class="notification-list" id="notificationList" role="list"></div>
+                                <button type="button" class="notification-settings-link" onclick="openNotifSettings()"><i class="fas fa-gear"></i> Gestionar notificaciones</button>
+                            </section>
+                        </div>
                         <button class="icon-btn-action lang-btn" id="langToggleBtn" title="Cambiar idioma / Switch language">
                             <span class="lang-flag">🌐</span> <span class="lang-text" id="headerLangCode">ES</span>
                         </button>
@@ -93,18 +125,18 @@
                     <div class="hero-welcome-banner">
                         <div class="hero-welcome-left">
                             <div class="hero-greeting-badge"><i class="fas fa-star"></i> Panel Financiero Personal</div>
-                            <h2 class="hero-welcome-title">¡Buenas noches, <span id="heroUserName">Samuel</span>! 👋</h2>
+                                     <h2 class="hero-welcome-title"><span id="saludo-texto">¡Buenas noches,</span> <span id="nombre-usuario-saludo">Usuario</span>! 👋</h2>
                             <p class="hero-welcome-subtitle">Aquí tienes un resumen de tu situación financiera de hoy. Todo está bajo control.</p>
                             <div class="hero-cta-group">
-                                <button class="btn-hero-action" onclick="navigateTo('view-gastos')"><i class="fas fa-plus"></i> Registrar movimiento</button>
+                                <button class="btn-hero-action" id="btnAbrirMovimiento"><i class="fas fa-plus"></i> Registrar movimiento</button>
                                 <button class="btn-hero-secondary" onclick="navigateTo('view-recordatorios')"><i class="fas fa-calendar-alt"></i> Ver calendario</button>
                             </div>
                         </div>
                         <div class="hero-welcome-right">
                             <div class="hero-balance-card">
-                                <div class="hero-balance-label">Patrimonio Neto</div>
-                                <div class="hero-balance-amount">$8.750.000</div>
-                                <div class="hero-balance-trend"><i class="fas fa-arrow-trend-up"></i> +9.7% este mes</div>
+                                <div class="hero-balance-label">Liquidez</div>
+                                <div class="hero-balance-amount">$0</div>
+                                <div class="hero-balance-trend"><i class="fas fa-arrow-trend-up"></i> Sin datos registrados</div>
                                 <div class="hero-balance-decoration"></div>
                             </div>
                         </div>
@@ -113,35 +145,36 @@
                     <!-- Quick Stats Row -->
                     <div class="home-stats-row">
                         <div class="home-stat-card home-stat-income">
-                            <div class="home-stat-icon"><i class="fas fa-arrow-down-to-bracket"></i></div>
+                            <div class="home-stat-icon"><i class="fas fa-arrow-up"></i></div>
                             <div class="home-stat-info">
                                 <span class="home-stat-label">Ingresos del mes</span>
-                                <span class="home-stat-value">$2.450.000</span>
-                                <span class="home-stat-sub trend-up"><i class="fas fa-caret-up"></i> +12.6%</span>
+                                <span class="home-stat-value" id="kpiIngresosMes">$0</span>
+                                <span class="home-stat-sub trend-up" id="ingresosVariacion"><i class="fas fa-minus"></i> Sin comparación</span>
                             </div>
                         </div>
                         <div class="home-stat-card home-stat-expense">
-                            <div class="home-stat-icon"><i class="fas fa-arrow-up-from-bracket"></i></div>
+                            <div class="home-stat-icon"><i class="fas fa-arrow-down"></i></div>
                             <div class="home-stat-info">
                                 <span class="home-stat-label">Gastos del mes</span>
-                                <span class="home-stat-value">$1.240.500</span>
-                                <span class="home-stat-sub trend-down"><i class="fas fa-caret-up"></i> +8.4%</span>
+                                <span class="home-stat-value" id="kpiGastosMes">$0</span>
+                                <span class="home-stat-sub trend-down" id="gastosVariacion"><i class="fas fa-minus"></i> Sin comparación</span>
                             </div>
                         </div>
                         <div class="home-stat-card home-stat-savings">
                             <div class="home-stat-icon"><i class="fas fa-piggy-bank"></i></div>
                             <div class="home-stat-info">
                                 <span class="home-stat-label">Ahorros acumulados</span>
-                                <span class="home-stat-value">$3.250.000</span>
+                                <span class="home-stat-value" id="kpiAhorrosTotales">$0</span>
                                 <span class="home-stat-sub trend-up"><i class="fas fa-caret-up"></i> +15.3%</span>
                             </div>
                         </div>
                         <div class="home-stat-card home-stat-goals">
                             <div class="home-stat-icon"><i class="fas fa-bullseye"></i></div>
                             <div class="home-stat-info">
-                                <span class="home-stat-label">Metas activas</span>
-                                <span class="home-stat-value">4 metas</span>
-                                <span class="home-stat-sub trend-neutral">64% promedio</span>
+                                <span class="home-stat-label">Metas de ahorro</span>
+                                <span class="home-stat-value" id="kpiMetasActivas">0</span>
+                                <span class="home-stat-sub trend-neutral" id="kpiMetasPromedio">0% progreso promedio</span>
+                                <span class="goal-status-summary" id="homeMetaStatus"></span>
                             </div>
                         </div>
                     </div>
@@ -152,26 +185,8 @@
                         <div class="card-box">
                             <div class="card-box-header">
                                 <h3><i class="fas fa-clock" style="color: var(--color-secondary-light); margin-right: 8px;"></i>Actividad reciente</h3>
-                                <button class="btn-link-action" onclick="navigateTo('view-gastos')">Ver gastos</button>
                             </div>
-                            <div class="transactions-list">
-                                <div class="transaction-row">
-                                    <div class="transaction-left"><div class="transaction-icon-box">🍔</div><div class="transaction-info"><span class="transaction-title">Restaurante</span><span class="transaction-date">Hoy • Alimentación</span></div></div>
-                                    <span class="transaction-amount-negative">-$35.000</span>
-                                </div>
-                                <div class="transaction-row">
-                                    <div class="transaction-left"><div class="transaction-icon-box">💼</div><div class="transaction-info"><span class="transaction-title">Salario - Empresa</span><span class="transaction-date">Hoy • Salario</span></div></div>
-                                    <span class="transaction-amount-positive">+$1.800.000</span>
-                                </div>
-                                <div class="transaction-row">
-                                    <div class="transaction-left"><div class="transaction-icon-box">🚌</div><div class="transaction-info"><span class="transaction-title">Transporte</span><span class="transaction-date">Ayer • Transporte</span></div></div>
-                                    <span class="transaction-amount-negative">-$8.500</span>
-                                </div>
-                                <div class="transaction-row">
-                                    <div class="transaction-left"><div class="transaction-icon-box">💻</div><div class="transaction-info"><span class="transaction-title">Proyecto Freelance</span><span class="transaction-date">15 Ago • Freelance</span></div></div>
-                                    <span class="transaction-amount-positive">+$350.000</span>
-                                </div>
-                            </div>
+                            <div class="transactions-list" id="listaActividadReciente"></div>
                         </div>
 
                         <!-- Goals Progress -->
@@ -180,48 +195,7 @@
                                 <h3><i class="fas fa-trophy" style="color: var(--color-accent-orange); margin-right: 8px;"></i>Progreso de metas</h3>
                                 <button class="btn-link-action" onclick="navigateTo('view-metas')">Ver todas</button>
                             </div>
-                            <div class="home-goals-list">
-                                <div class="home-goal-row">
-                                    <div class="home-goal-left">
-                                        <span class="home-goal-icon">✈️</span>
-                                        <div class="home-goal-info">
-                                            <span class="home-goal-name">Viaje a Europa</span>
-                                            <div class="home-goal-bar"><div class="home-goal-fill" style="width: 75%; background: #10b981;"></div></div>
-                                        </div>
-                                    </div>
-                                    <span class="home-goal-pct" style="color: #10b981;">75%</span>
-                                </div>
-                                <div class="home-goal-row">
-                                    <div class="home-goal-left">
-                                        <span class="home-goal-icon">🛡️</span>
-                                        <div class="home-goal-info">
-                                            <span class="home-goal-name">Fondo de emergencia</span>
-                                            <div class="home-goal-bar"><div class="home-goal-fill" style="width: 60%; background: #3b82f6;"></div></div>
-                                        </div>
-                                    </div>
-                                    <span class="home-goal-pct" style="color: #3b82f6;">60%</span>
-                                </div>
-                                <div class="home-goal-row">
-                                    <div class="home-goal-left">
-                                        <span class="home-goal-icon">💻</span>
-                                        <div class="home-goal-info">
-                                            <span class="home-goal-name">Nueva Laptop</span>
-                                            <div class="home-goal-bar"><div class="home-goal-fill" style="width: 40%; background: #f59e0b;"></div></div>
-                                        </div>
-                                    </div>
-                                    <span class="home-goal-pct" style="color: #f59e0b;">40%</span>
-                                </div>
-                                <div class="home-goal-row">
-                                    <div class="home-goal-left">
-                                        <span class="home-goal-icon">🏠</span>
-                                        <div class="home-goal-info">
-                                            <span class="home-goal-name">Casa propia</span>
-                                            <div class="home-goal-bar"><div class="home-goal-fill" style="width: 25%; background: #8b5cf6;"></div></div>
-                                        </div>
-                                    </div>
-                                    <span class="home-goal-pct" style="color: #8b5cf6;">25%</span>
-                                </div>
-                            </div>
+                            <div class="home-goals-list" id="widgetProgresoMetas"></div>
                         </div>
                     </div>
 
@@ -234,20 +208,7 @@
                             </div>
                             <button class="btn-link-action" onclick="navigateTo('view-recordatorios')">Ver calendario <i class="fas fa-arrow-right"></i></button>
                         </div>
-                        <div class="home-reminders-chips" id="homeRemindersChips">
-                            <div class="reminder-chip reminder-chip-urgent">
-                                <i class="fas fa-fire"></i>
-                                <span>Pago de servicios – Hoy 11:00 AM</span>
-                            </div>
-                            <div class="reminder-chip reminder-chip-soon">
-                                <i class="fas fa-clock"></i>
-                                <span>Revisión de cuenta – Mañana</span>
-                            </div>
-                            <div class="reminder-chip reminder-chip-normal">
-                                <i class="fas fa-calendar"></i>
-                                <span>Pago hipoteca – 27 Ago</span>
-                            </div>
-                        </div>
+                        <div class="home-reminders-chips" id="homeRemindersChips"></div>
                     </div>
                 </div>
 
@@ -260,99 +221,24 @@
                             <h2>MIS GASTOS</h2>
                             <p>Controla y analiza en qué estás utilizando tu dinero.</p>
                         </div>
-                        <div class="section-actions-group">
-                            <select class="period-select" id="gastosPeriodSelect">
-                                <option value="este_mes">Este mes</option>
-                                <option value="mes_pasado">Mes pasado</option>
-                            </select>
-                            <button class="btn-primary-action" onclick="openModalRegistrarGasto()">
-                                <i class="fas fa-plus"></i> Registrar gasto
-                            </button>
-                        </div>
                     </div>
 
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">GASTADO ESTE MES</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valGastadoEsteMes">$1.240.500</div></div>
-                            <div><span class="metric-trend-badge trend-down"><i class="fas fa-caret-up"></i> 8.4% vs el mes pasado</span></div>
+                    <div class="card-box financial-history-panel" data-financial-type="gasto">
+                        <div class="financial-history-header">
+                            <h3>Listado de Gastos</h3>
+                            <div><span>Total:</span><strong class="financial-history-total" id="total-seccion-detallada-gasto">$0</strong></div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PRESUPUESTO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valPresupuestoTotal">$1.500.000</div></div>
-                            <div><span class="progress-pill-red" id="valPresupuestoPct">82.7% utilizado</span></div>
+                        <div class="financial-history-filters">
+                            <label><span>Buscar</span><input type="search" data-history-filter="search" placeholder="Buscar por categoría o descripción..." oninput="aplicarFiltros('gasto')"></label>
+                            <button type="button" onclick="limpiarFiltros('gasto')">Limpiar</button>
+                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros('gasto')"></label>
+                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros('gasto')"></label>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">DISPONIBLE</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valDisponibleGastos">$259.500</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">restante</span></div>
-                        </div>
-                    </div>
-
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>¿En qué gastas más?</h3></div>
-                            <div class="donut-container">
-                                <canvas id="chartGastosDona" width="220" height="220"></canvas>
-                                <div class="donut-center-label">
-                                    <span id="centerGastosTotal">$1.240.500</span>
-                                    <small>Gastos totales</small>
-                                </div>
-                            </div>
-                            <div class="legend-list">
-                                <div class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Alimentación 32%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Transporte 21%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #06b6d4;"></span> Entretenimiento 18%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Servicios 16%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #64748b;"></span> Otros 13%</div>
-                            </div>
-                        </div>
-
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Tus mayores gastos</h3></div>
-                            <div class="category-progress-list" id="listMayoresGastos">
-                                <div class="category-progress-item">
-                                    <div class="category-info-row">
-                                        <span class="category-name-icon">🍔 Alimentación</span>
-                                        <div class="category-amount-pct"><span class="category-amount">$396.000</span><span class="category-pct">32%</span></div>
-                                    </div>
-                                    <div class="progress-track-bg"><div class="progress-fill-bar" style="width: 32%; background: #f59e0b;"></div></div>
-                                </div>
-                                <div class="category-progress-item">
-                                    <div class="category-info-row">
-                                        <span class="category-name-icon">🚌 Transporte</span>
-                                        <div class="category-amount-pct"><span class="category-amount">$260.000</span><span class="category-pct">21%</span></div>
-                                    </div>
-                                    <div class="progress-track-bg"><div class="progress-fill-bar" style="width: 21%; background: #8b5cf6;"></div></div>
-                                </div>
-                                <div class="category-progress-item">
-                                    <div class="category-info-row">
-                                        <span class="category-name-icon">🎮 Entretenimiento</span>
-                                        <div class="category-amount-pct"><span class="category-amount">$223.000</span><span class="category-pct">18%</span></div>
-                                    </div>
-                                    <div class="progress-track-bg"><div class="progress-fill-bar" style="width: 18%; background: #06b6d4;"></div></div>
-                                </div>
-                                <div class="category-progress-item">
-                                    <div class="category-info-row">
-                                        <span class="category-name-icon">🏠 Servicios</span>
-                                        <div class="category-amount-pct"><span class="category-amount">$198.000</span><span class="category-pct">16%</span></div>
-                                    </div>
-                                    <div class="progress-track-bg"><div class="progress-fill-bar" style="width: 16%; background: #10b981;"></div></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-box">
-                        <div class="card-box-header">
-                            <h3>Últimos movimientos</h3>
-                            <button class="btn-link-action" onclick="openModalVerTodos('movimientos')">Ver todos</button>
-                        </div>
-                        <div class="transactions-list" id="listUltimosMovimientos">
-                            <div class="transaction-row">
-                                <div class="transaction-left"><div class="transaction-icon-box">🍔</div><div class="transaction-info"><span class="transaction-title">Restaurante</span><span class="transaction-date">Hoy</span></div></div>
-                                <span class="transaction-amount-negative">-$35.000</span>
-                            </div>
+                        <div class="financial-history-table-wrap">
+                            <table class="financial-history-table">
+                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+                                <tbody class="financial-history-body" id="tabla-detallada-body-gasto" aria-live="polite"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -366,164 +252,126 @@
                             <h2>MIS INGRESOS</h2>
                             <p>Visualiza tus fuentes de dinero y su evolución.</p>
                         </div>
-                        <div class="section-actions-group">
-                            <button class="btn-primary-action" onclick="openModalRegistrarIngreso()">
-                                <i class="fas fa-plus"></i> Registrar ingreso
-                            </button>
-                        </div>
                     </div>
 
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">TOTAL INGRESOS</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valTotalIngresos">$2.450.000</div></div>
-                            <div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> 12.6% vs el mes pasado</span></div>
+                    <div class="card-box financial-history-panel" data-financial-type="ingreso">
+                        <div class="financial-history-header">
+                            <h3>Listado de Ingresos</h3>
+                            <div><span>Total:</span><strong class="financial-history-total" id="total-seccion-detallada-ingreso">$0</strong></div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PROMEDIO MENSUAL</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valPromedioMensual">$2.180.000</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">Últimos 6 meses</span></div>
+                        <div class="financial-history-filters">
+                            <label><span>Buscar</span><input type="search" data-history-filter="search" placeholder="Buscar por categoría o descripción..." oninput="aplicarFiltros('ingreso')"></label>
+                            <button type="button" onclick="limpiarFiltros('ingreso')">Limpiar</button>
+                            <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros('ingreso')"></label>
+                            <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros('ingreso')"></label>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">MAYOR INGRESO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valMayorIngreso">$1.800.000</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">Salario principal</span></div>
-                        </div>
-                    </div>
-
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Evolución de ingresos</h3></div>
-                            <div style="height: 220px; position: relative;"><canvas id="chartEvolucionIngresos"></canvas></div>
-                        </div>
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Fuentes de ingresos</h3></div>
-                            <div class="donut-container">
-                                <canvas id="chartFuentesIngresos" width="220" height="220"></canvas>
-                                <div class="donut-center-label"><span id="centerIngresosTotal">$2.450.000</span><small>Total</small></div>
-                            </div>
-                            <div class="legend-list">
-                                <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Salario 73%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #06b6d4;"></span> Freelance 15%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Negocio 8%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Otros 4%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-box">
-                        <div class="card-box-header">
-                            <h3>Últimos ingresos</h3>
-                            <button class="btn-link-action" onclick="openModalVerTodos('ingresos')">Ver todos</button>
-                        </div>
-                        <div class="transactions-list" id="listUltimosIngresos">
-                            <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box">💼</div><div class="transaction-info"><span class="transaction-title">Salario - Empresa</span><span class="transaction-date">Hoy</span></div></div><span class="transaction-amount-positive">+$1.800.000</span></div>
+                        <div class="financial-history-table-wrap">
+                            <table class="financial-history-table">
+                                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+                                <tbody class="financial-history-body" id="tabla-detallada-body-ingreso" aria-live="polite"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
                 <!-- ============================================================ -->
-                <!-- MIS AHORROS                                                   -->
-                <!-- ============================================================ -->
-                <div class="content-section" id="view-ahorros">
-                    <div class="section-header-bar">
-                        <div class="section-title-group">
-                            <h2>MIS AHORROS</h2>
-                            <p>Sigue el progreso de tus metas y alcanza tus sueños.</p>
-                        </div>
-                        <div class="section-actions-group">
-                            <button class="btn-primary-action" onclick="openModalNuevaMeta()"><i class="fas fa-plus"></i> Nueva meta</button>
-                        </div>
-                    </div>
-
-                    <div class="metrics-grid">
-                        <div class="metric-card"><div class="metric-card-header">TOTAL AHORRADO</div><div class="metric-card-body"><div class="metric-value" id="valTotalAhorrado">$3.250.000</div></div><div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> 15.3% vs el mes pasado</span></div></div>
-                        <div class="metric-card"><div class="metric-card-header">METAS ACTIVAS</div><div class="metric-card-body"><div class="metric-value" id="valMetasActivasCount">4</div></div><div><span class="metric-trend-badge trend-neutral">en progreso</span></div></div>
-                        <div class="metric-card"><div class="metric-card-header">PORCENTAJE TOTAL</div><div class="metric-card-body"><div class="metric-value" id="valPorcentajeTotalMetas">64%</div></div><div><div class="progress-track-bg" style="margin-top: 10px;"><div class="progress-fill-bar" style="width: 64%; background: #10b981;"></div></div></div></div>
-                    </div>
-
-                    <div class="card-box" style="background: transparent; border: none; padding: 0; box-shadow: none;">
-                        <h3 style="font-size: 18px; color: white; margin-bottom: 16px;">Mis metas</h3>
-                        <div class="goals-grid" id="containerGoalsGrid"></div>
-                    </div>
-
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Ahorros recientes</h3></div>
-                            <div class="transactions-list" id="listAhorrosRecientes">
-                                <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box" style="background: rgba(16, 185, 129, 0.15);">💚</div><div class="transaction-info"><span class="transaction-title">Aporte a Viaje a Europa</span><span class="transaction-date">Hoy</span></div></div><span class="transaction-amount-positive">+$150.000</span></div>
-                                <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box" style="background: rgba(16, 185, 129, 0.15);">💚</div><div class="transaction-info"><span class="transaction-title">Aporte a Fondo de emergencia</span><span class="transaction-date">Ayer</span></div></div><span class="transaction-amount-positive">+$100.000</span></div>
-                            </div>
-                        </div>
-                        <div class="savings-tip-card">
-                            <div class="tip-icon-glow">💡</div>
-                            <div class="tip-content">
-                                <h4>Tip de ahorro</h4>
-                                <p><strong>¡Vas por buen camino!</strong><br>Si ahorras $150.000 más al mes, alcanzarás tus metas 2 meses antes.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- ============================================================ -->
                 <!-- MI SALDO                                                      -->
                 <!-- ============================================================ -->
                 <div class="content-section" id="view-saldo">
-                    <div class="section-header-bar">
-                        <div class="section-title-group">
-                            <h2>MI SALDO</h2>
-                            <p>Conoce tu situación financiera total.</p>
-                        </div>
-                    </div>
+                    <div id="seccion-saldo" class="saldo-page">
+                        <header class="saldo-page-header">
+                            <div>
+                                <span class="saldo-page-eyebrow"><i class="fas fa-chart-line" aria-hidden="true"></i> Análisis financiero</span>
+                                <h2>Mi saldo</h2>
+                                <p>Un resumen claro de tu liquidez, tus movimientos y tus ahorros.</p>
+                            </div>
+                            <span class="saldo-page-mark" aria-hidden="true"><i class="fas fa-wallet"></i></span>
+                        </header>
 
-                    <div class="metrics-grid-4">
-                        <div class="metric-card"><div class="metric-card-header">PATRIMONIO NETO</div><div class="metric-card-body"><div class="metric-value" id="valPatrimonioNeto">$8.750.000</div></div><div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> 9.7% vs el mes pasado</span></div></div>
-                        <div class="metric-card"><div class="metric-card-header">ACTIVOS</div><div class="metric-card-body"><div class="metric-value" id="valActivosTotal">$12.400.000</div></div><div><span class="metric-trend-badge trend-neutral">Total</span></div></div>
-                        <div class="metric-card"><div class="metric-card-header">PASIVOS</div><div class="metric-card-body"><div class="metric-value" id="valPasivosTotal">$3.650.000</div></div><div><span class="metric-trend-badge trend-neutral">Total</span></div></div>
-                        <div class="metric-card"><div class="metric-card-header">LIQUIDEZ</div><div class="metric-card-body"><div class="metric-value" id="valLiquidezPct">73%</div></div><div><span class="metric-trend-badge trend-up">Salud financiera</span></div></div>
-                    </div>
+                        <div class="saldo-charts-grid">
+                            <div class="saldo-chart-card saldo-trend-card">
+                                <div class="saldo-trend-header saldo-card-header">
+                                    <div class="saldo-card-heading">
+                                        <span class="saldo-card-icon"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></span>
+                                        <div>
+                                            <h3>Evolución de tu liquidez</h3>
+                                            <p>Ingresos menos gastos a lo largo del tiempo</p>
+                                        </div>
+                                    </div>
+                                    <div class="saldo-period-toggle" role="group" aria-label="Periodo de estadísticas">
+                                        <button type="button" class="is-active" data-saldo-period="monthly" aria-pressed="true">Mensual</button>
+                                        <button type="button" data-saldo-period="weekly" aria-pressed="false">Semanal</button>
+                                    </div>
+                                </div>
+                                <div class="saldo-trend-meta">
+                                    <p class="saldo-trend-range" id="saldoTrendRange"><i class="far fa-calendar" aria-hidden="true"></i> Últimos 6 meses</p>
+                                    <span class="saldo-trend-caption"><span aria-hidden="true"></span> Balance neto</span>
+                                </div>
+                                <p class="saldo-trend-status" id="saldoTrendStatus" role="status" aria-live="polite" hidden></p>
+                                <div class="financial-chart-canvas saldo-trend-canvas">
+                                    <canvas id="graficoEvolucion"></canvas>
+                                </div>
+                            </div>
 
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Evolución de tu patrimonio</h3></div>
-                            <div style="height: 220px; position: relative;"><canvas id="chartPatrimonioEvolucion"></canvas></div>
-                        </div>
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Distribución</h3></div>
-                            <div class="donut-container">
-                                <canvas id="chartDistribucionActivos" width="220" height="220"></canvas>
-                                <div class="donut-center-label"><span id="centerActivosTotal">$12.400.000</span><small>Activos</small></div>
+                            <div class="saldo-chart-card saldo-distribution-card">
+                                <div class="saldo-card-heading saldo-distribution-heading">
+                                    <span class="saldo-card-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>
+                                    <div>
+                                        <h3>Distribución</h3>
+                                        <p>Así se compone tu liquidez</p>
+                                    </div>
+                                </div>
+                                <div class="saldo-donut-layout">
+                                    <canvas id="graficoSaldoDona"></canvas>
+                                    <div class="saldo-donut-center" aria-live="polite">
+                                        <span>Disponible</span>
+                                        <strong id="saldo-dona-liquidez">$0</strong>
+                                        <small>Liquidez actual</small>
+                                    </div>
+                                </div>
+                                <div class="saldo-donut-legend" id="saldoDonaLegend" aria-label="Detalle de la distribución"></div>
                             </div>
-                            <div class="legend-list">
-                                <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Cuentas 35%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #06b6d4;"></span> Inversiones 30%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Bienes 25%</div>
-                                <div class="legend-item"><span class="legend-dot" style="background: #64748b;"></span> Otros 10%</div>
-                            </div>
                         </div>
-                    </div>
 
-                    <div class="two-column-grid">
-                        <div class="card-box">
-                            <div class="card-box-header">
-                                <h3>Tus cuentas</h3>
-                                <button class="btn-link-action" onclick="openModalCuentas()">Ver todos</button>
+                        <section class="saldo-chart-card saldo-summary-card" aria-labelledby="saldoSummaryTitle">
+                            <div class="saldo-summary-header">
+                                <div class="saldo-card-heading">
+                                    <span class="saldo-card-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
+                                    <div>
+                                        <h3 id="saldoSummaryTitle">Resumen financiero</h3>
+                                        <p>Indicadores principales de tu actividad</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="transactions-list">
-                                <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box" style="background: rgba(245, 158, 11, 0.15);">🏛️</div><div class="transaction-info"><span class="transaction-title">Bancolombia Ahorros</span></div></div><span class="transaction-amount-positive">$2.450.000</span></div>
-                                <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box" style="background: rgba(239, 68, 68, 0.15);">📱</div><div class="transaction-info"><span class="transaction-title">Daviplata</span></div></div><span class="transaction-amount-positive">$800.000</span></div>
-                                <div class="transaction-row"><div class="transaction-left"><div class="transaction-icon-box" style="background: rgba(139, 92, 246, 0.15);">🟣</div><div class="transaction-info"><span class="transaction-title">Nequi</span></div></div><span class="transaction-amount-positive">$350.000</span></div>
+                            <div class="saldo-summary-grid">
+                                <article class="saldo-summary-item is-income">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-up" aria-hidden="true"></i> Ingresos totales</span>
+                                    <strong id="saldo-ingresos">$0</strong>
+                                    <small>Entradas registradas</small>
+                                </article>
+                                <article class="saldo-summary-item is-expense">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-down" aria-hidden="true"></i> Gastos totales</span>
+                                    <strong id="saldo-gastos">$0</strong>
+                                    <small>Salidas registradas</small>
+                                </article>
+                                <article class="saldo-summary-item is-savings">
+                                    <span class="saldo-summary-label"><i class="fas fa-piggy-bank" aria-hidden="true"></i> Ahorros / Metas</span>
+                                    <strong id="saldo-ahorrado">$0</strong>
+                                    <small>Ahorro acumulado</small>
+                                </article>
+                                <article class="saldo-summary-item is-available">
+                                    <span class="saldo-summary-label"><i class="fas fa-wallet" aria-hidden="true"></i> Liquidez disponible</span>
+                                    <strong id="saldo-disponible">$0</strong>
+                                    <small>Disponible actualmente</small>
+                                </article>
+                                <article class="saldo-summary-item is-volume">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Movimiento total</span>
+                                    <strong id="saldo-movimiento-total">$0</strong>
+                                    <small>Ingresos y gastos</small>
+                                </article>
                             </div>
-                        </div>
-                        <div class="card-box">
-                            <div class="card-box-header"><h3>Resumen financiero</h3></div>
-                            <div class="summary-financial-list">
-                                <div class="summary-financial-row"><span class="summary-financial-label">Ingresos este mes</span><span class="transaction-amount-positive">+$2.450.000</span></div>
-                                <div class="summary-financial-row"><span class="summary-financial-label">Gastos este mes</span><span class="transaction-amount-negative">-$1.240.500</span></div>
-                                <div class="summary-financial-row"><span class="summary-financial-label">Ahorros este mes</span><span class="transaction-amount-positive">+$800.000</span></div>
-                                <div class="summary-financial-row"><span class="summary-financial-label" style="font-weight: 700; color: white;">Saldo neto</span><span class="summary-net-glow">+$2.009.500</span></div>
-                            </div>
-                        </div>
+                        </section>
                     </div>
                 </div>
 
@@ -533,8 +381,8 @@
                 <div class="content-section" id="view-metas">
                     <div class="section-header-bar">
                         <div class="section-title-group">
-                            <h2>GESTIÓN DE METAS</h2>
-                            <p>Define tus objetivos financieros y alcanza tus sueños.</p>
+                            <h2>AHORROS Y METAS</h2>
+                            <p>Convierte tus planes en metas alcanzables: define cuánto quieres ahorrar, registra tus aportes y sigue tu avance hasta cumplir cada objetivo.</p>
                         </div>
                     </div>
 
@@ -544,7 +392,7 @@
                             <div class="metas-hero-icon">🎯</div>
                             <div class="metas-hero-text">
                                 <h3>Crear nueva meta de ahorro</h3>
-                                <p>Define tu objetivo, monto y fecha límite. Notaire te ayuda a llegar allá.</p>
+                                <p>Elige tu objetivo y una fecha límite; registra cada aporte y celebra tu progreso con Notaire.</p>
                             </div>
                         </div>
                         <button class="btn-add-meta-hero">
@@ -555,28 +403,59 @@
 
                     <!-- Stats rápidos -->
                     <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-card-header">TOTAL AHORRADO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valTotalAhorradoMetas">$6.000.000</div></div>
+                        <div class="metric-card goal-savings-card">
+                            <div class="metric-card-header goal-metric-header">
+                                <span>TOTAL AHORRADO</span>
+                                <span class="goal-metric-icon is-savings" aria-hidden="true"><i class="fas fa-piggy-bank"></i></span>
+                            </div>
+                            <div class="metric-card-body"><div class="metric-value" id="valTotalAhorradoMetas">$0</div></div>
                             <div><span class="metric-trend-badge trend-up"><i class="fas fa-caret-up"></i> +15.3%</span></div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">METAS ACTIVAS</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valMetasCount">4</div></div>
-                            <div><span class="metric-trend-badge trend-neutral">en progreso</span></div>
+                        <div class="metric-card goal-status-card">
+                            <div class="metric-card-header goal-metric-header">
+                                <span>ESTADO DE TUS METAS</span>
+                                <span class="goal-metric-icon is-status" aria-hidden="true"><i class="fas fa-bullseye"></i></span>
+                            </div>
+                            <div class="goal-status-counts">
+                                <div class="goal-status-count is-progress">
+                                    <strong id="valMetasEnProgreso">0</strong>
+                                    <span>En progreso</span>
+                                </div>
+                                <div class="goal-status-count is-completed">
+                                    <strong id="valMetasCompletadas">0</strong>
+                                    <span>Terminadas</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-card-header">PROGRESO PROMEDIO</div>
-                            <div class="metric-card-body"><div class="metric-value" id="valMetasAvgPct">64%</div></div>
-                            <div><div class="progress-track-bg" style="margin-top: 10px;"><div class="progress-fill-bar" style="width: 64%; background: #10b981;"></div></div></div>
+                        <div class="metric-card goal-average-card">
+                            <div class="metric-card-header goal-metric-header">
+                                <span>PROGRESO PROMEDIO</span>
+                                <span class="goal-metric-icon is-progress" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+                            </div>
+                            <div class="metric-card-body"><div class="metric-value" id="valMetasAvgPct">0%</div></div>
+                            <div><div class="progress-track-bg" style="margin-top: 10px;"><div class="progress-fill-bar" style="width: 0%; background: var(--color-primary);"></div></div></div>
                         </div>
                     </div>
 
-                    <!-- Grilla de metas -->
+                    <section class="goals-next-section" aria-labelledby="metasProximasTitle">
+                        <div class="goals-section-heading">
+                            <div>
+                                <h3 id="metasProximasTitle">Más cerca de cumplir</h3>
+                                <p>Tus tres metas activas con mayor avance.</p>
+                            </div>
+                            <span class="goals-section-icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
+                        </div>
+                        <div class="goals-next-grid" id="metasProximasGrid"></div>
+                    </section>
+
+                    <!-- Grilla completa de metas -->
                     <div class="card-box" style="background: transparent; border: none; padding: 0; box-shadow: none;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                            <h3 style="font-size: 18px; color: white;">Mis metas activas</h3>
-                            <span style="font-size: 13px; color: var(--color-text-muted);" id="metasCountLabel">4 metas</span>
+                        <div class="goals-section-heading goals-all-heading">
+                            <div>
+                                <h3>Mis metas</h3>
+                                <p>Consulta tus objetivos en progreso y los que ya completaste.</p>
+                            </div>
+                            <div class="goal-status-summary" id="metasCountLabel" aria-label="Estado de las metas"></div>
                         </div>
                         <div class="goals-grid" id="metasGoalsGrid"></div>
                     </div>
@@ -587,6 +466,90 @@
                         <h3>Aún no tienes metas</h3>
                         <p>Crea tu primera meta de ahorro y empieza a avanzar hacia tus objetivos financieros.</p>
                         <button class="btn-hero-action" onclick="openModalNuevaMeta()"><i class="fas fa-plus"></i> Crear primera meta</button>
+                    </div>
+
+                    <div class="two-column-grid metas-savings-details">
+                        <div class="card-box">
+                            <div class="card-box-header"><h3><i class="fas fa-piggy-bank" style="color: var(--color-primary); margin-right: 8px;"></i><span id="ahorrosRecentTitle">Ahorros recientes</span></h3></div>
+                            <div class="transactions-list" id="listaAhorrosRecientes"></div>
+                        </div>
+                        <div class="savings-tip-card">
+                            <div class="tip-icon-glow" aria-hidden="true">💡</div>
+                            <div class="tip-content">
+                                <h4 id="ahorroTipTitle">Tip Notaire</h4>
+                                <p id="ahorroTipText">No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-card metas-budget-card">
+                        <div class="config-card-header">
+                            <div class="config-card-icon" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div>
+                                <h3>Presupuesto Mensual</h3>
+                                <p>Límite de gastos por categoría</p>
+                            </div>
+                        </div>
+                        <div class="config-fields">
+                            <div class="form-group">
+                                <label class="config-field-label" for="cfgPresupuesto">Presupuesto total mensual ($)</label>
+                                <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="cfgPresupuesto" value="0">
+                            </div>
+                            <div class="budget-categories-list" id="budgetCategoriesList">
+                                <div class="budget-cat-row" data-budget-category="services">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🏠" aria-label="Elegir emoji para Servicios" title="Elegir emoji">🏠</button>
+                                    <input type="text" class="budget-cat-name" value="Servicios" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Servicios"><option value="1" selected>Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Servicios" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Servicios" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                                <div class="budget-cat-row" data-budget-category="food">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🍽️" aria-label="Elegir emoji para Alimentación" title="Elegir emoji">🍽️</button>
+                                    <input type="text" class="budget-cat-name" value="Alimentación" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Alimentación"><option value="1">Prioridad 1</option><option value="2" selected>Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Alimentación" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Alimentación" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                                <div class="budget-cat-row" data-budget-category="transport">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🚌" aria-label="Elegir emoji para Transporte" title="Elegir emoji">🚌</button>
+                                    <input type="text" class="budget-cat-name" value="Transporte" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Transporte"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3" selected>Prioridad 3</option><option value="4">Prioridad 4</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Transporte" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Transporte" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                                <div class="budget-cat-row" data-budget-category="savings">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🐷" aria-label="Elegir emoji para Ahorros" title="Elegir emoji">🐷</button>
+                                    <input type="text" class="budget-cat-name" value="Ahorros" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Ahorros"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4" selected>Prioridad 4</option><option value="5">Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Ahorros" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Ahorros" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                                <div class="budget-cat-row" data-budget-category="entertainment">
+                                    <button type="button" class="budget-cat-icon" data-emoji="🎮" aria-label="Elegir emoji para Entretenimiento" title="Elegir emoji">🎮</button>
+                                    <input type="text" class="budget-cat-name" value="Entretenimiento" aria-label="Nombre de categoría" readonly>
+                                    <select class="budget-cat-priority" aria-label="Prioridad de Entretenimiento"><option value="1">Prioridad 1</option><option value="2">Prioridad 2</option><option value="3">Prioridad 3</option><option value="4">Prioridad 4</option><option value="5" selected>Prioridad 5</option></select>
+                                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" class="budget-cat-input" value="0" placeholder="$" aria-label="Presupuesto de Entretenimiento" readonly>
+                                    <button type="button" class="budget-cat-edit" aria-label="Editar categoría Entretenimiento" title="Editar categoría"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+                                    <div class="budget-cat-emoji-picker" hidden></div>
+                                    <span class="budget-cat-remove-placeholder" aria-hidden="true"></span>
+                                </div>
+                            </div>
+                            <div class="budget-category-actions">
+                                <button type="button" class="budget-category-add" id="budgetCategoryAdd"><i class="fas fa-plus"></i> Agregar categoría</button>
+                                <span>Elige la prioridad, pulsa el emoji para cambiarlo y usa Editar para modificar el nombre o monto.</span>
+                            </div>
+                            <button type="button" class="btn-config-save" onclick="saveBudgetConfig()"><i class="fas fa-check"></i> Guardar presupuesto</button>
+                        </div>
                     </div>
                 </div>
 
@@ -606,6 +569,21 @@
                         </div>
                     </div>
 
+                    <section class="calendar-payments-card" aria-labelledby="calendarPaymentsTitle">
+                        <div class="calendar-payments-header">
+                            <div>
+                                <h3 id="calendarPaymentsTitle">Calendario de Pagos y Compromisos</h3>
+                                <p>Controla tus vencimientos y marca los pagos realizados.</p>
+                            </div>
+                            <button type="button" class="calendar-payment-add" id="calendarPaymentAdd">
+                                + Nuevo Recordatorio
+                            </button>
+                        </div>
+                        <div class="calendar-payments-list" id="lista-recordatorios" aria-live="polite">
+                            <div class="calendar-payments-empty">Cargando pagos y compromisos...</div>
+                        </div>
+                    </section>
+
                     <div class="calendar-layout-grid">
                         <!-- Calendario principal -->
                         <div class="calendar-main-card">
@@ -615,7 +593,12 @@
                                     <button class="btn-cal-nav" id="btnCalPrev"><i class="fas fa-chevron-left"></i></button>
                                     <button class="btn-cal-nav" id="btnCalNext"><i class="fas fa-chevron-right"></i></button>
                                 </div>
-                                <div class="month-title-select" id="calMonthTitle">Agosto 2026 <i class="fas fa-chevron-down" style="font-size: 14px;"></i></div>
+                                <button type="button" class="month-title-select" id="calMonthTitle" aria-label="Seleccionar mes y año" aria-expanded="false" aria-controls="calendarMonthPicker"></button>
+                                <div class="calendar-month-picker" id="calendarMonthPicker" hidden>
+                                    <label><span>Mes</span><select id="calendarMonthSelect"></select></label>
+                                    <label><span>Año</span><input id="calendarYearInput" type="text" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+                                    <button type="button" id="calendarMonthApply">Ir al mes</button>
+                                </div>
                                 <div class="view-toggle-pill">
                                     <button class="view-toggle-btn active" id="calViewMonth">Mes</button>
                                     <button class="view-toggle-btn" id="calViewWeek">Semana</button>
@@ -623,33 +606,25 @@
                                 </div>
                             </div>
 
-                            <div class="calendar-legend-tags">
-                                <div class="tag-item"><span class="legend-dot" style="background: var(--color-primary);"></span> Notarial</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #10b981;"></span> Pago / Financiero</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #f59e0b;"></span> Recordatorio</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #06b6d4;"></span> Personal</div>
-                                <div class="tag-item"><span class="legend-dot" style="background: #ec4899;"></span> Cumpleaños</div>
+                            <div class="calendar-weekday-grid" id="calendarWeekdays" role="row" aria-label="Días de la semana">
+                                <div class="cal-day-header" role="columnheader">Dom</div>
+                                <div class="cal-day-header" role="columnheader">Lun</div>
+                                <div class="cal-day-header" role="columnheader">Mar</div>
+                                <div class="cal-day-header" role="columnheader">Mié</div>
+                                <div class="cal-day-header" role="columnheader">Jue</div>
+                                <div class="cal-day-header" role="columnheader">Vie</div>
+                                <div class="cal-day-header" role="columnheader">Sáb</div>
                             </div>
 
                             <!-- Grid del calendario (días) -->
-                            <div class="calendar-month-grid" id="calendarMonthGrid">
-                                <!-- Encabezados días -->
-                                <div class="cal-day-header">Dom</div>
-                                <div class="cal-day-header">Lun</div>
-                                <div class="cal-day-header">Mar</div>
-                                <div class="cal-day-header">Mié</div>
-                                <div class="cal-day-header">Jue</div>
-                                <div class="cal-day-header">Vie</div>
-                                <div class="cal-day-header">Sáb</div>
-                                <!-- Las celdas se generan dinámicamente -->
-                            </div>
+                            <div class="calendar-month-grid" id="calendarMonthGrid"></div>
 
                             <!-- Barra inferior de notificaciones -->
                             <div class="cal-notif-bar">
                                 <div class="cal-notif-left">
                                     <div class="cal-notif-icon-shield"><i class="fas fa-shield-halved"></i></div>
                                     <div>
-                                        <span class="cal-notif-title">Notificaciones activas <i class="fas fa-circle-check" style="color: #10b981; font-size: 12px;"></i></span>
+                                        <span class="cal-notif-title">Notificaciones activas <i class="fas fa-circle-check" style="color: var(--color-primary); font-size: 12px;"></i></span>
                                         <span class="cal-notif-sub">Recibirás recordatorios 24h y 1h antes de cada evento.</span>
                                     </div>
                                 </div>
@@ -664,7 +639,7 @@
                             <div class="card-box">
                                 <div class="card-box-header">
                                     <h3>Próximos eventos</h3>
-                                    <button class="btn-link-action">Ver todos</button>
+                                    <button type="button" class="btn-link-action" id="btnUpcomingAll" aria-expanded="false">Ver todos</button>
                                 </div>
                                 <div class="upcoming-events-list" id="upcomingEventsList">
                                     <!-- Se genera dinámicamente -->
@@ -684,15 +659,182 @@
                                     <h4>Tip Notaire</h4>
                                     <p>Activa las notificaciones para recibir recordatorios antes de cada evento.</p>
                                 </div>
-                                <i class="fas fa-chevron-right" style="color: var(--color-text-dim);"></i>
+                                <button class="cal-tip-action" type="button" onclick="openNotifSettings()" aria-label="Ir a la configuración de notificaciones">
+                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="view-calculadora">
+                    <div class="section-header-bar">
+                        <div class="section-title-group">
+                            <h2>CALCULADORA</h2>
+                            <p>Resuelve operaciones cotidianas y científicas con precisión.</p>
+                        </div>
+                    </div>
+                    <div class="calculator-workspace" id="scientificCalculator">
+                        <div class="scientific-calculator card-box">
+                            <div class="calculator-display">
+                                <div class="calculator-display-top"><span><i class="fas fa-calculator"></i> NOTAIRE</span><span class="calculator-memory-indicator" id="calculatorMemoryIndicator" aria-live="polite"></span></div>
+                                <output id="calculatorExpression" aria-live="polite"></output>
+                                <output id="calculatorResult" aria-live="polite">0</output>
+                            </div>
+                            <div class="calculator-keypad" id="calculatorKeypad">
+                                <button type="button" data-action="second" class="calculator-key calculator-key-function calculator-key-secondary" aria-label="Funciones secundarias" aria-pressed="false" title="Funciones secundarias">2nd</button>
+                                <button type="button" data-value="(" class="calculator-key calculator-key-function" aria-label="Abrir paréntesis" title="Abrir paréntesis">(</button>
+                                <button type="button" data-value=")" class="calculator-key calculator-key-function" aria-label="Cerrar paréntesis" title="Cerrar paréntesis">)</button>
+                                <button type="button" data-value="powten(" class="calculator-key calculator-key-function" aria-label="Diez elevado a x" title="Diez elevado a x">10ˣ</button>
+                                <button type="button" data-action="memory-clear" class="calculator-key calculator-key-function" aria-label="Borrar memoria" title="Borrar memoria">mc</button>
+                                <button type="button" data-action="memory-add" class="calculator-key calculator-key-function" aria-label="Sumar a memoria" title="Sumar a memoria">m+</button>
+                                <button type="button" data-action="memory-subtract" class="calculator-key calculator-key-function" aria-label="Restar de memoria" title="Restar de memoria">m−</button>
+                                <button type="button" data-action="memory-recall" class="calculator-key calculator-key-function" aria-label="Recuperar memoria" title="Recuperar memoria">mr</button>
+
+                                <button type="button" data-transform="reciprocal" class="calculator-key calculator-key-function" aria-label="Inverso de x" title="Inverso de x">1/x</button>
+                                <button type="button" data-transform="square" class="calculator-key calculator-key-function" aria-label="Elevar al cuadrado" title="Elevar al cuadrado">x²</button>
+                                <button type="button" data-transform="cube" class="calculator-key calculator-key-function" aria-label="Elevar al cubo" title="Elevar al cubo">x³</button>
+                                <button type="button" data-value="^" class="calculator-key calculator-key-function" aria-label="Potencia x elevado a y" title="Potencia x elevado a y">xʸ</button>
+                                <button type="button" data-action="clear" class="calculator-key calculator-key-clear" aria-label="Limpiar todo" title="Limpiar todo">AC</button>
+                                <button type="button" data-action="delete" class="calculator-key calculator-key-clear" aria-label="Borrar último carácter" title="Borrar último carácter"><i class="fas fa-delete-left"></i></button>
+                                <button type="button" data-action="sign" class="calculator-key calculator-key-clear" aria-label="Cambiar signo" title="Cambiar signo">+/−</button>
+                                <button type="button" data-value="/" class="calculator-key calculator-key-operator" aria-label="Dividir" title="Dividir">÷</button>
+
+                                <button type="button" data-value="!" class="calculator-key calculator-key-function" aria-label="Factorial" title="Factorial">x!</button>
+                                <button type="button" data-transform="sqrt" class="calculator-key calculator-key-function" aria-label="Raíz cuadrada" title="Raíz cuadrada">√</button>
+                                <button type="button" data-transform="nth-root" class="calculator-key calculator-key-function" aria-label="Raíz de índice n" title="Raíz de índice n">ⁿ√x</button>
+                                <button type="button" data-value="log(" class="calculator-key calculator-key-function" aria-label="Logaritmo base diez" title="Logaritmo base diez">lg</button>
+                                <button type="button" data-value="7" class="calculator-key">7</button>
+                                <button type="button" data-value="8" class="calculator-key">8</button>
+                                <button type="button" data-value="9" class="calculator-key">9</button>
+                                <button type="button" data-value="*" class="calculator-key calculator-key-operator" aria-label="Multiplicar" title="Multiplicar">×</button>
+
+                                <button type="button" data-value="sin(" data-alt-value="asin(" data-label="sin" data-alt-label="sin⁻¹" class="calculator-key calculator-key-function" aria-label="Seno, pulsa 2nd para arcoseno" title="Seno (2nd: arcoseno)">sin</button>
+                                <button type="button" data-value="cos(" data-alt-value="acos(" data-label="cos" data-alt-label="cos⁻¹" class="calculator-key calculator-key-function" aria-label="Coseno, pulsa 2nd para arcocoseno" title="Coseno (2nd: arcocoseno)">cos</button>
+                                <button type="button" data-value="tan(" data-alt-value="atan(" data-label="tan" data-alt-label="tan⁻¹" class="calculator-key calculator-key-function" aria-label="Tangente, pulsa 2nd para arcotangente" title="Tangente (2nd: arcotangente)">tan</button>
+                                <button type="button" data-value="ln(" class="calculator-key calculator-key-function" aria-label="Logaritmo natural" title="Logaritmo natural">ln</button>
+                                <button type="button" data-value="4" class="calculator-key">4</button>
+                                <button type="button" data-value="5" class="calculator-key">5</button>
+                                <button type="button" data-value="6" class="calculator-key">6</button>
+                                <button type="button" data-value="-" class="calculator-key calculator-key-operator" aria-label="Restar" title="Restar">−</button>
+
+                                <button type="button" data-value="sinh(" data-alt-value="asinh(" data-label="sinh" data-alt-label="sinh⁻¹" class="calculator-key calculator-key-function" aria-label="Seno hiperbólico, pulsa 2nd para inversa" title="Seno hiperbólico (2nd: inversa)">sinh</button>
+                                <button type="button" data-value="cosh(" data-alt-value="acosh(" data-label="cosh" data-alt-label="cosh⁻¹" class="calculator-key calculator-key-function" aria-label="Coseno hiperbólico, pulsa 2nd para inversa" title="Coseno hiperbólico (2nd: inversa)">cosh</button>
+                                <button type="button" data-value="tanh(" data-alt-value="atanh(" data-label="tanh" data-alt-label="tanh⁻¹" class="calculator-key calculator-key-function" aria-label="Tangente hiperbólica, pulsa 2nd para inversa" title="Tangente hiperbólica (2nd: inversa)">tanh</button>
+                                <button type="button" data-value="exp(" class="calculator-key calculator-key-function" aria-label="e elevado a x" title="e elevado a x">eˣ</button>
+                                <button type="button" data-value="1" class="calculator-key">1</button>
+                                <button type="button" data-value="2" class="calculator-key">2</button>
+                                <button type="button" data-value="3" class="calculator-key">3</button>
+                                <button type="button" data-value="+" class="calculator-key calculator-key-operator" aria-label="Sumar" title="Sumar">+</button>
+
+                                <button type="button" id="calculatorAngleMode" class="calculator-key calculator-key-function" aria-pressed="false" title="Cambiar a radianes">Rad</button>
+                                <button type="button" data-value="pi" class="calculator-key calculator-key-function" aria-label="Constante pi" title="Constante pi">π</button>
+                                <button type="button" data-action="ee" class="calculator-key calculator-key-function" aria-label="Exponente decimal" title="Exponente decimal">EE</button>
+                                <button type="button" data-action="random" class="calculator-key calculator-key-function" aria-label="Número aleatorio" title="Número aleatorio">Rand</button>
+                                <button type="button" data-value="%" class="calculator-key calculator-key-function" aria-label="Porcentaje" title="Porcentaje">%</button>
+                                <button type="button" data-value="0" class="calculator-key">0</button>
+                                <button type="button" data-value="." class="calculator-key" aria-label="Separador decimal" title="Separador decimal">,</button>
+                                <button type="button" data-action="equals" class="calculator-key calculator-key-equals" aria-label="Calcular resultado" title="Calcular resultado">=</button>
+                            </div>
+                        </div>
+                        <aside class="calculator-side-panel">
+                            <section class="currency-converter card-box" aria-labelledby="currencyConverterTitle">
+                                <div class="currency-converter-header">
+                                    <div><span class="calculator-history-eyebrow" id="currencyConverterEyebrow">MONEDAS</span><h3 id="currencyConverterTitle">Tasa de cambio</h3></div>
+                                    <button type="button" id="currencyRateRefresh" class="currency-refresh-button" aria-label="Actualizar tasa" title="Actualizar tasa"><i class="fas fa-rotate"></i></button>
+                                </div>
+                                <div class="currency-converter-fields">
+                                    <label class="currency-converter-row" for="currencyAmountFrom">
+                                        <span class="currency-amount-input-wrap"><span class="currency-amount-prefix" id="currencyFromPrefix">$</span><input id="currencyAmountFrom" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="Cantidad de moneda de origen"></span>
+                                        <select id="currencyFrom" aria-label="Moneda de origen">
+                                            <option value="USD">USD — Dólar estadounidense</option>
+                                            <option value="COP">COP — Peso colombiano</option>
+                                            <option value="EUR">EUR — Euro</option>
+                                            <option value="GBP">GBP — Libra esterlina</option>
+                                            <option value="JPY">JPY — Yen japonés</option>
+                                        </select>
+                                    </label>
+                                    <button type="button" id="currencySwap" class="currency-swap-button" aria-label="Intercambiar monedas" title="Intercambiar monedas"><i class="fas fa-right-left"></i></button>
+                                    <label class="currency-converter-row" for="currencyAmountTo">
+                                        <span class="currency-amount-input-wrap"><span class="currency-amount-prefix" id="currencyToPrefix">$</span><input id="currencyAmountTo" type="text" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Cantidad de moneda de destino"></span>
+                                        <select id="currencyTo" aria-label="Moneda de destino">
+                                            <option value="COP">COP — Peso colombiano</option>
+                                            <option value="USD">USD — Dólar estadounidense</option>
+                                            <option value="EUR">EUR — Euro</option>
+                                            <option value="GBP">GBP — Libra esterlina</option>
+                                            <option value="JPY">JPY — Yen japonés</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div class="currency-rate-footer">
+                                    <span id="currencyRateValue">Cargando tasa...</span>
+                                    <span id="currencyRateUpdated" aria-live="polite"></span>
+                                </div>
+                            </section>
+                            <section class="calculator-history card-box" aria-labelledby="calculatorHistoryTitle">
+                                <div class="calculator-history-header">
+                                    <div><span class="calculator-history-eyebrow">TUS OPERACIONES</span><h3 id="calculatorHistoryTitle">Historial</h3></div>
+                                    <button type="button" id="calculatorClearHistory" class="calculator-history-clear" aria-label="Borrar historial" title="Borrar historial"><i class="fas fa-trash-can"></i></button>
+                                </div>
+                                <div id="calculatorHistoryList" class="calculator-history-list" aria-live="polite"></div>
+                            </section>
+                        </aside>
                     </div>
                 </div>
 
                 <!-- ============================================================ -->
                 <!-- CONFIGURACIÓN                                                 -->
                 <!-- ============================================================ -->
+                <div class="content-section" id="view-solicitudes">
+                    <div class="section-header-bar support-section-header">
+                        <div class="support-heading-icon" aria-hidden="true"><i class="fas fa-life-ring"></i></div>
+                        <div class="section-title-group support-section-title">
+                            <span class="support-eyebrow">Centro de ayuda Notaire</span>
+                            <h2>SOPORTE Y SOLICITUDES</h2>
+                            <p>Reporta un error o envía una solicitud. Un administrador o empleado te responderá aquí.</p>
+                        </div>
+                    </div>
+                    <div class="card-box support-compose-card">
+                        <div class="support-card-heading">
+                            <div class="support-card-icon" aria-hidden="true"><i class="fas fa-paper-plane"></i></div>
+                            <div>
+                                <h3>Cuéntanos qué necesitas</h3>
+                                <p>Elige el tipo y la prioridad para orientar mejor tu solicitud.</p>
+                            </div>
+                        </div>
+                        <form id="clienteSolForm" class="cli-sol-form">
+                            <label><span>Tipo</span>
+                                <select id="clienteSolTipo" required>
+                                    <option value="reporte_error">Reporte de error</option>
+                                    <option value="solicitud_soporte">Soporte / ayuda</option>
+                                    <option value="solicitud_permiso">Solicitud (cambio, permiso o trámite)</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </label>
+                            <label><span>Prioridad</span>
+                                <select id="clienteSolPrioridad">
+                                    <option value="baja">Baja</option>
+                                    <option value="media" selected>Media</option>
+                                    <option value="alta">Alta</option>
+                                </select>
+                            </label>
+                            <label class="wide"><span>Asunto</span><input id="clienteSolAsunto" required maxlength="180" placeholder="Resume tu solicitud en una frase"></label>
+                            <label class="wide"><span>Descripción</span><textarea id="clienteSolDescripcion" rows="4" required placeholder="Incluye los detalles necesarios para poder ayudarte."></textarea></label>
+                            <div class="support-form-actions wide">
+                                <p><i class="fas fa-shield-halved" aria-hidden="true"></i> El equipo de Notaire te responderá en esta sección.</p>
+                                <div><button class="btn-primary-action" type="submit"><i class="fas fa-paper-plane"></i> Enviar</button> <span id="clienteSolMsg" class="cli-sol-msg"></span></div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-box support-history-card">
+                        <div class="card-box-header support-history-header">
+                            <div><h3>Mis solicitudes</h3><p>Seguimiento y respuestas del equipo</p></div>
+                            <span class="support-history-icon" aria-hidden="true"><i class="fas fa-inbox"></i></span>
+                        </div>
+                        <div id="clienteSolList" class="cli-sol-list"><p>Cargando...</p></div>
+                    </div>
+                </div>
+
                 <div class="content-section" id="view-configuracion">
                     <div class="section-header-bar">
                         <div class="section-title-group">
@@ -708,7 +850,7 @@
                             <!-- Perfil -->
                             <div class="config-card">
                                 <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #8c00ff, #a225f5);">
+                                    <div class="config-card-icon" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <div>
@@ -718,19 +860,19 @@
                                 </div>
                                 <div class="config-fields">
                                     <div class="config-field-row">
-                                        <div class="config-avatar-large" id="configAvatarLarge">SG</div>
+                                        <div class="config-avatar-large" id="configAvatarLarge">US</div>
                                         <button class="btn-config-action" onclick="openModalPerfil()"><i class="fas fa-pen"></i> Editar perfil</button>
                                     </div>
-                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-user-circle"></i> Nombre</span><span class="config-info-val" id="configNombre">Samuel Gañán</span></div>
-                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-envelope"></i> Correo</span><span class="config-info-val" id="configEmail">samuel.ganan@notaire.com</span></div>
-                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-phone"></i> Teléfono</span><span class="config-info-val">+57 300 123 4567</span></div>
+                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-user-circle"></i> Nombre</span><span class="config-info-val" id="configNombre">Usuario</span></div>
+                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-envelope"></i> Correo</span><span class="config-info-val" id="configEmail">Sin correo</span></div>
+                                    <div class="config-info-row"><span class="config-info-label"><i class="fas fa-phone"></i> Teléfono</span><span class="config-info-val" id="configTelefono">Sin teléfono</span></div>
                                 </div>
                             </div>
 
                             <!-- Apariencia -->
-                            <div class="config-card">
+                            <div class="config-card appearance-config-card">
                                 <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #f59e0b, #ec4899);">
+                                    <div class="config-card-icon" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
                                         <i class="fas fa-palette"></i>
                                     </div>
                                     <div>
@@ -739,69 +881,64 @@
                                     </div>
                                 </div>
                                 <div class="config-fields">
-                                    <label class="config-field-label">Tema de color</label>
-                                    <div class="theme-swatches">
-                                        <div class="theme-swatch active" data-theme="purple" title="Púrpura Notaire" style="background: linear-gradient(135deg, #8c00ff, #a225f5);" onclick="setThemeSwatch('purple', this)"></div>
-                                        <div class="theme-swatch" data-theme="blue" title="Azul Profundo" style="background: linear-gradient(135deg, #2563eb, #06b6d4);" onclick="setThemeSwatch('blue', this)"></div>
-                                        <div class="theme-swatch" data-theme="emerald" title="Esmeralda" style="background: linear-gradient(135deg, #059669, #10b981);" onclick="setThemeSwatch('emerald', this)"></div>
-                                        <div class="theme-swatch" data-theme="rose" title="Rosa" style="background: linear-gradient(135deg, #e11d48, #ec4899);" onclick="setThemeSwatch('rose', this)"></div>
-                                        <div class="theme-swatch" data-theme="amber" title="Ámbar" style="background: linear-gradient(135deg, #d97706, #f59e0b);" onclick="setThemeSwatch('amber', this)"></div>
+                                    <div class="theme-palette-section">
+                                        <div class="theme-palette-heading">
+                                            <label class="config-field-label">Tema de color</label>
+                                            <p>Personaliza los colores de tu panel</p>
+                                            <span class="theme-current-label" id="themeCurrentLabel">Notaire</span>
+                                        </div>
+                                        <div class="theme-swatch-groups">
+                                            <div class="theme-swatch-group" aria-label="Colores de marca">
+                                                <span class="theme-swatch-group-title">Colores de marca</span>
+                                                <div class="theme-swatches">
+                                                    <button type="button" class="theme-swatch active theme-swatch-purple" data-theme="purple" title="Notaire" aria-label="Aplicar tema Notaire" aria-pressed="true" onclick="setThemeSwatch('purple')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Notaire</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-blue" data-theme="blue" title="Azul" aria-label="Aplicar tema azul" aria-pressed="false" onclick="setThemeSwatch('blue')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Azul</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-indigo" data-theme="indigo" title="Índigo" aria-label="Aplicar tema índigo" aria-pressed="false" onclick="setThemeSwatch('indigo')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Índigo</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-cyan" data-theme="cyan" title="Cian" aria-label="Aplicar tema cian" aria-pressed="false" onclick="setThemeSwatch('cyan')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Cian</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-teal" data-theme="teal" title="Turquesa" aria-label="Aplicar tema turquesa" aria-pressed="false" onclick="setThemeSwatch('teal')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Turquesa</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-emerald" data-theme="emerald" title="Esmeralda" aria-label="Aplicar tema esmeralda" aria-pressed="false" onclick="setThemeSwatch('emerald')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Esmeralda</span></button>
+                                                </div>
+                                            </div>
+                                            <div class="theme-swatch-group" aria-label="Colores de acento y neutros">
+                                                <span class="theme-swatch-group-title">Acentos y neutros</span>
+                                                <div class="theme-swatches">
+                                                    <button type="button" class="theme-swatch theme-swatch-gold" data-theme="gold" title="Dorado" aria-label="Aplicar tema dorado" aria-pressed="false" onclick="setThemeSwatch('gold')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Dorado</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-orange" data-theme="orange" title="Naranja" aria-label="Aplicar tema naranja" aria-pressed="false" onclick="setThemeSwatch('orange')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Naranja</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-red" data-theme="red" title="Rojo" aria-label="Aplicar tema rojo" aria-pressed="false" onclick="setThemeSwatch('red')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Rojo</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-rose" data-theme="rose" title="Rosa" aria-label="Aplicar tema rosa" aria-pressed="false" onclick="setThemeSwatch('rose')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Rosa</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-gray" data-theme="gray" title="Gris" aria-label="Aplicar tema gris" aria-pressed="false" onclick="setThemeSwatch('gray')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Gris</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-black" data-theme="black" title="Carbón" aria-label="Aplicar tema carbón" aria-pressed="false" onclick="setThemeSwatch('black')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Carbón</span></button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <label class="config-field-label" style="margin-top: 16px;">Modo de visualización</label>
-                                    <div class="config-toggle-row">
-                                        <div class="config-toggle-opt active" id="themeOptDark" onclick="setDisplayMode('dark', this)">
-                                            <i class="fas fa-moon"></i> Oscuro
-                                        </div>
-                                        <div class="config-toggle-opt" id="themeOptLight" onclick="setDisplayMode('light', this)">
-                                            <i class="fas fa-sun"></i> Claro
-                                        </div>
-                                        <div class="config-toggle-opt" id="themeOptAuto" onclick="setDisplayMode('auto', this)">
-                                            <i class="fas fa-circle-half-stroke"></i> Auto
+                                    <div class="theme-mode-section">
+                                        <label class="config-field-label">Modo de visualización</label>
+                                        <div class="config-toggle-row">
+                                            <div class="config-toggle-opt active" id="themeOptDark" onclick="setDisplayMode('dark', this)">
+                                                <i class="fas fa-moon"></i> Oscuro
+                                            </div>
+                                            <div class="config-toggle-opt" id="themeOptLight" onclick="setDisplayMode('light', this)">
+                                                <i class="fas fa-sun"></i> Claro
+                                            </div>
+                                            <div class="config-toggle-opt" id="themeOptAuto" onclick="setDisplayMode('auto', this)">
+                                                <i class="fas fa-circle-half-stroke"></i> Auto
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Idioma y región -->
-                            <div class="config-card">
-                                <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">
-                                        <i class="fas fa-globe"></i>
-                                    </div>
-                                    <div>
-                                        <h3>Idioma y Región</h3>
-                                        <p>Moneda, fecha y formato</p>
-                                    </div>
-                                </div>
-                                <div class="config-fields">
-                                    <div class="form-group">
-                                        <label class="config-field-label">Idioma</label>
-                                        <select class="form-control" id="cfgIdioma" onchange="setLanguageFromSelect(this.value)">
-                                            <option value="es" selected>Español (Colombia)</option>
-                                            <option value="es-mx">Español (México)</option>
-                                            <option value="en">English (US)</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="config-field-label">Moneda</label>
-                                        <select class="form-control" id="cfgMoneda">
-                                            <option selected>COP – Peso Colombiano</option>
-                                            <option>USD – Dólar Americano</option>
-                                            <option>EUR – Euro</option>
-                                        </select>
-                                    </div>
-                                    <button class="btn-config-save" onclick="saveRegionConfig()"><i class="fas fa-check"></i> Guardar preferencias</button>
-                                </div>
-                            </div>
+                            <!-- Idioma y región eliminado: el idioma se gestiona desde el botón arriba a la derecha -->
                         </div>
 
                         <!-- Col derecha -->
                         <div class="config-col">
 
                             <!-- Notificaciones -->
-                            <div class="config-card">
+                            <div class="config-card" id="notificationSettingsCard">
                                 <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #10b981, #06b6d4);">
+                                    <div class="config-card-icon" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
                                         <i class="fas fa-bell"></i>
                                     </div>
                                     <div>
@@ -810,6 +947,16 @@
                                     </div>
                                 </div>
                                 <div class="config-fields">
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Avisos por correo</span>
+                                            <span class="config-toggle-sub">Recibir recordatorios en el correo de tu cuenta</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifEmail" checked onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
                                     <div class="config-toggle-row-single">
                                         <div class="config-toggle-text">
                                             <span class="config-toggle-title">Notificaciones del navegador</span>
@@ -842,6 +989,26 @@
                                     </div>
                                     <div class="config-toggle-row-single">
                                         <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Resumen diario</span>
+                                            <span class="config-toggle-sub">Aviso diario de compromisos pendientes</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifDaily" checked onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
+                                            <span class="config-toggle-title">Resumen mensual</span>
+                                            <span class="config-toggle-sub">Aviso para revisar tu presupuesto al iniciar el mes</span>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="togNotifMonthly" checked onchange="saveNotifConfig()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="config-toggle-row-single">
+                                        <div class="config-toggle-text">
                                             <span class="config-toggle-title">Alertas de gastos</span>
                                             <span class="config-toggle-sub">Cuando superes el presupuesto</span>
                                         </div>
@@ -863,52 +1030,10 @@
                                 </div>
                             </div>
 
-                            <!-- Presupuesto -->
-                            <div class="config-card">
-                                <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
-                                        <i class="fas fa-wallet"></i>
-                                    </div>
-                                    <div>
-                                        <h3>Presupuesto Mensual</h3>
-                                        <p>Límite de gastos por categoría</p>
-                                    </div>
-                                </div>
-                                <div class="config-fields">
-                                    <div class="form-group">
-                                        <label class="config-field-label">Presupuesto total mensual ($)</label>
-                                        <input type="number" class="form-control" id="cfgPresupuesto" value="1500000">
-                                    </div>
-                                    <div class="budget-categories-list">
-                                        <div class="budget-cat-row">
-                                            <span class="budget-cat-icon">🍔</span>
-                                            <span class="budget-cat-name">Alimentación</span>
-                                            <input type="number" class="budget-cat-input" value="450000" placeholder="$">
-                                        </div>
-                                        <div class="budget-cat-row">
-                                            <span class="budget-cat-icon">🚌</span>
-                                            <span class="budget-cat-name">Transporte</span>
-                                            <input type="number" class="budget-cat-input" value="300000" placeholder="$">
-                                        </div>
-                                        <div class="budget-cat-row">
-                                            <span class="budget-cat-icon">🎮</span>
-                                            <span class="budget-cat-name">Entretenimiento</span>
-                                            <input type="number" class="budget-cat-input" value="250000" placeholder="$">
-                                        </div>
-                                        <div class="budget-cat-row">
-                                            <span class="budget-cat-icon">🏠</span>
-                                            <span class="budget-cat-name">Servicios</span>
-                                            <input type="number" class="budget-cat-input" value="300000" placeholder="$">
-                                        </div>
-                                    </div>
-                                    <button class="btn-config-save" onclick="saveBudgetConfig()"><i class="fas fa-check"></i> Guardar presupuesto</button>
-                                </div>
-                            </div>
-
                             <!-- Seguridad -->
                             <div class="config-card">
                                 <div class="config-card-header">
-                                    <div class="config-card-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+                                    <div class="config-card-icon" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
                                         <i class="fas fa-lock"></i>
                                     </div>
                                     <div>
@@ -918,28 +1043,18 @@
                                 </div>
                                 <div class="config-fields">
                                     <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-key"></i>
-                                            <span>Cambiar contraseña</span>
-                                        </div>
-                                        <button class="btn-config-action" onclick="showToast('Redirigiendo al flujo de cambio de contraseña...')"><i class="fas fa-arrow-right"></i></button>
+                                        <button class="config-security-button" type="button" onclick="openPasswordChangeDialog()">
+                                            <i class="fas fa-key" aria-hidden="true"></i>
+                                            <span><strong>Cambiar contraseña</strong><small>Actualiza la clave de acceso a tu cuenta</small></span>
+                                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                     <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-shield-halved"></i>
-                                            <span>Autenticación 2FA</span>
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="tog2FA" onchange="showToast('2FA ' + (this.checked ? 'activado' : 'desactivado'))">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="config-security-row">
-                                        <div class="config-security-info">
-                                            <i class="fas fa-right-from-bracket" style="color: #ef4444;"></i>
-                                            <span style="color: #ef4444;">Cerrar sesión</span>
-                                        </div>
-                                        <button class="btn-config-danger" onclick="confirmLogout()"><i class="fas fa-arrow-right"></i></button>
+                                        <button class="config-security-button is-logout" type="button" onclick="confirmLogout()">
+                                            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                                            <span><strong>Cerrar sesión</strong><small>Salir de Notaire en este dispositivo</small></span>
+                                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -954,6 +1069,14 @@
                 &copy; <span id="currentYear">2026</span> NOTAIRE SYSTEM
             </footer>
         </main>
+
+        <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación principal">
+            <button type="button" data-nav="view-inicio"><i class="fas fa-home"></i><span>Inicio</span></button>
+            <button type="button" data-nav="view-gastos"><i class="fas fa-right-left"></i><span>Movimientos</span></button>
+            <button type="button" data-nav="view-saldo"><i class="fas fa-scale-balanced"></i><span>Saldo</span></button>
+            <button type="button" data-nav="view-metas"><i class="fas fa-piggy-bank"></i><span>Ahorros</span></button>
+            <button type="button" data-nav="more"><i class="fas fa-ellipsis"></i><span>Más</span></button>
+        </nav>
     </div>
 
     <!-- ================================================================== -->
@@ -965,7 +1088,7 @@
         <div class="modal-container-box">
             <div class="modal-header-box"><h3><i class="fas fa-receipt" style="color: #ef4444; margin-right: 10px;"></i>Registrar Nuevo Gasto</h3><button class="modal-close-btn" onclick="closeModal('modalRegistrarGasto')">&times;</button></div>
             <form id="formRegistrarGasto" onsubmit="handleGuardarGasto(event)">
-                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control" id="gastoMonto" placeholder="Ej: 50000" required></div>
+                <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="gastoMonto" placeholder="Ej: 50000" required></div>
                 <div class="form-group"><label>Categoría</label><select class="form-control" id="gastoCategoria"><option value="Alimentación">🍔 Alimentación</option><option value="Transporte">🚌 Transporte</option><option value="Entretenimiento">🎮 Entretenimiento</option><option value="Servicios">🏠 Servicios</option><option value="Otros">🛒 Otros</option></select></div>
                 <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="gastoDescripcion" placeholder="Ej: Almuerzo con compañeros" required></div>
                 <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="gastoFecha" required></div>
@@ -977,9 +1100,9 @@
     <!-- Modal: Registrar Ingreso -->
     <div class="modal-overlay" id="modalRegistrarIngreso">
         <div class="modal-container-box">
-            <div class="modal-header-box"><h3><i class="fas fa-chart-line" style="color: #10b981; margin-right: 10px;"></i>Registrar Nuevo Ingreso</h3><button class="modal-close-btn" onclick="closeModal('modalRegistrarIngreso')">&times;</button></div>
+            <div class="modal-header-box"><h3><i class="fas fa-chart-line" style="color: var(--color-primary); margin-right: 10px;"></i>Registrar Nuevo Ingreso</h3><button class="modal-close-btn" onclick="closeModal('modalRegistrarIngreso')">&times;</button></div>
             <form id="formRegistrarIngreso" onsubmit="handleGuardarIngreso(event)">
-                <div class="form-group"><label>Monto ($)</label><input type="number" class="form-control" id="ingresoMonto" placeholder="Ej: 1800000" required></div>
+                <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="ingresoMonto" placeholder="Ej: 1800000" required></div>
                 <div class="form-group"><label>Fuente</label><select class="form-control" id="ingresoCategoria"><option value="Salario">💼 Salario</option><option value="Freelance">💻 Freelance</option><option value="Negocio">🛍️ Negocio</option><option value="Intereses">💰 Intereses</option></select></div>
                 <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="ingresoDescripcion" placeholder="Ej: Salario agosto" required></div>
                 <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="ingresoFecha" required></div>
@@ -991,26 +1114,26 @@
     <!-- Modal: Nueva Meta -->
     <div class="modal-overlay" id="modalNuevaMeta">
         <div class="modal-container-box">
-            <div class="modal-header-box"><h3><i class="fas fa-bullseye" style="color: #10b981; margin-right: 10px;"></i>Crear Nueva Meta</h3><button class="modal-close-btn" onclick="closeModal('modalNuevaMeta')">&times;</button></div>
+            <div class="modal-header-box"><h3><i class="fas fa-bullseye" style="color: var(--color-primary); margin-right: 10px;"></i>Crear Nueva Meta</h3><button class="modal-close-btn" onclick="closeModal('modalNuevaMeta')">&times;</button></div>
             <form id="formNuevaMeta" onsubmit="handleGuardarNuevaMeta(event)">
                 <div class="form-group"><label>Ícono de la meta</label>
                     <div class="emoji-picker-row" id="emojiPickerMeta">
-                        <span class="emoji-opt selected" data-emoji="🎯">🎯</span>
-                        <span class="emoji-opt" data-emoji="✈️">✈️</span>
-                        <span class="emoji-opt" data-emoji="🏠">🏠</span>
-                        <span class="emoji-opt" data-emoji="🚗">🚗</span>
-                        <span class="emoji-opt" data-emoji="💻">💻</span>
-                        <span class="emoji-opt" data-emoji="🛡️">🛡️</span>
-                        <span class="emoji-opt" data-emoji="🎓">🎓</span>
-                        <span class="emoji-opt" data-emoji="💍">💍</span>
-                        <span class="emoji-opt" data-emoji="🏋️">🏋️</span>
-                        <span class="emoji-opt" data-emoji="🌴">🌴</span>
+                        <button type="button" class="emoji-opt selected" data-emoji="🎯" aria-label="Meta general" aria-pressed="true">🎯</button>
+                        <button type="button" class="emoji-opt" data-emoji="✈️" aria-label="Viajes" aria-pressed="false">✈️</button>
+                        <button type="button" class="emoji-opt" data-emoji="🌴" aria-label="Vacaciones" aria-pressed="false">🌴</button>
+                        <button type="button" class="emoji-opt" data-emoji="🏠" aria-label="Vivienda" aria-pressed="false">🏠</button>
+                        <button type="button" class="emoji-opt" data-emoji="🚗" aria-label="Vehículo" aria-pressed="false">🚗</button>
+                        <button type="button" class="emoji-opt" data-emoji="💻" aria-label="Tecnología" aria-pressed="false">💻</button>
+                        <button type="button" class="emoji-opt" data-emoji="🛡️" aria-label="Protección financiera" aria-pressed="false">🛡️</button>
+                        <button type="button" class="emoji-opt" data-emoji="🎓" aria-label="Estudios" aria-pressed="false">🎓</button>
+                        <button type="button" class="emoji-opt" data-emoji="💍" aria-label="Celebración" aria-pressed="false">💍</button>
+                        <button type="button" class="emoji-opt" data-emoji="🏋️" aria-label="Salud y deporte" aria-pressed="false">🏋️</button>
                     </div>
                     <input type="hidden" id="metaIcono" value="🎯">
                 </div>
                 <div class="form-group"><label>Nombre de la meta</label><input type="text" class="form-control" id="metaNombre" placeholder="Ej: Viaje a Cartagena" required></div>
-                <div class="form-group"><label>Monto Objetivo ($)</label><input type="number" class="form-control" id="metaObjetivo" placeholder="Ej: 5000000" required></div>
-                <div class="form-group"><label>Monto Inicial (ahorro actual)</label><input type="number" class="form-control" id="metaInicial" placeholder="0" value="0"></div>
+                <div class="form-group"><label>Monto Objetivo ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="metaObjetivo" placeholder="Ej: 5000000" required></div>
+                <div class="form-group"><label>Monto Inicial (ahorro actual)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="metaInicial" placeholder="0" value="0"></div>
                 <div class="form-group"><label>Fecha Límite</label><input type="date" class="form-control" id="metaFecha" required></div>
                 <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;"><i class="fas fa-plus"></i> Crear Meta</button>
             </form>
@@ -1020,11 +1143,14 @@
     <!-- Modal: Aportar a Meta -->
     <div class="modal-overlay" id="modalAportarMeta">
         <div class="modal-container-box">
-            <div class="modal-header-box"><h3><i class="fas fa-piggy-bank" style="color: #10b981; margin-right: 10px;"></i>Aportar a Meta</h3><button class="modal-close-btn" onclick="closeModal('modalAportarMeta')">&times;</button></div>
+            <div class="modal-header-box"><h3><i class="fas fa-piggy-bank" style="color: var(--color-primary); margin-right: 10px;"></i>Aportar a Meta</h3><button class="modal-close-btn" onclick="closeModal('modalAportarMeta')">&times;</button></div>
             <form onsubmit="handleGuardarAporteMeta(event)">
                 <input type="hidden" id="aporteMetaId">
+                <input type="hidden" id="aporteMetaObjetivo">
+                <input type="hidden" id="aporteMetaActual">
                 <div class="form-group"><label>Meta</label><input type="text" class="form-control" id="aporteMetaNombre" readonly></div>
-                <div class="form-group"><label>Monto a Aportar ($)</label><input type="number" class="form-control" id="aporteMonto" placeholder="Ej: 200000" required></div>
+                <div class="form-group"><label for="aporteMonto">Monto a Aportar ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="aporteMonto" placeholder="Ej: 200000" required><small id="aporteDisponible" class="form-help-text"></small></div>
+                <div id="aporteError" class="aporte-error" role="alert" hidden></div>
                 <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Confirmar Aporte</button>
             </form>
         </div>
@@ -1035,50 +1161,116 @@
         <div class="modal-container-box">
             <div class="modal-header-box"><h3><i class="fas fa-user-circle" style="color: var(--color-secondary-light); margin-right: 10px;"></i>Perfil de Usuario</h3><button class="modal-close-btn" onclick="closeModal('modalPerfil')">&times;</button></div>
             <form onsubmit="handleGuardarPerfil(event)">
-                <div class="form-group"><label>Nombre completo</label><input type="text" class="form-control" id="perfilNombre" value="Samuel Gañán" required></div>
-                <div class="form-group"><label>Correo electrónico</label><input type="email" class="form-control" id="perfilEmail" value="samuel.ganan@notaire.com" required></div>
-                <div class="form-group"><label>Teléfono</label><input type="tel" class="form-control" id="perfilTelefono" value="+57 300 123 4567"></div>
-                <div class="form-group"><label>Documento</label><input type="text" class="form-control" id="perfilDocumento" value="1098765432"></div>
+                <div class="form-group"><label>Nombre completo</label><input type="text" class="form-control" id="perfilNombre" value="" placeholder="Nombre del usuario" required></div>
+                <div class="form-group"><label>Correo electrónico</label><input type="email" class="form-control" id="perfilEmail" value="" placeholder="Correo del usuario" required></div>
+                <div class="form-group"><label>Teléfono</label><input type="tel" class="form-control" id="perfilTelefono"></div>
+                <div class="form-group"><label>Documento</label><input type="text" class="form-control" id="perfilDocumento"></div>
                 <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Ver Todos -->
-    <div class="modal-overlay" id="modalVerTodos">
-        <div class="modal-container-box" style="max-width: 680px;">
-            <div class="modal-header-box"><h3 id="verTodosTitle">Historial</h3><button class="modal-close-btn" onclick="closeModal('modalVerTodos')">&times;</button></div>
-            <div class="transactions-list" id="verTodosContentList" style="max-height: 350px; overflow-y: auto;"></div>
+    <!-- Modal: Editar Gasto -->
+    <div class="modal-overlay" id="modalEditarGasto">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: var(--color-secondary-light); margin-right: 10px;"></i>Editar Gasto</h3><button class="modal-close-btn" onclick="closeModal('modalEditarGasto')">&times;</button></div>
+            <form id="formEditarGasto" onsubmit="handleGuardarEdicionGasto(event)">
+                <input type="hidden" id="editGastoId">
+                <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="editGastoMonto" required></div>
+                <div class="form-group"><label>Categoría</label><select class="form-control" id="editGastoCategoria"><option value="Alimentación">🍔 Alimentación</option><option value="Transporte">🚌 Transporte</option><option value="Entretenimiento">🎮 Entretenimiento</option><option value="Servicios">🏠 Servicios</option><option value="Otros">🛒 Otros</option></select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="editGastoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="editGastoFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Ingreso -->
+    <div class="modal-overlay" id="modalEditarIngreso">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: var(--color-primary); margin-right: 10px;"></i>Editar Ingreso</h3><button class="modal-close-btn" onclick="closeModal('modalEditarIngreso')">&times;</button></div>
+            <form id="formEditarIngreso" onsubmit="handleGuardarEdicionIngreso(event)">
+                <input type="hidden" id="editIngresoId">
+                <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="editIngresoMonto" required></div>
+                <div class="form-group"><label>Fuente</label><select class="form-control" id="editIngresoFuente"><option value="Salario">💼 Salario</option><option value="Freelance">💻 Freelance</option><option value="Negocio">🛍️ Negocio</option><option value="Intereses">💰 Intereses</option><option value="Otros">🟢 Otros</option></select></div>
+                <div class="form-group"><label>Descripción</label><input type="text" class="form-control" id="editIngresoDescripcion" required></div>
+                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="editIngresoFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Meta (Ahorro) -->
+    <div class="modal-overlay" id="modalEditarMeta">
+        <div class="modal-container-box">
+            <div class="modal-header-box"><h3><i class="fas fa-pen" style="color: #3b82f6; margin-right: 10px;"></i>Editar Meta</h3><button class="modal-close-btn" onclick="closeModal('modalEditarMeta')">&times;</button></div>
+            <form id="formEditarMeta" onsubmit="handleGuardarEdicionMeta(event)">
+                <input type="hidden" id="editMetaId">
+                <div class="form-group"><label>Nombre de la meta</label><input type="text" class="form-control" id="editMetaNombre" required></div>
+                <div class="form-group"><label>Monto objetivo ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="editMetaObjetivo" required></div>
+                <div class="form-group"><label>Monto actual ($)</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" class="form-control" id="editMetaActual" required></div>
+                <div class="form-group"><label>Fecha límite</label><input type="date" class="form-control" id="editMetaFecha" required></div>
+                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;">Guardar Cambios</button>
+            </form>
         </div>
     </div>
 
     <!-- Modal: Nuevo Evento (Calendario) -->
     <div class="modal-overlay" id="modalNuevoEvento">
-        <div class="modal-container-box">
-            <div class="modal-header-box"><h3><i class="fas fa-calendar-plus" style="color: var(--color-secondary-light); margin-right: 10px;"></i>Nuevo Evento</h3><button class="modal-close-btn" onclick="closeModal('modalNuevoEvento')">&times;</button></div>
-            <form id="formNuevoEvento" onsubmit="handleGuardarEvento(event)">
-                <div class="form-group"><label>Título del evento</label><input type="text" class="form-control" id="eventoTitulo" placeholder="Ej: Pago de hipoteca" required></div>
-                <div class="form-group"><label>Tipo</label>
-                    <select class="form-control" id="eventoTipo">
-                        <option value="purple">🟣 Notarial</option>
-                        <option value="green">🟢 Pago / Financiero</option>
-                        <option value="orange">🟠 Recordatorio</option>
-                        <option value="blue">🔵 Personal</option>
-                        <option value="pink">🩷 Cumpleaños</option>
-                    </select>
-                </div>
-                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="eventoFecha" required></div>
-                <div class="form-group"><label>Hora</label><input type="time" class="form-control" id="eventoHora"></div>
-                <div class="form-group"><label>Nota / Descripción</label><textarea class="form-control" id="eventoNota" rows="3" placeholder="Detalles del evento..."></textarea></div>
-                <div class="form-group">
-                    <label>Notificaciones</label>
-                    <div class="notif-opts-row">
-                        <label class="notif-opt-label"><input type="checkbox" id="notifDiaBefore" checked> 24h antes</label>
-                        <label class="notif-opt-label"><input type="checkbox" id="notifHourBefore" checked> 1h antes</label>
-                        <label class="notif-opt-label"><input type="checkbox" id="notifOnDay"> El mismo día</label>
+        <div class="modal-container-box calendar-event-modal" role="dialog" aria-modal="true" aria-labelledby="calendarEventTitle">
+            <header class="modal-header-box calendar-event-header">
+                <div class="calendar-event-heading">
+                    <span class="calendar-event-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                    <div>
+                        <span class="calendar-event-eyebrow">AGENDA</span>
+                        <h3 id="calendarEventTitle">Nuevo Evento</h3>
+                        <p>Organiza tus fechas importantes y recibe avisos a tiempo.</p>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;"><i class="fas fa-calendar-plus"></i> Guardar Evento</button>
+                <button type="button" class="modal-close-btn" aria-label="Cerrar formulario" onclick="closeModal('modalNuevoEvento')">&times;</button>
+            </header>
+            <form id="formNuevoEvento" class="calendar-event-form" onsubmit="handleGuardarEvento(event)">
+                <div class="calendar-event-error" id="calendarEventError" role="alert" hidden></div>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoTitulo">Título del evento</label>
+                    <input type="text" class="form-control" id="eventoTitulo" placeholder="Ej.: Pago de hipoteca" maxlength="120" required>
+                </div>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoTipo">Tipo de evento</label>
+                    <select class="form-control" id="eventoTipo">
+                        <option value="purple">📅 Eventos</option>
+                        <option value="green">💳 Pagos</option>
+                        <option value="orange">🔔 Recordatorio</option>
+                        <option value="blue">👤 Personal</option>
+                    </select>
+                </div>
+                <div class="calendar-event-date-row">
+                    <div class="form-group">
+                        <label for="eventoFecha">Fecha</label>
+                        <input type="date" class="form-control" id="eventoFecha" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventoHora">Hora <span>(opcional)</span></label>
+                        <input type="time" class="form-control" id="eventoHora">
+                    </div>
+                </div>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoNota">Nota o descripción <span>(opcional)</span></label>
+                    <textarea class="form-control" id="eventoNota" rows="3" maxlength="500" placeholder="Añade detalles que quieras recordar..."></textarea>
+                </div>
+                <fieldset class="calendar-event-notifications calendar-event-field-wide">
+                    <legend>Notificaciones</legend>
+                    <p>Elige cuándo quieres recibir un aviso.</p>
+                    <div class="notif-opts-row">
+                        <label class="notif-opt-label" for="notifDiaBefore"><input type="checkbox" id="notifDiaBefore" checked><span>24 horas antes</span></label>
+                        <label class="notif-opt-label" for="notifHourBefore"><input type="checkbox" id="notifHourBefore" checked><span>1 hora antes</span></label>
+                        <label class="notif-opt-label" for="notifOnDay"><input type="checkbox" id="notifOnDay"><span>El mismo día</span></label>
+                    </div>
+                </fieldset>
+                <div class="calendar-event-actions calendar-event-field-wide">
+                    <span><i class="fas fa-lock" aria-hidden="true"></i> Solo tú verás tus recordatorios.</span>
+                    <button type="submit" class="btn-primary-action"><i class="fas fa-calendar-check" aria-hidden="true"></i> Guardar evento</button>
+                </div>
             </form>
         </div>
     </div>
@@ -1114,10 +1306,106 @@
         <button class="system-notif-close" onclick="document.getElementById('systemNotifBanner').style.display='none'">&times;</button>
     </div>
 
+    <!-- Modal para Registrar Movimiento -->
+    <div id="modalMovimiento" class="movement-modal-overlay" style="display: none;">
+        <section class="movement-modal" role="dialog" aria-modal="true" aria-labelledby="tituloModalMovimiento">
+            <header class="movement-modal-header">
+                <div class="movement-modal-icon"><i class="fas fa-exchange-alt" aria-hidden="true"></i></div>
+                <div>
+                    <span class="movement-modal-eyebrow">Control financiero</span>
+                    <h3 id="tituloModalMovimiento">Registrar Movimiento</h3>
+                    <p>Registra tus ingresos y gastos en un solo lugar.</p>
+                </div>
+                <button type="button" class="movement-modal-close" aria-label="Cerrar" onclick="idEdicionActual = null; document.getElementById('modalMovimiento').style.display='none';">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </header>
+
+            <form id="formMovimiento" class="movement-form">
+                <div class="movement-form-grid">
+                    <div class="movement-field">
+                        <label for="tipoMovimiento">Tipo de movimiento</label>
+                        <select id="tipoMovimiento" required>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="gasto">Gasto</option>
+                        </select>
+                    </div>
+                    <div class="movement-field movement-amount-field">
+                        <label for="montoMovimiento">Monto ($)</label>
+                        <div class="movement-input-with-icon">
+                            <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+                            <input type="text" inputmode="decimal" data-format-number autocomplete="off" id="montoMovimiento" required placeholder="Ej. 150.000">
+                        </div>
+                    </div>
+                    <div class="movement-field">
+                        <label for="categoriaMovimiento">Categoría</label>
+                        <input type="text" id="categoriaMovimiento" required placeholder="Ej. Honorarios, oficina">
+                    </div>
+                    <div class="movement-field">
+                        <label for="fechaMovimiento">Fecha</label>
+                        <input type="date" id="fechaMovimiento" required>
+                    </div>
+                    <div class="movement-field movement-description-field">
+                        <label for="descripcionMovimiento">Descripción <span>(opcional)</span></label>
+                        <input type="text" id="descripcionMovimiento" placeholder="Agrega un detalle para identificarlo">
+                    </div>
+                </div>
+
+                <div class="movement-form-actions">
+                    <button type="button" id="btnCerrarModal" class="movement-cancel-button" onclick="idEdicionActual = null; document.getElementById('modalMovimiento').style.display='none';">Cancelar</button>
+                    <button type="submit" class="movement-save-button"><i class="fas fa-check" aria-hidden="true"></i> Guardar movimiento</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- Modal Abonar a Meta -->
+    <div id="modalAbonarMeta" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background: var(--color-card-bg); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; color: var(--color-text-main);">
+            <h3 id="tituloMetaAbonar">Abonar a Meta</h3>
+            <form id="formAbonarMeta">
+                <input type="hidden" id="idMetaAbonar">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px;">Monto a Abonar ($):</label>
+                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" id="montoAbono" style="width:100%; padding:8px; background:var(--color-input-bg); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:6px;" placeholder="Ej: 50000" required>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" onclick="document.getElementById('modalAbonarMeta').style.display='none'" style="padding:8px 16px; background:var(--color-card-hover); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:999px; cursor:pointer;">Cancelar</button>
+                    <button type="submit" style="padding: 9px 16px; background:linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color:#fff; border:none; border-radius:999px; font-weight:bold; cursor:pointer; box-shadow:0 5px 14px var(--color-primary-glow);">Guardar Abono</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalRecordatorio" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background: var(--color-card-bg); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; color: var(--color-text-main);">
+            <h3>Nuevo Compromiso Financiero</h3>
+            <form id="formRecordatorio">
+                <div style="margin-bottom: 15px;"><label style="display:block; margin-bottom:5px;">Concepto / Título:</label><input type="text" id="tituloRecordatorio" style="width:100%; padding:8px; background:var(--color-input-bg); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:6px;" required></div>
+                <div style="margin-bottom: 15px;"><label style="display:block; margin-bottom:5px;">Monto ($):</label><input type="text" inputmode="decimal" data-format-number autocomplete="off" id="montoRecordatorio" style="width:100%; padding:8px; background:var(--color-input-bg); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:6px;" required></div>
+                <div style="margin-bottom: 20px;"><label style="display:block; margin-bottom:5px;">Fecha de Vencimiento:</label><input type="date" id="fechaRecordatorio" style="width:100%; padding:8px; background:var(--color-input-bg); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:6px;" required></div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;"><button type="button" onclick="document.getElementById('modalRecordatorio').style.display='none'" style="padding:8px 16px; background:var(--color-card-hover); color:var(--color-text-main); border:1px solid var(--color-card-border); border-radius:999px; cursor:pointer;">Cancelar</button><button type="submit" style="padding:9px 16px; background:linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color:#fff; border:none; border-radius:999px; font-weight:bold; cursor:pointer; box-shadow:0 5px 14px var(--color-primary-glow);">Guardar Recordatorio</button></div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="../admin/assets/js/admin-dashboard.js"></script>
-    <script src="assets/js/cliente-dashboard-ext.js"></script>
-    <script src="../../assets/js/notaire-i18n.js"></script>
+    <script src="../assets/js/financial-chart.js?v=20261027"></script>
+    <script src="../assets/js/month-selector.js?v=1"></script>
+    <script src="../../assets/js/number-input-format.js?v=2"></script>
+    <script src="assets/js/api.js?v=20261031-2"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261105-panel-finishes"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261105-panel-finishes"></script>
+    <script src="assets/js/movimientos.js?v=20261105-financial-history-tables"></script>
+    <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/ahorros.js?v=20261027"></script>
+    <script src="assets/js/recordatorios.js?v=20261105-calendar-payments"></script>
+    <script src="assets/js/scientific-calculator.js?v=20261102-rate-fix5"></script>
+    <script src="assets/js/saldo.js?v=20261105-panel-finishes"></script>
+    <script src="assets/js/inicio.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/mobile-nav.js?v=9"></script>
+    <script src="assets/js/cliente-solicitudes.js?v=20261105-panel-finishes"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261105-panel-finishes"></script>
 </body>
 
 </html>

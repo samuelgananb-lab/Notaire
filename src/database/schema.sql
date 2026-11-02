@@ -54,7 +54,18 @@ CREATE TABLE IF NOT EXISTS metas_financieras (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
--- 5. Tabla de Registros Financieros (Transacciones)
+-- 5. Tabla de Aportes a Metas
+CREATE TABLE IF NOT EXISTS aportes_meta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meta_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    monto DECIMAL(12, 2) NOT NULL CHECK(monto > 0),
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meta_id) REFERENCES metas_financieras(id_meta) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
+
+-- 6. Tabla de Registros Financieros (Transacciones)
 CREATE TABLE IF NOT EXISTS registros_financieros (
     id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
     id_usuario INTEGER NOT NULL,
