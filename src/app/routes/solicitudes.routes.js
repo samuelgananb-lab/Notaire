@@ -38,6 +38,21 @@ function responderError(res, error, mensaje) {
   });
 }
 
+async function responderSolicitudNoEditable(res, id, usuarioId) {
+  const { data, error } = await supabase
+    .from('solicitudes_empleado')
+    .select('estado')
+    .eq('id', id)
+    .eq('usuario_id', usuarioId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return res.status(404).json({ error: 'Solicitud no encontrada' });
+  if (data.estado !== 'abierta') {
+    return res.status(409).json({ error: 'Solo puedes modificar solicitudes que aún están abiertas' });
+  }
+  return res.status(409).json({ error: 'La solicitud cambió. Actualiza la lista e inténtalo de nuevo' });
+}
+
 router.get('/', async (req, res) => {
   try {
     let query = supabase.from('solicitudes_empleado').select('*').order('created_at', { ascending: false }).limit(200);
@@ -91,6 +106,76 @@ router.post('/', async (req, res) => {
     res.status(201).json(data);
   } catch (error) {
     responderError(res, error, 'Error al enviar la solicitud');
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  try {
+    if (req.usuario.rol !== 'cliente') {
+      return res.status(403).json({ error: 'Solo el cliente puede editar sus solicitudes' });
+    }
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Solicitud inválida' });
+
+    const body = req.body || {};
+    const tipo = String(body.tipo || '').trim();
+    const asunto = String(body.asunto || '').trim();
+    const descripcion = String(body.descripcion || '').trim();
+    const prioridad = String(body.prioridad || '').trim();
+    if (!tipos.includes(tipo) || !prioridades.includes(prioridad) || !asunto || asunto.length > 180 || !descripcion) {
+      return res.status(400).json({ error: 'Tipo, prioridad, asunto y descripción son obligatorios; el asunto admite hasta 180 caracteres' });
+    }
+
+    const { data, error } = await supabase
+      .from('solicitudes_empleado')
+      .update({ tipo, asunto, descripcion, prioridad, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('usuario_id', req.usuario.id)
+      .eq('estado', 'abierta')
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return await responderSolicitudNoEditable(res, req.params.id, req.usuario.id);
+
+    await registrarAuditoria({
+      req,
+      accion: 'editar_solicitud',
+      recurso: 'solicitud',
+      recursoId: data.id,
+      detalles: { tipo, prioridad }
+    });
+    res.json(data);
+  } catch (error) {
+    responderError(res, error, 'Error al actualizar la solicitud');
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    if (req.usuario.rol !== 'cliente') {
+      return res.status(403).json({ error: 'Solo el cliente puede eliminar sus solicitudes' });
+    }
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Solicitud inválida' });
+
+    const { data, error } = await supabase
+      .from('solicitudes_empleado')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('usuario_id', req.usuario.id)
+      .eq('estado', 'abierta')
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return await responderSolicitudNoEditable(res, req.params.id, req.usuario.id);
+
+    await registrarAuditoria({
+      req,
+      accion: 'eliminar_solicitud',
+      recurso: 'solicitud',
+      recursoId: data.id
+    });
+    res.json({ ok: true, id: data.id });
+  } catch (error) {
+    responderError(res, error, 'Error al eliminar la solicitud');
   }
 });
 

@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
     <title>NOTAIRE - Panel de Empleado</title>
-    <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
+    <script src="../../assets/js/auth-guard.js?v=20261102-theme-colors"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/empleado.css?v=1">
+    <link rel="stylesheet" href="assets/css/empleado.css?v=2">
 </head>
 
 <body>
@@ -205,8 +205,8 @@
                     <div class="emp-stack">
                         <form class="emp-card" id="formPassword">
                             <h2 class="emp-card-title">Seguridad</h2>
-                            <label class="emp-label">Nueva contraseña<input class="emp-input" id="cfgPassword" type="password" minlength="8" autocomplete="new-password" required></label>
-                            <label class="emp-label">Confirmar contraseña<input class="emp-input" id="cfgPassword2" type="password" minlength="8" autocomplete="new-password" required></label>
+                            <label class="emp-label">Nueva contraseña<span class="emp-password-wrap"><input class="emp-input" id="cfgPassword" type="password" minlength="8" autocomplete="new-password" required><button type="button" class="password-toggle" data-password-target="cfgPassword" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fas fa-eye-slash" aria-hidden="true"></i></button></span></label>
+                            <label class="emp-label">Confirmar contraseña<span class="emp-password-wrap"><input class="emp-input" id="cfgPassword2" type="password" minlength="8" autocomplete="new-password" required><button type="button" class="password-toggle" data-password-target="cfgPassword2" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fas fa-eye-slash" aria-hidden="true"></i></button></span></label>
                             <button class="emp-btn primary" type="submit">Cambiar contraseña</button>
                         </form>
                         <div class="emp-card">
@@ -308,6 +308,7 @@
         </form>
     </div>
 
+    <script src="../../assets/js/password-toggle.js?v=20261102-password-eye2"></script>
     <script src="assets/js/empleado.js?v=2"></script>
 </body>
 

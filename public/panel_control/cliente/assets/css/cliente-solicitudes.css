@@ -67,6 +67,7 @@
 .cli-sol-form select { min-height: 44px; }
 .cli-sol-form select {
     appearance: none;
+    -webkit-appearance: none;
     padding-right: 40px;
     color-scheme: dark;
     background-image:
@@ -87,7 +88,7 @@ html[data-theme="light"] .cli-sol-form select { color-scheme: light; }
 .cli-sol-form select:focus,
 .cli-sol-form textarea:focus {
     border-color: var(--color-primary);
-    background: rgba(var(--color-sidebar-rgb), .9);
+    background-color: rgba(var(--color-sidebar-rgb), .9);
     box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), .13);
 }
 .cli-sol-form select option { color: var(--color-text-main); background: var(--color-card-bg); }
@@ -99,9 +100,11 @@ html[data-theme="light"] .cli-sol-form select { color-scheme: light; }
 .support-form-actions .btn-primary-action:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 22px var(--color-primary-glow); }
 .support-form-actions .btn-primary-action:disabled { cursor: wait; opacity: .68; }
 
-.support-history-card { gap: 2px; }
+.support-history-card { gap: 2px; border-color: rgba(var(--color-primary-rgb), .2); }
 .support-history-header { margin-bottom: 16px; }
 .support-history-header h3 { margin: 0 0 4px; }
+.support-history-header > div { min-width: 0; }
+.support-history-header p { max-width: 54ch; }
 .support-history-icon {
     width: 38px;
     height: 38px;
@@ -115,7 +118,7 @@ html[data-theme="light"] .cli-sol-form select { color-scheme: light; }
 .cli-sol-item {
     min-width: 0;
     max-width: 100%;
-    padding: 16px;
+    padding: 17px;
     overflow: hidden;
     border: 1px solid rgba(var(--color-primary-rgb), .17);
     border-radius: 14px;
@@ -129,6 +132,46 @@ html[data-theme="light"] .cli-sol-form select { color-scheme: light; }
 .cli-sol-item p { max-width: 100%; margin: 10px 0 0; color: var(--color-text-muted); line-height: 1.55; overflow-wrap: anywhere; word-break: break-word; }
 .cli-sol-reply { padding: 10px 12px; border-left: 3px solid var(--color-primary); border-radius: 0 9px 9px 0; background: rgba(var(--color-primary-rgb), .1); }
 .cli-sol-reply b { color: var(--color-secondary-light); }
+.cli-sol-actions,
+.cli-sol-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cli-sol-actions { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(var(--color-primary-rgb), .12); }
+.cli-sol-action {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.cli-sol-action:hover:not(:disabled) { transform: translateY(-1px); }
+.cli-sol-action:focus-visible { outline: 2px solid var(--color-secondary-light); outline-offset: 2px; }
+.cli-sol-action:disabled { cursor: wait; opacity: .6; }
+.cli-sol-action-secondary { border-color: rgba(var(--color-primary-rgb), .2); color: var(--color-secondary-light); background: rgba(var(--color-primary-rgb), .08); }
+.cli-sol-action-secondary:hover:not(:disabled) { border-color: rgba(var(--color-primary-rgb), .45); background: rgba(var(--color-primary-rgb), .15); }
+.cli-sol-action-primary { border-color: transparent; color: #fff; background: linear-gradient(110deg, var(--color-primary), var(--color-secondary)); }
+.cli-sol-action-danger { border-color: rgba(239, 68, 68, .2); color: #f87171; background: rgba(239, 68, 68, .08); }
+.cli-sol-action-danger:hover:not(:disabled) { border-color: rgba(239, 68, 68, .4); background: rgba(239, 68, 68, .15); }
+.cli-sol-edit-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; padding: 15px; border: 1px solid rgba(var(--color-primary-rgb), .18); border-radius: 13px; background: rgba(var(--color-sidebar-rgb), .38); }
+.cli-sol-edit-form label { display: flex; min-width: 0; flex-direction: column; gap: 7px; color: var(--color-text-main); font-size: 11px; font-weight: 650; }
+.cli-sol-edit-form .wide { grid-column: 1 / -1; }
+.cli-sol-edit-form input,
+.cli-sol-edit-form select,
+.cli-sol-edit-form textarea { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid rgba(var(--color-primary-rgb), .2); border-radius: 10px; outline: none; color: var(--color-text-main); background-color: rgba(var(--color-card-rgb), .78); font: inherit; font-size: 12px; }
+.cli-sol-edit-form select { min-height: 40px; padding-right: 36px; appearance: none; -webkit-appearance: none; color-scheme: dark; background-image: linear-gradient(45deg, transparent 50%, var(--color-secondary-light) 50%), linear-gradient(135deg, var(--color-secondary-light) 50%, transparent 50%); background-position: calc(100% - 17px) center, calc(100% - 12px) center; background-repeat: no-repeat; background-size: 5px 5px; cursor: pointer; }
+.cli-sol-edit-form textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+.cli-sol-edit-form input:focus,
+.cli-sol-edit-form select:focus,
+.cli-sol-edit-form textarea:focus { border-color: var(--color-primary); background-color: rgba(var(--color-card-rgb), .96); box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), .12); }
+html[data-theme="light"] .cli-sol-edit-form select { color-scheme: light; }
+.cli-sol-edit-form select option { color: var(--color-text-main); background: var(--color-card-bg); }
+.cli-sol-edit-actions { justify-content: flex-end; padding-top: 3px; }
 .cli-sol-badge { flex: 0 0 auto; padding: 5px 10px; border: 1px solid rgba(var(--color-accent-orange-rgb), .2); border-radius: 999px; color: var(--color-accent-orange); background: rgba(var(--color-accent-orange-rgb), .12); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .cli-sol-badge.en_proceso { border-color: rgba(59, 130, 246, .22); color: #60a5fa; background: rgba(59, 130, 246, .12); }
 .cli-sol-badge.resuelta { border-color: rgba(16, 185, 129, .2); color: #34d399; background: rgba(16, 185, 129, .12); }
@@ -149,6 +192,10 @@ html[data-theme="light"] .cli-sol-form select { color-scheme: light; }
     .support-compose-card { gap: 18px; }
     .cli-sol-form { grid-template-columns: minmax(0, 1fr); gap: 13px; }
     .cli-sol-form .wide { grid-column: auto; }
+    .cli-sol-edit-form { grid-template-columns: minmax(0, 1fr); gap: 11px; padding: 12px; }
+    .cli-sol-edit-form .wide { grid-column: auto; }
+    .cli-sol-edit-actions { justify-content: stretch; }
+    .cli-sol-edit-actions .cli-sol-action { flex: 1; }
     .support-form-actions { align-items: flex-start; flex-direction: column; }
     .support-form-actions > div { width: 100%; }
 }

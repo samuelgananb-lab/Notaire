@@ -2,11 +2,15 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { supabase, supabaseAuth } from '../database/supabase.js';
 
-// Sin JWT_SECRET se usa un secreto aleatorio por proceso (nunca uno público)
-if (!process.env.JWT_SECRET) {
-  console.warn('[seguridad] JWT_SECRET no definido: se usa un secreto temporal; defínelo en .env');
+const configuredJwtSecret = process.env.JWT_SECRET?.trim();
+if (process.env.NODE_ENV === 'production' &&
+  (!configuredJwtSecret || Buffer.byteLength(configuredJwtSecret, 'utf8') < 32)) {
+  throw new Error('JWT_SECRET debe estar configurado con al menos 32 caracteres en producción.');
 }
-export const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString('hex');
+if (!configuredJwtSecret) {
+  console.warn('[seguridad] JWT_SECRET no definido: se usa un secreto temporal solo para desarrollo.');
+}
+export const JWT_SECRET = configuredJwtSecret || crypto.randomBytes(48).toString('hex');
 
 export const bloquearEmpleado = async (req, res, next) => {
   try {

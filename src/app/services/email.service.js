@@ -115,12 +115,16 @@ export function createEmailService({
     logger.warn(`Correo de Notaire inactivo (${config.mode}): ${details}`);
   }
 
-  async function send({ to, subject, text }) {
+  async function send({ to, subject, text, idempotencyKey }) {
     if (!config.ready) return false;
     if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()) {
       throw new Error('El asunto y el contenido del correo son obligatorios.');
     }
     if (/[\r\n]/.test(subject)) throw new Error('El asunto del correo no puede contener saltos de línea.');
+    if (idempotencyKey !== undefined &&
+      (typeof idempotencyKey !== 'string' || !idempotencyKey.trim() || idempotencyKey.length > 256)) {
+      throw new Error('La clave idempotente del correo no es válida.');
+    }
 
     const recipients = Array.isArray(to) ? to : [to];
     if (!recipients.length || recipients.some(recipient => !isEmail(recipient))) {
@@ -136,13 +140,17 @@ export function createEmailService({
 
     resendClient ||= resendFactory(env.RESEND_API_KEY.trim());
     const emailSubject = `Notaire | ${subject.trim()}`;
-    const { data, error } = await resendClient.emails.send({
+    const email = {
       from: config.sender,
       to: destinations,
       subject: emailSubject,
       text,
       html: renderEmailHtml({ subject: emailSubject, text, appUrl: config.appUrl })
-    });
+    };
+    const response = idempotencyKey
+      ? await resendClient.emails.send(email, { idempotencyKey })
+      : await resendClient.emails.send(email);
+    const { data, error } = response;
 
     if (error) throw new Error(`Resend rechazó el correo: ${error.message || 'error sin detalle'}`);
     if (!data?.id) throw new Error('Resend no confirmó el envío del correo.');

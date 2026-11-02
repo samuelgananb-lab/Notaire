@@ -198,6 +198,22 @@ button { cursor: pointer; }
     border: 1px solid var(--border); background: var(--input); outline: none;
 }
 .emp-input:focus, .emp-search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(140, 0, 255, 0.2); }
+.emp-password-wrap { position: relative; display: block; }
+.emp-password-wrap .emp-input { padding-right: 44px; }
+.emp-password-wrap .password-toggle {
+    position: absolute; top: 50%; right: 8px; display: grid; width: 30px; height: 30px;
+    padding: 0; place-items: center; color: var(--muted); background: transparent; border: 0;
+    cursor: pointer; transform: translateY(-50%); transition: color .2s ease;
+}
+.emp-password-wrap .password-toggle:hover { color: var(--text); }
+.emp-password-wrap .password-toggle-animate { animation: password-toggle-eye .3s cubic-bezier(.2, .8, .2, 1); }
+@keyframes password-toggle-eye {
+    45% { opacity: .55; transform: rotate(-12deg) scale(.72); }
+    75% { transform: rotate(7deg) scale(1.16); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .emp-password-wrap .password-toggle-animate { animation: none; }
+}
 select.emp-input option { background: #16112e; color: #fff; }
 [data-theme="light"] select.emp-input option { background: #fff; color: #0f172a; }
 .emp-label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; color: var(--muted); font-size: 14px; }

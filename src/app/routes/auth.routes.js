@@ -10,6 +10,7 @@ import { getPrefs, savePrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 const ID_ROL_CLIENTE = '11111111-1111-1111-1111-111111111111';
+const LOCAL_SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 function auditarResultadoLogin(req, res) {
   res.once('finish', () => {
@@ -34,6 +35,22 @@ async function obtenerNombreRol(idRol) {
 
   if (error) throw error;
   return data?.nombre_rol ? String(data.nombre_rol).trim().toLowerCase() : null;
+}
+
+function crearSesionLocal(usuario) {
+  const token = jwt.sign(
+    { id: usuario.id, email: usuario.email, id_rol: usuario.id_rol },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+  const refresh_token = jwt.sign(
+    { id: usuario.id, token_type: 'refresh' },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+  const payload = jwt.decode(token);
+
+  return { token, refresh_token, expires_at: payload.exp };
 }
 
 // POST: Registrar nuevo usuario
@@ -186,15 +203,10 @@ router.post('/login', loginRateLimit, async (req, res) => {
       text: `Hola ${usuario.nombre},\n\nSe inició sesión en tu cuenta de Notaire el ${new Date().toLocaleString('es-CO')}.\n\nSi no reconoces este acceso, cambia tu contraseña y contacta al equipo de soporte.`
     });
 
-    const token = jwt.sign(
-      { id: usuario.id, email: usuario.email, id_rol: usuario.id_rol },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
+    const session = crearSesionLocal(usuario);
     res.json({
       mensaje: 'Inicio de sesión exitoso',
-      token,
+      ...session,
       usuario: {
         id: usuario.id,
         nombre: usuario.nombre,
@@ -214,13 +226,47 @@ router.post('/refresh', async (req, res) => {
   if (!refreshToken) return res.status(400).json({ error: 'Refresh token requerido' });
 
   const { data, error } = await supabaseAuth.auth.refreshSession({ refresh_token: refreshToken });
-  if (error || !data.session) return res.status(401).json({ error: 'La sesión no se puede renovar' });
+  if (!error && data.session) {
+    return res.json({
+      token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_at: data.session.expires_at,
+      usuario: data.user
+    });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(refreshToken, JWT_SECRET, {
+      algorithms: ['HS256'],
+      ignoreExpiration: true
+    });
+  } catch {
+    return res.status(401).json({ error: 'La sesión no se puede renovar' });
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (
+    !payload.id ||
+    !Number.isInteger(payload.exp) ||
+    payload.exp < now - LOCAL_SESSION_MAX_AGE_SECONDS ||
+    (payload.token_type === 'refresh' && payload.exp <= now)
+  ) {
+    return res.status(401).json({ error: 'La sesión no se puede renovar' });
+  }
+
+  const { data: usuario, error: userError } = await supabase
+    .from('usuarios')
+    .select('id, nombre, email, id_rol')
+    .eq('id', payload.id)
+    .maybeSingle();
+
+  if (userError) throw userError;
+  if (!usuario) return res.status(401).json({ error: 'La sesión no se puede renovar' });
 
   res.json({
-    token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
-    expires_at: data.session.expires_at,
-    usuario: data.user
+    ...crearSesionLocal(usuario),
+    usuario
   });
 });
 

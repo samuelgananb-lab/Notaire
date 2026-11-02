@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { currentExchangeRateDate, getExchangeRate, getSupportedCurrencies, isValidExchangeRateDate, normalizeCurrencyCatalog } from '../src/app/services/exchange-rate.service.js';
 
-test('el catálogo prioriza monedas principales y excluye entradas no monetarias', () => {
+test('el catálogo conserva monedas con tasa reciente y excluye entradas no monetarias o vencidas', () => {
     const currencies = normalizeCurrencyCatalog([
         { iso_code: 'ZZZ', iso_numeric: '999', name: 'Unknown Currency', symbol: null },
         { iso_code: 'BTC', iso_numeric: null, name: 'Bitcoin', symbol: '₿' },
         { iso_code: 'USD', iso_numeric: '840', name: 'US Dollar', symbol: '$' },
-        { iso_code: 'COP', iso_numeric: '170', name: 'Colombian Peso', symbol: '$' },
+        { iso_code: 'COP', iso_numeric: '170', name: 'Colombian Peso', symbol: '$', end_date: '2026-11-01' },
         { iso_code: 'OLD', iso_numeric: '111', name: 'Old Currency', end_date: '2000-01-01' },
         { iso_code: 'bad', iso_numeric: '000', name: 'Invalid' }
-    ]);
+    ], new Date('2026-11-02T12:00:00.000Z'));
 
     assert.deepEqual(currencies.map(currency => currency.code), ['COP', 'USD', 'ZZZ']);
     assert.equal(currencies[2].symbol, 'ZZZ');

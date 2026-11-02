@@ -88,30 +88,58 @@
         return;
     }
 
-    async function refreshSession() {
-        const refreshToken = localStorage.getItem('notaire_refresh_token');
-        if (!refreshToken) return;
-        const response = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken })
-        });
-        if (!response.ok) throw new Error('Sesión expirada');
-        const data = await response.json();
-        localStorage.setItem('notaire_token', data.token);
-        if (data.refresh_token) localStorage.setItem('notaire_refresh_token', data.refresh_token);
-        if (data.expires_at) localStorage.setItem('notaire_expires_at', String(data.expires_at));
+    let sessionRefreshPromise = null;
+    function refreshSession() {
+        if (!sessionRefreshPromise) {
+            sessionRefreshPromise = (async () => {
+                const refreshToken = localStorage.getItem('notaire_refresh_token')
+                    || localStorage.getItem('notaire_token');
+                if (!refreshToken) return;
+                const response = await fetch('/api/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                if (!response.ok) throw new Error('Sesión expirada');
+                const data = await response.json();
+                localStorage.setItem('notaire_token', data.token);
+                if (data.refresh_token) localStorage.setItem('notaire_refresh_token', data.refresh_token);
+                if (data.expires_at) localStorage.setItem('notaire_expires_at', String(data.expires_at));
+            })().finally(() => {
+                sessionRefreshPromise = null;
+            });
+        }
+        return sessionRefreshPromise;
     }
 
-    refreshSession().catch(clearSessionAndRedirect);
-    window.setInterval(() => refreshSession().catch(clearSessionAndRedirect), 10 * 60 * 1000);
+    window.notaireRefreshSession = async () => {
+        try {
+            await refreshSession();
+        } catch (error) {
+            clearSessionAndRedirect();
+            throw error;
+        }
+    };
+    window.notaireSessionReady = window.notaireRefreshSession().then(() => true).catch(() => false);
+    window.setInterval(() => {
+        window.notaireRefreshSession().catch(error => console.error('No se pudo renovar la sesión:', error));
+    }, 10 * 60 * 1000);
 
     // Validación con backend cuando la API está disponible
     if (window.fetch && !currentPath.includes('/auth/login.html')) {
-        fetch('/api/auth/verify', {
+        window.notaireSessionReady.then(sessionReady => {
+            if (!sessionReady) return null;
+            return fetch('/api/auth/verify', {
             headers: { Authorization: `Bearer ${localStorage.getItem('notaire_token') || ''}` }
+            });
+        }).then(response => {
+            if (!response) return null;
+            if (!response.ok) {
+                clearSessionAndRedirect();
+                return null;
+            }
+            return response.json();
         })
-            .then(res => res.json())
             .then(data => {
                 if (data && data.authenticated === false) {
                     // El servidor indica que la sesión ya no es válida

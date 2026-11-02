@@ -1,16 +1,18 @@
 const FRANKFURTER_API = 'https://api.frankfurter.dev/v2';
 const CURRENCY_ORDER = ['COP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'NZD', 'MXN', 'BRL', 'INR', 'KRW', 'SGD', 'HKD', 'SEK', 'NOK', 'DKK', 'PLN', 'AED', 'SAR', 'ZAR'];
 
-export function normalizeCurrencyCatalog(currencies) {
+export function normalizeCurrencyCatalog(currencies, now = new Date()) {
   if (!Array.isArray(currencies)) throw new TypeError('La respuesta de monedas no es válida');
   const priority = new Map(CURRENCY_ORDER.map((code, index) => [code, index]));
-  const today = new Date().toISOString().slice(0, 10);
+  const latestCurrencyDate = new Date(now);
+  latestCurrencyDate.setUTCDate(latestCurrencyDate.getUTCDate() - 7);
+  const activeSince = latestCurrencyDate.toISOString().slice(0, 10);
   return currencies
     .filter(currency =>
       /^[A-Z]{3}$/.test(currency?.iso_code || '') &&
       /^\d{3}$/.test(currency?.iso_numeric || '') &&
       currency?.name &&
-      (!currency.end_date || currency.end_date >= today)
+      (!currency.end_date || currency.end_date >= activeSince)
     )
     .map(currency => ({
       code: currency.iso_code,

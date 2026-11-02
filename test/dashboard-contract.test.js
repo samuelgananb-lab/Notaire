@@ -600,7 +600,7 @@ test('las pestañas secundarias cargan metas, ahorros y saldo al abrirse', async
 test('el resumen de saldo incluye la gráfica agregada y el anillo detalla sus valores', async () => {
     const [balance, dashboardRoute, html, styles] = await Promise.all([
         read('public/panel_control/cliente/assets/js/saldo.js'),
-        read('src/app/server.js'),
+        read('src/app/app.js'),
         read('public/panel_control/cliente/dashboard.html'),
         read('public/panel_control/cliente/assets/css/cliente-dashboard.css')
     ]);
@@ -725,15 +725,15 @@ test('el empleado no tiene acceso a registros ni información de dinero', async 
     const adminHtml = await read('public/panel_control/admin/dashboard.html');
     const adminScript = await read('public/panel_control/admin/assets/js/admin-live.js');
     const adminRoute = await read('src/app/routes/admin.routes.js');
-    const server = await read('src/app/server.js');
+    const appSource = await read('src/app/app.js');
 
     assert.match(adminHtml, /class="has-submenu finance-only"/);
     assert.match(adminScript, /classList\.add\('employee-mode'\)/);
     assert.match(adminScript, /isEmployeeSession\(\)\) return;/);
     assert.match(adminRoute, /if \(employeeSafe\) \{\s*return res\.json\(\{ employeeScope: true/);
-    assert.match(server, /'\/api\/transacciones', verificarToken, bloquearEmpleado/);
-    assert.match(server, /'\/api\/metas', verificarToken, bloquearEmpleado/);
-    assert.match(server, /'\/api\/patrimonio', verificarToken, bloquearEmpleado/);
+    assert.match(appSource, /'\/api\/transacciones', verificarToken, bloquearEmpleado/);
+    assert.match(appSource, /'\/api\/metas', verificarToken, bloquearEmpleado/);
+    assert.match(appSource, /'\/api\/patrimonio', verificarToken, bloquearEmpleado/);
 });
 
 test('el panel admin incluye centro de notificaciones operativas', async () => {
@@ -1078,11 +1078,11 @@ test('el panel conecta tips, filtros y controles de soporte con estilos responsi
 });
 
 test('actividad reciente muestra solo ingresos y gastos y elimina el acceso adicional a gastos', async () => {
-    const [html, homeScript, styles, server] = await Promise.all([
+    const [html, homeScript, styles, appSource] = await Promise.all([
         read('public/panel_control/cliente/dashboard.html'),
         read('public/panel_control/cliente/assets/js/inicio.js'),
         read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
-        read('src/app/server.js')
+        read('src/app/app.js')
     ]);
 
     assert.match(html, /id="listaActividadReciente"/);
@@ -1093,7 +1093,7 @@ test('actividad reciente muestra solo ingresos y gastos y elimina el acceso adic
     assert.match(homeScript, /obtenerMovimientosRecientes\(dashboardData, normalizarTipo\)/);
     assert.match(homeScript, /await fetchTransacciones\(\)/);
     assert.match(homeScript, /No se pudieron cargar los movimientos recientes\./);
-    assert.match(server, /\.from\('transacciones'\)[\s\S]*?\.limit\(5\)/);
+    assert.match(appSource, /\.from\('transacciones'\)[\s\S]*?\.limit\(5\)/);
     assert.match(styles, /\[data-theme="light"\] \.config-toggle-title/);
     assert.match(styles, /\[data-theme="light"\] \.section-title-group h2/);
     assert.match(styles, /\[data-theme="light"\] \.goal-title-text/);
@@ -1493,7 +1493,6 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.match(keypadMarkup, /data-action="random"/);
     assert.match(html, /class="calculator-history card-box"[\s\S]*id="calculatorHistoryList"/);
     assert.match(html, /id="calculatorHistoryMore"[^>]*aria-controls="calculatorHistoryMorePanel"/);
-    assert.doesNotMatch(html.match(/<button[^>]*id="calculatorHistoryMore"[^>]*>/)?.[0] || '', /\shidden(?:\s|>)/);
     assert.match(html, /id="calculatorHistoryMorePanel"[^>]*data-open="false" aria-hidden="true"/);
     assert.match(html, /id="calculatorHistoryMoreTitle"/);
     assert.match(html, /id="calculatorHistoryClose"/);
@@ -1744,9 +1743,7 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     elements.get('calculatorClearHistory').listeners.click();
     assert.deepEqual(JSON.parse(storage.values().next().value), []);
     assert.equal(elements.get('calculatorHistoryList').children.length, 1);
-    assert.equal(elements.get('calculatorHistoryMore').hidden, false);
-    assert.match(elements.get('calculatorHistoryMoreLabel').textContent, /historial/i);
-    assert.equal(elements.get('calculatorHistoryMoreList').children.length, 1);
+    assert.equal(elements.get('calculatorHistoryMore').hidden, true);
     assert.doesNotMatch(calculator, /\beval\s*\(/);
 });
 

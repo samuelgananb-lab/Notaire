@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Notaire - Sistema Notarial Inteligente",
-  "main": "src/app/server.js",
+  "main": "index.js",
   "scripts": {
     "start": "node src/app/server.js",
     "test": "node --test",

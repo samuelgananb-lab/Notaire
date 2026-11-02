@@ -18,6 +18,7 @@ const developmentEnv = (overrides = {}) => ({
 
 function createSender(env, { response = { data: { id: 'email_test_123' }, error: null } } = {}) {
   const calls = [];
+  const options = [];
   const logs = [];
   const service = createEmailService({
     env,
@@ -25,8 +26,9 @@ function createSender(env, { response = { data: { id: 'email_test_123' }, error:
       assert.equal(apiKey, env.RESEND_API_KEY);
       return {
         emails: {
-          send: async payload => {
+          send: async (payload, sendOptions) => {
             calls.push(payload);
+            options.push(sendOptions);
             return response;
           }
         }
@@ -38,7 +40,7 @@ function createSender(env, { response = { data: { id: 'email_test_123' }, error:
       error: message => logs.push(message)
     }
   });
-  return { service, calls, logs };
+  return { service, calls, options, logs };
 }
 
 test('desarrollo redirige todos los destinatarios al autorizado', async () => {
@@ -122,6 +124,18 @@ test('producción falla al iniciar con variables incompletas o remitente de prue
 test('un error de Resend no se reporta como envío exitoso', async () => {
   const { service, calls } = createSender(developmentEnv(), {
     response: { data: null, error: { message: 'sender domain is not verified' } }
+  });
+
+  test('envía claves idempotentes como opciones de Resend', async () => {
+    const { service, options } = createSender(developmentEnv());
+
+    assert.equal(await service.send({
+      to: 'usuario-real@example.test',
+      subject: 'Aviso programado',
+      text: 'Contenido del aviso.',
+      idempotencyKey: 'event/42/notif24_sent/1'
+    }), true);
+    assert.deepEqual(options[0], { idempotencyKey: 'event/42/notif24_sent/1' });
   });
 
   await assert.rejects(

@@ -5,6 +5,17 @@ dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (process.env.NODE_ENV === 'production' && supabaseUrl) {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(supabaseUrl);
+  } catch {
+    throw new Error('SUPABASE_URL debe ser una URL válida en producción.');
+  }
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error('SUPABASE_URL debe usar HTTPS en producción.');
+  }
+}
 
 const missingSupabaseVariables = [
   !supabaseUrl && 'SUPABASE_URL',
