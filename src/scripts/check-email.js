@@ -2,7 +2,9 @@ import { getEmailStatus, sendAppEmail } from '../app/services/email.service.js';
 
 const status = getEmailStatus();
 
-if (!status.ready) {
+if (status.disabled) {
+  console.log('El correo está desactivado (EMAIL_MODE=disabled); no se realizó ningún envío.');
+} else if (!status.ready) {
   console.error('La configuración de correo no está lista:');
   for (const item of [...status.missing.map(name => `Falta ${name}`), ...status.issues]) {
     console.error(`- ${item}`);

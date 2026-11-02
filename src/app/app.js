@@ -29,8 +29,9 @@ if (process.env.NODE_ENV === 'production' &&
   (!cronSecret || Buffer.byteLength(cronSecret, 'utf8') < 32)) {
   throw new Error('CRON_SECRET debe estar configurado con al menos 32 caracteres en producción.');
 }
-if (process.env.NODE_ENV === 'production' && process.env.EMAIL_MODE !== 'production') {
-  throw new Error('EMAIL_MODE=production es obligatorio en producción.');
+const emailMode = String(process.env.EMAIL_MODE || '').trim().toLowerCase();
+if (process.env.NODE_ENV === 'production' && !['production', 'disabled'].includes(emailMode)) {
+  throw new Error('EMAIL_MODE debe ser production o disabled en producción.');
 }
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
 app.use(cors({ origin: corsOrigins.length ? corsOrigins : false }));

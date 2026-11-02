@@ -264,7 +264,9 @@ export function startEventNotificationScheduler() {
     }
   });
   const status = getEmailStatus();
-  console.log(status.ready
-    ? `Notificaciones por correo activas (Resend, modo ${status.mode}).`
-    : `Notificaciones por correo inactivas; configura: ${[...status.missing, ...status.issues].join(', ')}.`);
+  console.log(status.disabled
+    ? 'Notificaciones por correo desactivadas (EMAIL_MODE=disabled).'
+    : status.ready
+      ? `Notificaciones por correo activas (Resend, modo ${status.mode}).`
+      : `Notificaciones por correo inactivas; configura: ${[...status.missing, ...status.issues].join(', ')}.`);
 }

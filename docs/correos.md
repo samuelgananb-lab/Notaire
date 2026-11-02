@@ -4,6 +4,14 @@ Notaire centraliza sus correos propios en `src/app/services/email.service.js` y 
 
 La recuperación de contraseña continúa a cargo de Supabase Auth mediante `resetPasswordForEmail`. Ese flujo genera y valida los enlaces de recuperación, por lo que no se debe reemplazar ni enviar un enlace propio desde Resend.
 
+## Desactivar correo temporalmente
+
+Para desplegar sin notificaciones por correo, configura `EMAIL_MODE=disabled`. En este modo el servicio no importa ni inicializa Resend, no requiere `RESEND_API_KEY`, `MAIL_FROM`, dominio verificado ni `PUBLIC_APP_URL`, y toda petición de envío devuelve `false` sin registrarse como enviada. Las notificaciones internas de la aplicación y sus rutas no dependen de este ajuste. La recuperación de contraseña administrada por Supabase Auth conserva su configuración independiente.
+
+`npm run email:test` indicará que el correo está desactivado y no realizará ningún envío.
+
+En Vercel conserva `EMAIL_MODE=disabled` y elimina las variables de Resend (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_TEST_RECIPIENT` y `PUBLIC_APP_URL`) mientras el correo esté apagado.
+
 ## Configuración de desarrollo
 
 1. Crea una cuenta en [Resend](https://resend.com/) y genera una API Key desde **API Keys**.
@@ -61,7 +69,7 @@ Antes de habilitar los envíos:
    PUBLIC_APP_URL=https://www.midominio.com
    ```
 
-4. Reinicia el servidor. En producción, el proceso no inicia con variables faltantes, formato inválido, una URL que no use HTTPS o el remitente `onboarding@resend.dev`.
+4. Reinicia el servidor. Al reactivar el correo en producción, el proceso no inicia con variables faltantes, formato inválido, una URL que no use HTTPS o el remitente `onboarding@resend.dev`.
 5. Realiza una prueba desde el entorno desplegado y verifica el ID/estado en el panel de Resend. No se redirigen los destinatarios legítimos en producción.
 
 No uses `MAIL_TEST_RECIPIENT` como mecanismo de redirección en producción. La recuperación de contraseña mantiene el proveedor y las plantillas configurados en Supabase Auth.

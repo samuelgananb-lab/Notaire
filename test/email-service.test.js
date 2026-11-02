@@ -72,6 +72,30 @@ test('desarrollo no envía si falta la configuración o el destinatario autoriza
   assert.equal(factoryCalls, 0);
 });
 
+test('el modo desactivado no requiere configuración ni inicializa Resend', async () => {
+  let factoryCalls = 0;
+  const service = createEmailService({
+    env: { EMAIL_MODE: 'disabled' },
+    resendFactory: () => { factoryCalls += 1; throw new Error('Resend no debe inicializarse'); },
+    logger: { info() {}, warn() {} }
+  });
+
+  assert.deepEqual(service.getStatus(), {
+    provider: 'resend',
+    mode: 'disabled',
+    ready: false,
+    disabled: true,
+    missing: [],
+    issues: []
+  });
+  assert.equal(await service.send({
+    to: 'user@example.test',
+    subject: 'Aviso',
+    text: 'Notificación de prueba'
+  }), false);
+  assert.equal(factoryCalls, 0);
+});
+
 test('rechaza destinatarios y asuntos inválidos antes de llamar a Resend', async () => {
   const { service, calls } = createSender(developmentEnv());
 

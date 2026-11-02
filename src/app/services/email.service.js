@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import { Resend } from 'resend';
 
 dotenv.config();
 
@@ -22,32 +21,37 @@ function getEmailConfiguration(env = process.env) {
   const missing = [];
   const issues = [];
 
-  if (!['development', 'production'].includes(mode)) issues.push('EMAIL_MODE debe ser development o production.');
-  if (provider !== 'resend') issues.push('EMAIL_PROVIDER debe ser resend.');
-  if (!env.RESEND_API_KEY?.trim()) missing.push('RESEND_API_KEY');
-  if (!sender) missing.push('MAIL_FROM');
-  else if (!isEmail(senderAddress)) issues.push('MAIL_FROM no contiene una dirección válida.');
+  if (!['development', 'production', 'disabled'].includes(mode)) {
+    issues.push('EMAIL_MODE debe ser development, production o disabled.');
+  }
 
-  if (mode === 'development') {
-    if (!env.MAIL_TEST_RECIPIENT?.trim()) missing.push('MAIL_TEST_RECIPIENT');
-    else if (!isEmail(env.MAIL_TEST_RECIPIENT)) issues.push('MAIL_TEST_RECIPIENT no es una dirección válida.');
-    if (senderAddress && senderAddress !== DEV_SENDER) {
-      issues.push(`En desarrollo MAIL_FROM debe usar ${DEV_SENDER}.`);
+  if (mode !== 'disabled') {
+    if (provider !== 'resend') issues.push('EMAIL_PROVIDER debe ser resend.');
+    if (!env.RESEND_API_KEY?.trim()) missing.push('RESEND_API_KEY');
+    if (!sender) missing.push('MAIL_FROM');
+    else if (!isEmail(senderAddress)) issues.push('MAIL_FROM no contiene una dirección válida.');
+
+    if (mode === 'development') {
+      if (!env.MAIL_TEST_RECIPIENT?.trim()) missing.push('MAIL_TEST_RECIPIENT');
+      else if (!isEmail(env.MAIL_TEST_RECIPIENT)) issues.push('MAIL_TEST_RECIPIENT no es una dirección válida.');
+      if (senderAddress && senderAddress !== DEV_SENDER) {
+        issues.push(`En desarrollo MAIL_FROM debe usar ${DEV_SENDER}.`);
+      }
     }
-  }
 
-  if (mode === 'production') {
-    if (senderAddress === DEV_SENDER) issues.push('El remitente onboarding@resend.dev no se permite en producción.');
-    if (!env.PUBLIC_APP_URL?.trim()) missing.push('PUBLIC_APP_URL');
-  }
+    if (mode === 'production') {
+      if (senderAddress === DEV_SENDER) issues.push('El remitente onboarding@resend.dev no se permite en producción.');
+      if (!env.PUBLIC_APP_URL?.trim()) missing.push('PUBLIC_APP_URL');
+    }
 
-  if (env.PUBLIC_APP_URL?.trim()) {
-    try {
-      const appUrl = new URL(env.PUBLIC_APP_URL);
-      if (!['http:', 'https:'].includes(appUrl.protocol)) issues.push('PUBLIC_APP_URL debe usar HTTP o HTTPS.');
-      if (mode === 'production' && appUrl.protocol !== 'https:') issues.push('PUBLIC_APP_URL debe usar HTTPS en producción.');
-    } catch {
-      issues.push('PUBLIC_APP_URL no es una URL válida.');
+    if (env.PUBLIC_APP_URL?.trim()) {
+      try {
+        const appUrl = new URL(env.PUBLIC_APP_URL);
+        if (!['http:', 'https:'].includes(appUrl.protocol)) issues.push('PUBLIC_APP_URL debe usar HTTP o HTTPS.');
+        if (mode === 'production' && appUrl.protocol !== 'https:') issues.push('PUBLIC_APP_URL debe usar HTTPS en producción.');
+      } catch {
+        issues.push('PUBLIC_APP_URL no es una URL válida.');
+      }
     }
   }
 
@@ -60,7 +64,8 @@ function getEmailConfiguration(env = process.env) {
     appUrl: String(env.PUBLIC_APP_URL || 'http://localhost:3000').trim().replace(/\/+$/, ''),
     missing: [...new Set(missing)],
     issues,
-    ready: missing.length === 0 && issues.length === 0
+    ready: mode !== 'disabled' && missing.length === 0 && issues.length === 0,
+    disabled: mode === 'disabled'
   };
 }
 
@@ -100,7 +105,10 @@ function renderEmailHtml({ subject, text, appUrl }) {
 
 export function createEmailService({
   env = process.env,
-  resendFactory = (apiKey) => new Resend(apiKey),
+  resendFactory = async apiKey => {
+    const { Resend } = await import('resend');
+    return new Resend(apiKey);
+  },
   logger = console
 } = {}) {
   const config = getEmailConfiguration(env);
@@ -110,12 +118,15 @@ export function createEmailService({
     throw new Error(`Configuración de correo de producción inválida: ${[...config.missing, ...config.issues].join(' ')}`);
   }
 
-  if (!config.ready) {
+  if (config.disabled) {
+    logger.info('Correo de Notaire desactivado (EMAIL_MODE=disabled).');
+  } else if (!config.ready) {
     const details = [...config.missing.map(name => `falta ${name}`), ...config.issues].join('; ');
     logger.warn(`Correo de Notaire inactivo (${config.mode}): ${details}`);
   }
 
   async function send({ to, subject, text, idempotencyKey }) {
+    if (config.disabled) return false;
     if (!config.ready) return false;
     if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()) {
       throw new Error('El asunto y el contenido del correo son obligatorios.');
@@ -138,7 +149,7 @@ export function createEmailService({
       throw new Error('El destinatario de desarrollo no está autorizado.');
     }
 
-    resendClient ||= resendFactory(env.RESEND_API_KEY.trim());
+    resendClient ||= await resendFactory(env.RESEND_API_KEY.trim());
     const emailSubject = `Notaire | ${subject.trim()}`;
     const email = {
       from: config.sender,
@@ -165,6 +176,7 @@ export function createEmailService({
       provider: config.provider,
       mode: config.mode,
       ready: config.ready,
+      disabled: config.disabled,
       missing: [...config.missing],
       issues: [...config.issues]
     })
