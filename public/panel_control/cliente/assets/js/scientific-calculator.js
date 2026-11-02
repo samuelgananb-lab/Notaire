@@ -8,7 +8,13 @@
     const angleButton = document.getElementById('calculatorAngleMode');
     const historyList = document.getElementById('calculatorHistoryList');
     const clearHistoryButton = document.getElementById('calculatorClearHistory');
+    const historyMoreButton = document.getElementById('calculatorHistoryMore');
+    const historyMoreLabel = document.getElementById('calculatorHistoryMoreLabel');
+    const historyMorePanel = document.getElementById('calculatorHistoryMorePanel');
+    const historyMoreList = document.getElementById('calculatorHistoryMoreList');
     const memoryIndicator = document.getElementById('calculatorMemoryIndicator');
+    const maxHistoryItems = 10;
+    const visibleHistoryItems = 3;
     let expression = '';
     let degrees = true;
     let justEvaluated = false;
@@ -30,7 +36,7 @@
     function readHistory() {
         try {
             const records = JSON.parse(localStorage.getItem(historyStorageKey) || '[]');
-            return Array.isArray(records) ? records.slice(0, 30) : [];
+            return Array.isArray(records) ? records.slice(0, maxHistoryItems) : [];
         } catch (error) {
             console.error('No se pudo cargar el historial de cálculos:', error);
             return [];
@@ -38,28 +44,27 @@
     }
 
     function saveHistory() {
+        history = history.slice(0, maxHistoryItems);
         try {
-            localStorage.setItem(historyStorageKey, JSON.stringify(history.slice(0, 30)));
+            localStorage.setItem(historyStorageKey, JSON.stringify(history));
         } catch (error) {
             console.error('No se pudo guardar el historial de cálculos:', error);
         }
         renderHistory();
     }
 
-    function renderHistory() {
-        if (!historyList) return;
-        historyList.replaceChildren();
-        if (!history.length) {
+    function renderHistoryEntries(list, records, emptyMessage) {
+        if (!list) return;
+        list.replaceChildren();
+        if (!records.length && emptyMessage) {
             const empty = document.createElement('div');
             empty.className = 'calculator-history-empty';
             const icon = document.createElement('i');
             icon.className = 'fas fa-clock-rotate-left';
             const text = document.createElement('span');
-            text.textContent = window.getCurrentLang?.() === 'en'
-                ? 'Your completed calculations will be saved here.'
-                : 'Tus cálculos realizados aparecerán aquí.';
+            text.textContent = emptyMessage;
             empty.append(icon, text);
-            historyList.append(empty);
+            list.append(empty);
             return;
         }
 
@@ -67,7 +72,7 @@
             dateStyle: 'short',
             timeStyle: 'short'
         });
-        history.forEach(record => {
+        records.forEach(record => {
             const item = document.createElement('button');
             item.type = 'button';
             item.className = 'calculator-history-entry';
@@ -82,8 +87,52 @@
             date.dateTime = record.createdAt;
             date.textContent = dateFormatter.format(new Date(record.createdAt));
             item.append(expressionLabel, resultLabel, date);
-            historyList.append(item);
+            list.append(item);
         });
+    }
+
+    function setHistoryMenuOpen(isOpen) {
+        if (!historyMoreButton || !historyMorePanel) return;
+        if (isOpen) {
+            const cardBounds = historyMorePanel.parentElement?.getBoundingClientRect?.();
+            if (cardBounds && Number.isFinite(window.innerHeight)) {
+                const spaceAbove = cardBounds.top - 4;
+                const spaceBelow = window.innerHeight - cardBounds.bottom - 4;
+                const opensAbove = spaceAbove > spaceBelow;
+                historyMorePanel.dataset.placement = opensAbove ? 'above' : 'below';
+                historyMorePanel.style.maxHeight = `${Math.max(80, Math.min(280, Math.floor(Math.max(spaceAbove, spaceBelow))))}px`;
+            }
+        } else {
+            delete historyMorePanel.dataset.placement;
+            historyMorePanel.style.maxHeight = '';
+        }
+        historyMorePanel.hidden = !isOpen;
+        historyMoreButton.setAttribute('aria-expanded', String(isOpen));
+        const icon = historyMoreButton.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down', !isOpen);
+            icon.classList.toggle('fa-chevron-up', isOpen);
+        }
+    }
+
+    function renderHistory() {
+        if (!historyList) return;
+        const english = window.getCurrentLang?.() === 'en';
+        renderHistoryEntries(historyList, history.slice(0, visibleHistoryItems), history.length
+            ? ''
+            : (english ? 'Your completed calculations will be saved here.' : 'Tus cálculos realizados aparecerán aquí.'));
+        renderHistoryEntries(historyMoreList, history.slice(visibleHistoryItems, maxHistoryItems));
+        const additionalCount = Math.min(Math.max(history.length - visibleHistoryItems, 0), maxHistoryItems - visibleHistoryItems);
+        if (historyMoreButton) {
+            historyMoreButton.hidden = additionalCount === 0;
+            if (historyMoreLabel) {
+                historyMoreLabel.textContent = english ? `See ${additionalCount} more` : `Ver ${additionalCount} más`;
+            }
+            historyMoreButton.setAttribute('aria-label', english
+                ? `Show ${additionalCount} older calculations`
+                : `Mostrar ${additionalCount} operaciones anteriores`);
+        }
+        if (additionalCount === 0) setHistoryMenuOpen(false);
     }
 
     function getFrankfurterPath(path) {
@@ -199,13 +248,15 @@
                 if (externalPath === '/currencies' && Array.isArray(data)) {
                     const preferredCodes = ['COP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'NZD', 'MXN', 'BRL', 'INR', 'KRW', 'SGD', 'HKD', 'SEK', 'NOK', 'DKK', 'PLN', 'AED', 'SAR', 'ZAR'];
                     const priority = new Map(preferredCodes.map((code, index) => [code, index]));
-                    const today = new Date().toISOString().slice(0, 10);
+                    const latestCurrencyDate = new Date();
+                    latestCurrencyDate.setUTCDate(latestCurrencyDate.getUTCDate() - 7);
+                    const activeSince = latestCurrencyDate.toISOString().slice(0, 10);
                     const currencies = data
                         .filter(currency =>
                             /^[A-Z]{3}$/.test(currency?.iso_code || '') &&
                             /^\d{3}$/.test(currency?.iso_numeric || '') &&
                             currency?.name &&
-                            (!currency.end_date || currency.end_date >= today)
+                            (!currency.end_date || currency.end_date >= activeSince)
                         )
                         .map(currency => ({
                             code: currency.iso_code,
@@ -223,6 +274,13 @@
             } catch (error) {
                 throw new Error(`No se pudo consultar la API de Notaire ni Frankfurter: ${internalError.message}; ${error.message}`);
             }
+        };
+        const mergeFallbackCurrencies = catalog => {
+            const available = new Map(catalog.map(currency => [currency.code, currency]));
+            fallbackCurrencies.forEach(currency => {
+                if (!available.has(currency.code)) available.set(currency.code, currency);
+            });
+            return [...available.values()];
         };
         const setStatus = (message, isError = false) => {
             rateOutput.textContent = message;
@@ -261,6 +319,13 @@
             const quote = toSelect.value;
             exchangeRate = null;
             refreshPrefixes();
+            if (!base || !quote) {
+                const english = window.getCurrentLang?.() === 'en';
+                setStatus(english ? 'Select two currencies to see the exchange rate.' : 'Selecciona dos monedas para consultar la tasa.', true);
+                toAmount.value = '';
+                updatedOutput.textContent = '';
+                return;
+            }
             setStatus(window.getCurrentLang?.() === 'en' ? 'Loading exchange rate...' : 'Cargando tasa de cambio...');
             updatedOutput.textContent = '';
             try {
@@ -271,6 +336,7 @@
                     const params = new URLSearchParams({ base, quote, date: localRateDate() });
                     if (forceRefresh) params.set('refresh', '1');
                     const result = await fetchCurrencyData(`/api/exchange-rates/rate?${params}`);
+                    if (currentRequestId !== requestId) return;
                     if (result.base !== base || result.quote !== quote || !Number.isFinite(result.rate) || result.rate <= 0) {
                         throw new Error('La tasa recibida no es válida.');
                     }
@@ -299,9 +365,12 @@
                 option.textContent = `${currency.code} — ${currencyName(currency)}`;
                 select.append(option);
             });
-            select.value = currencies.some(currency => currency.code === selectedValue)
-                ? selectedValue
-                : (select === fromSelect ? 'USD' : 'COP');
+            const otherSelect = select === fromSelect ? toSelect : fromSelect;
+            const preferredCode = select === fromSelect ? 'USD' : 'COP';
+            const options = Array.from(select.options, option => option.value);
+            const distinctOptions = options.filter(code => code !== otherSelect.value);
+            const candidates = [selectedValue, preferredCode, ...options];
+            select.value = candidates.find(code => options.includes(code) && (code !== otherSelect.value || distinctOptions.length === 0)) || options[0] || '';
         };
         const updateLanguage = () => {
             const english = window.getCurrentLang?.() === 'en';
@@ -363,7 +432,7 @@
             currencyCatalogPromise = fetchCurrencyData('/api/exchange-rates/currencies')
             .then(result => {
                 if (!Array.isArray(result.currencies) || !result.currencies.length) throw new Error('El catálogo de monedas está vacío.');
-                currencies = result.currencies;
+                currencies = mergeFallbackCurrencies(result.currencies);
                 populateSelect(fromSelect);
                 populateSelect(toSelect);
                 refreshPrefixes();
@@ -381,10 +450,23 @@
             });
             return currencyCatalogPromise;
         };
-        document.querySelector('#sidebarMenu a[data-target="view-calculadora"]')
-            ?.addEventListener('click', () => void loadCurrencyCatalog());
-        if (document.getElementById('view-calculadora')?.classList.contains('active')) {
+        document.addEventListener('click', event => {
+            if (event.target instanceof Element && event.target.closest('#sidebarMenu a[data-target="view-calculadora"]')) {
+                void loadCurrencyCatalog();
+            }
+        });
+        const calculatorView = document.getElementById('view-calculadora');
+        const loadCatalogIfCalculatorIsActive = () => {
+            if (!calculatorView?.classList.contains('active')) return false;
             void loadCurrencyCatalog();
+            return true;
+        };
+        if (!loadCatalogIfCalculatorIsActive() && calculatorView) {
+            const viewObserver = new MutationObserver(() => {
+                if (!loadCatalogIfCalculatorIsActive()) return;
+                viewObserver.disconnect();
+            });
+            viewObserver.observe(calculatorView, { attributes: true, attributeFilter: ['class'] });
         }
     }
 
@@ -691,7 +773,7 @@
             resultOutput.classList.remove('calculator-error');
             justEvaluated = true;
             history.unshift({ expression: completedExpression, result, createdAt: new Date().toISOString() });
-            history = history.slice(0, 30);
+            history = history.slice(0, maxHistoryItems);
             saveHistory();
         } catch (error) {
             resultOutput.textContent = error.message;
@@ -745,6 +827,24 @@
         render();
     });
 
+    historyMoreList?.addEventListener('click', event => {
+        const entry = event.target.closest('.calculator-history-entry');
+        if (!entry) return;
+        expression = entry.dataset.expression || '';
+        justEvaluated = false;
+        setHistoryMenuOpen(false);
+        render();
+    });
+
+    historyMoreButton?.addEventListener('click', () => {
+        setHistoryMenuOpen(historyMorePanel.hidden);
+    });
+
+    document.addEventListener('click', event => {
+        if (historyMorePanel?.hidden || historyMoreButton?.contains(event.target) || historyMorePanel?.contains(event.target)) return;
+        setHistoryMenuOpen(false);
+    });
+
     clearHistoryButton?.addEventListener('click', () => {
         history = [];
         saveHistory();
@@ -758,6 +858,11 @@
 
     document.addEventListener('keydown', event => {
         if (!document.getElementById('view-calculadora')?.classList.contains('active')) return;
+        if (event.key === 'Escape' && historyMorePanel && !historyMorePanel.hidden) {
+            setHistoryMenuOpen(false);
+            historyMoreButton?.focus();
+            return;
+        }
         if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
         if (/^[0-9.+\-*/^()%!]$/.test(event.key)) append(event.key);
         else if (event.key === 'Enter' || event.key === '=') calculate();
