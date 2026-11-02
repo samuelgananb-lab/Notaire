@@ -2,41 +2,23 @@ import cron from 'node-cron';
 import { supabase } from '../database/supabase.js';
 import { getPrefs } from './notification-prefs.service.js';
 import { getGoalDeadlineNotice } from './goal-notification-rules.js';
+import { getEmailStatus, sendAppEmail } from './email.service.js';
 
-const RESEND_URL = 'https://api.resend.com/emails';
 let reminderSchemaWarningShown = false;
 let goalSchemaWarningShown = false;
 
 function configured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
-}
-
-async function sendEmail({ to, subject, text }) {
-  if (!configured()) return false;
-
-  const response = await fetch(RESEND_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, text })
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Resend respondió ${response.status}: ${detail}`);
-  }
-  return true;
+  return getEmailStatus().ready;
 }
 
 export async function sendNotificationEmail({ to, subject, text }) {
-  if (!to) return false;
+  if (!to) {
+    console.warn('Correo omitido: falta el destinatario.');
+    return false;
+  }
 
   try {
-    const sent = await sendEmail({ to, subject: `Notaire | ${subject}`, text });
-    if (!sent) console.warn('Notificación por correo omitida: faltan RESEND_API_KEY o MAIL_FROM.');
-    return sent;
+    return await sendAppEmail({ to, subject, text });
   } catch (error) {
     console.error('Error enviando notificación por correo:', error.message);
     return false;
@@ -221,7 +203,8 @@ export function startEventNotificationScheduler() {
       console.error('Error enviando recordatorios:', error.message);
     }
   });
-  console.log(configured()
-    ? 'Notificaciones por correo activas.'
-    : 'Notificaciones por correo inactivas: faltan RESEND_API_KEY y MAIL_FROM.');
+  const status = getEmailStatus();
+  console.log(status.ready
+    ? `Notificaciones por correo activas (Resend, modo ${status.mode}).`
+    : `Notificaciones por correo inactivas; configura: ${[...status.missing, ...status.issues].join(', ')}.`);
 }
