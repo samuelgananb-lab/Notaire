@@ -173,7 +173,55 @@ test('el dashboard conserva Soporte y Configuración dentro del contenedor de vi
     assert.doesNotMatch(html, /modalVerTodos/);
     assert.match(support, /document\.querySelector\('a\[data-target="view-solicitudes"\]'\)\?\.addEventListener\('click', \(\) => void load\(\)\)/);
     assert.match(support, /view-solicitudes'\)\?\.classList\.contains\('active'\)\) void load\(\)/);
-    assert.match(calculator, /addEventListener\('click', \(\) => void loadCurrencyCatalog\(\)\)/);
+    assert.match(calculator, /document\.addEventListener\('click', event => \{\s*if \(event\.target instanceof Element && event\.target\.closest\('#sidebarMenu a\[data-target="view-calculadora"\]'\)\)/);
+});
+
+test('el panel organiza la navegación, la paleta y soporte por jerarquía', async () => {
+    const [html, styles, mobileStyles, supportStyles, extended, i18n] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/panel_control/cliente/assets/css/cliente-solicitudes.css'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
+        read('public/assets/js/notaire-i18n.js')
+    ]);
+    const sidebar = html.match(/<ul id="sidebarMenu">([\s\S]*?)<\/ul>/)?.[1];
+    assert.ok(sidebar, 'el menú lateral debe conservar su lista');
+    assert.deepEqual(
+        Array.from(sidebar.matchAll(/data-target="([^"]+)"/g), match => match[1]),
+        ['view-inicio', 'view-saldo', 'view-ingresos', 'view-gastos', 'view-metas', 'view-recordatorios', 'view-calculadora', 'view-solicitudes', 'view-configuracion']
+    );
+    assert.match(sidebar, /data-nav-label="finanzas"/);
+    assert.match(sidebar, /data-nav-label="planificacion"/);
+    assert.match(sidebar, /data-nav-label="cuenta"/);
+    assert.match(html, /class="theme-swatch-groups"/);
+    assert.equal((html.match(/class="theme-swatch(?: active)? theme-swatch-/g) || []).length, 12);
+    assert.match(html, /class="theme-swatch-name"/);
+    assert.match(extended, /themeCurrentLabel/);
+    assert.match(styles, /\.sidebar-top-section\s*\{[^}]*flex-direction: column;[^}]*min-height: 0;/s);
+    assert.match(styles, /\.sidebar-nav\s*\{[^}]*min-height: 0;[^}]*overflow-y: auto;/s);
+    assert.match(styles, /\.sidebar \* \{[^}]*scrollbar-width: none !important;[^}]*-ms-overflow-style: none !important;/s);
+    assert.match(styles, /\.sidebar \*::-webkit-scrollbar\s*\{[^}]*display: none !important;/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \.profile-info\s*\{[^}]*display: none;/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile\s*\{[^}]*min-height: 52px;[^}]*max-height: 52px;/s);
+    assert.match(styles, /\.sidebar-nav-heading\s*\{/);
+    assert.match(styles, /\.theme-swatch-group \.theme-swatches\s*\{[^}]*repeat\(6, minmax\(0, 1fr\)\)/s);
+    assert.match(mobileStyles, /\.theme-swatch-group \.theme-swatches \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+    assert.match(styles, /\.theme-swatch-color\s*\{[^}]*width: 34px;[^}]*height: 34px;/s);
+    assert.match(styles, /\.theme-swatch-name\s*\{[^}]*font-size: 10\.5px;[^}]*white-space: nowrap;/s);
+    assert.match(mobileStyles, /\.theme-swatch-color \{ width: 32px; height: 32px; \}/);
+    assert.match(mobileStyles, /\.theme-swatch-name \{ font-size: 10px; \}/);
+    assert.match(html, /data-theme="purple"[^>]*title="Notaire"[^>]*aria-label="Aplicar tema Notaire"[^>]*aria-pressed="true"[^>]*onclick="setThemeSwatch\('purple'\)"[^>]*><span class="theme-swatch-color"><\/span><span class="theme-swatch-name">Notaire<\/span><\/button>/);
+    assert.match(html, /id="themeCurrentLabel">Notaire<\/span>/);
+    for (const palette of ['teal', 'orange', 'cyan', 'indigo', 'red']) {
+        assert.match(styles, new RegExp(`html\\[data-theme="dark"\\]\\[data-color-palette="${palette}"\\]\\s*\\{[^}]*--color-bg:[^}]*--color-sidebar:[^}]*--color-card-bg:`, 's'));
+    }
+    assert.match(await read('public/assets/js/auth-guard.js'), /'purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'\]\.includes\(savedPalette\)/);
+    assert.match(supportStyles, /\.support-compose-card\s*\{/);
+    assert.match(supportStyles, /\.support-history-card\s*\{/);
+    assert.match(supportStyles, /@media \(max-width: 640px\)/);
+    assert.match(i18n, /calculadora: 'Calculator'/);
+    assert.match(i18n, /soporte: 'Support'/);
 });
 
 test('el respaldo de tasas traduce los parámetros internos a la ruta de Frankfurter', async () => {
@@ -186,6 +234,31 @@ test('el respaldo de tasas traduce los parámetros internos a la ruta de Frankfu
     assert.equal(getFrankfurterPath('/api/exchange-rates/rate?base=COP&quote=USD&date=2026-10-26&refresh=1'), '/rate/COP/USD?date=2026-10-26');
     assert.throws(() => getFrankfurterPath('/api/exchange-rates/rate?base=CO&quote=USD&date=2026-10-26'), /códigos de moneda no son válidos/);
     assert.throws(() => getFrankfurterPath('/api/exchange-rates/rate?base=COP&quote=USD'), /fecha de cotización no es válida/);
+});
+
+test('el conversor carga tasas cuando la vista guardada se restaura al iniciar', async () => {
+    const calculator = await read('public/panel_control/cliente/assets/js/scientific-calculator.js');
+    assert.match(calculator, /const loadCatalogIfCalculatorIsActive = \(\) => \{\s*if \(!calculatorView\?\.classList\.contains\('active'\)\) return false;\s*void loadCurrencyCatalog\(\);\s*return true;/);
+    assert.match(calculator, /if \(!loadCatalogIfCalculatorIsActive\(\) && calculatorView\) \{\s*const viewObserver = new MutationObserver/);
+    assert.match(calculator, /viewObserver\.observe\(calculatorView, \{ attributes: true, attributeFilter: \['class'\] \}\)/);
+    assert.match(calculator, /event\.target\.closest\('#sidebarMenu a\[data-target="view-calculadora"\]'\)/);
+    assert.match(calculator, /latestCurrencyDate\.setUTCDate\(latestCurrencyDate\.getUTCDate\(\) - 7\)/);
+    assert.match(calculator, /currency\.end_date >= activeSince/);
+});
+
+test('el conversor conserva monedas esenciales y nunca deja vacío el selector destino', async () => {
+    const calculator = await read('public/panel_control/cliente/assets/js/scientific-calculator.js');
+    const helperSource = calculator.match(/const mergeFallbackCurrencies = catalog => \{[\s\S]*?\n        \};/)?.[0];
+    assert.ok(helperSource, 'Debe existir el respaldo de monedas esenciales');
+    const mergeFallbackCurrencies = vm.runInNewContext(
+        `(${helperSource.replace('const mergeFallbackCurrencies = ', '').replace(/;$/, '')})`,
+        { fallbackCurrencies: [{ code: 'USD' }, { code: 'COP' }, { code: 'EUR' }] }
+    );
+    const merged = mergeFallbackCurrencies([{ code: 'USD' }, { code: 'SGD' }]);
+
+    assert.deepEqual(Array.from(merged, currency => currency.code), ['USD', 'SGD', 'COP', 'EUR']);
+    assert.match(calculator, /select\.value = candidates\.find\(code => options\.includes\(code\)[\s\S]*?\|\| options\[0\] \|\| ''/);
+    assert.match(calculator, /if \(!base \|\| !quote\)/);
 });
 
 test('los importes se agrupan visualmente y se convierten a número antes de guardarse', async () => {
@@ -425,10 +498,10 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     context.setThemeSwatch('purple');
     assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal', 'purple', 'purple']);
     assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'purple'));
-    for (const palette of ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black']) {
-        assert.match(html, new RegExp(`data-theme="${palette}"`));
-    }
-    assert.match(html, /data-theme="purple"[^>]*title="Notaire"/);
+    assert.match(html, /data-theme="purple"[\s\S]*data-theme="blue"[\s\S]*data-theme="indigo"[\s\S]*data-theme="cyan"[\s\S]*data-theme="teal"[\s\S]*data-theme="emerald"[\s\S]*data-theme="gold"[\s\S]*data-theme="orange"[\s\S]*data-theme="red"[\s\S]*data-theme="rose"[\s\S]*data-theme="gray"[\s\S]*data-theme="black"/);
+    assert.match(html, /id="themeCurrentLabel">Notaire<\/span>/);
+    assert.match(html, /aria-label="Colores de marca"/);
+    assert.match(html, /aria-label="Colores de acento y neutros"/);
     assert.match(styles, /html\[data-color-palette="emerald"\]/);
     assert.match(styles, /html\[data-color-palette="rose"\]/);
     assert.match(styles, /html\[data-color-palette="purple"\]/);
@@ -457,9 +530,6 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     assert.match(styles, /html\[data-theme="light"\] \.hero-welcome-title span[\s\S]*-webkit-text-fill-color: var\(--color-primary\)/);
     assert.match(styles, /--color-bg: #f3f5f8/);
     assert.match(mobileStyles, /financial-history-filters \{ grid-template-columns: minmax\(0, 1fr\) auto/);
-    assert.match(styles, /\.theme-swatch-color\s*\{[^}]*width: 34px;[^}]*height: 34px;/s);
-    assert.match(styles, /\.theme-swatch-name\s*\{[^}]*font-size: 10\.5px;[^}]*white-space: nowrap;/s);
-    assert.match(mobileStyles, /\.theme-swatch-color \{ width: 32px; height: 32px; \}/);
     assert.match(script, /color:var\(--color-text-main\);\">\$\{escapeHtmlExt\(evt\.titulo\)\}/);
     assert.match(styles, /\.theme-swatch-gold/);
     assert.match(styles, /\.theme-swatch-black/);
@@ -819,7 +889,7 @@ test('recuperar contraseña comparte la identidad visual y completa el flujo de 
     assert.match(passwordScript, /sessionStorage\.removeItem\('notaire_password_reset_token'\)/);
     assert.match(clientHtml, /onclick="openPasswordChangeDialog\(\)"/);
     assert.match(adminHtml, /onclick="openPasswordChangeDialog\(\)"/);
-    assert.match(clientHtml + adminHtml + employeeHtml, /auth-guard\.js\?v=20261026-password-dialog1/);
+    assert.match(clientHtml + adminHtml + employeeHtml, /auth-guard\.js\?v=/);
     assert.match(authGuard, /window\.openPasswordChangeDialog = function\(\)/);
     assert.match(authGuard, /fetch\('\/api\/auth\/password'/);
     assert.match(authGuard, /id = 'notaireAppDialog'/);
@@ -1079,7 +1149,7 @@ test('el logo y el avatar quedan centrados al colapsar el menú lateral', async 
     assert.match(styles, /\.sidebar\.collapsed \.brand-header \{[^}]*display: grid;[^}]*justify-items: center/s);
     assert.match(styles, /\.sidebar\.collapsed \.brand-logo-hex \{[^}]*justify-self: center/s);
     assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \{[^}]*display: grid;[^}]*place-items: center;[^}]*width: 100%;/s);
-    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \.profile-avatar-circle \{[^}]*flex: 0 0 42px;[^}]*width: 42px;[^}]*height: 42px;/s);
+    assert.match(styles, /\.sidebar\.collapsed \.sidebar-profile \.profile-avatar-circle \{[^}]*flex: 0 0 40px;[^}]*width: 40px;[^}]*height: 40px;/s);
     assert.match(styles, /\.profile-avatar-circle \{[^}]*aspect-ratio: 1;/s);
     assert.match(styles, /\.sidebar\.collapsed \.sidebar-toggle-btn \{[^}]*margin: 0 auto/s);
     assert.match(styles, /\.sidebar \{[^}]*transition: width 0\.42s cubic-bezier\(0\.22, 1, 0\.36, 1\)/s);
@@ -1099,8 +1169,8 @@ test('el panel cliente tiene centro de notificaciones, avisos periódicos y nave
 
     const destinations = [...html.matchAll(/data-target="(view-[^"]+)"/g)].map(match => match[1]);
     assert.deepEqual(destinations.slice(0, 9), [
-        'view-inicio', 'view-gastos', 'view-ingresos', 'view-saldo', 'view-metas',
-        'view-calculadora', 'view-recordatorios', 'view-solicitudes', 'view-configuracion'
+        'view-inicio', 'view-saldo', 'view-ingresos', 'view-gastos', 'view-metas',
+        'view-recordatorios', 'view-calculadora', 'view-solicitudes', 'view-configuracion'
     ]);
     assert.match(html, /id="notificationBell"[\s\S]{0,300}fa-bell/);
     assert.match(html, /id="notificationPanel"/);
@@ -1296,8 +1366,20 @@ test('el calendario guarda categorías compatibles y muestra los días en su pro
     assert.match(calendar, /WEEKDAY_NAMES\[window\.getCurrentLang/);
     assert.match(calendar, /calendarMonthApply/);
     assert.match(calendar, /calendarEventError/);
+    assert.match(calendar, /function initEventDateTimePickers\(\) \{[\s\S]*?input\.addEventListener\('click', \(\) => \{\s*if \(typeof input\.showPicker === 'function'\) input\.showPicker\(\)/);
+    assert.match(styles, /\.calendar-event-form select\.form-control \{[\s\S]*padding-right: 48px;[\s\S]*background-position: calc\(100% - 19px\)/);
+    const eventModal = html.slice(
+        html.indexOf('<div class="modal-overlay" id="modalNuevoEvento">'),
+        html.indexOf('<!-- Modal: Detalle Evento -->')
+    );
+    assert.match(eventModal, /role="dialog" aria-modal="true" aria-labelledby="calendarEventTitle"/);
+    assert.match(eventModal, /id="formNuevoEvento" class="calendar-event-form" onsubmit="handleGuardarEvento\(event\)"/);
+    assert.match(eventModal, /<fieldset class="calendar-event-notifications/);
+    assert.match(eventModal, /class="calendar-event-actions calendar-event-field-wide"/);
     assert.match(styles, /\.calendar-month-picker\[hidden\] \{ display: none; \}/);
     assert.match(styles, /\.calendar-event-modal \{/);
+    assert.match(styles, /\.calendar-event-form \{[\s\S]*overflow-y: auto/);
+    assert.match(mobileStyles, /\.calendar-event-modal \{[\s\S]*max-height: calc\(100dvh - 24px\)/);
     assert.match(mobileStyles, /\.calendar-weekday-grid \{ grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
 });
 
@@ -1410,6 +1492,12 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.match(keypadMarkup, /data-value="sinh\("/);
     assert.match(keypadMarkup, /data-action="random"/);
     assert.match(html, /class="calculator-history card-box"[\s\S]*id="calculatorHistoryList"/);
+    assert.match(html, /id="calculatorHistoryMore"[^>]*aria-controls="calculatorHistoryMorePanel"/);
+    assert.match(html, /id="calculatorHistoryMorePanel"[^>]*hidden[\s\S]*id="calculatorHistoryMoreList"/);
+    assert.match(styles, /\.calculator-history-list \{[^}]*gap: 6px;[^}]*padding: 10px 0 2px;/);
+    assert.match(styles, /\.calculator-history-more-panel \{[\s\S]*position: absolute;[\s\S]*max-height: min\(280px/);
+    assert.match(styles, /\.calculator-history-more-panel\[data-placement="above"\] \{ top: auto; bottom: calc\(100% - 8px\); \}/);
+    assert.match(styles, /\.calculator-history-more-panel\[hidden\] \{ display: none; \}/);
     assert.match(html, /class="calculator-side-panel"[\s\S]*id="currencyConverterTitle"[\s\S]*id="calculatorHistoryList"/);
     assert.match(html, /id="currencyFrom"/);
     assert.match(html, /id="currencyTo"/);
@@ -1443,7 +1531,11 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
         listeners: {},
         classList: {
             add(value) { this[value] = true; },
-            remove(value) { delete this[value]; }
+            remove(value) { delete this[value]; },
+            toggle(value, enabled) {
+                if (enabled) this[value] = true;
+                else delete this[value];
+            }
         },
         addEventListener(type, handler) { this.listeners[type] = handler; },
         setAttribute(name, value) { this.attributes[name] = value; },
@@ -1453,17 +1545,32 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
             return selector === '[data-alt-value]' ? [inverseTrigButton] : [];
         }
     });
-    for (const id of ['scientificCalculator', 'calculatorExpression', 'calculatorResult', 'calculatorKeypad', 'calculatorAngleMode', 'calculatorHistoryList', 'calculatorClearHistory']) {
+    for (const id of ['scientificCalculator', 'view-calculadora', 'calculatorExpression', 'calculatorResult', 'calculatorKeypad', 'calculatorAngleMode', 'calculatorHistoryList', 'calculatorClearHistory', 'calculatorHistoryMore', 'calculatorHistoryMoreLabel', 'calculatorHistoryMorePanel', 'calculatorHistoryMoreList']) {
         elements.set(id, makeElement());
     }
+    elements.get('view-calculadora').classList.contains = () => true;
+    for (const id of ['calculatorHistoryList', 'calculatorHistoryMoreList']) {
+        elements.get(id).children = [];
+        elements.get(id).append = (...children) => elements.get(id).children.push(...children);
+        elements.get(id).replaceChildren = (...children) => { elements.get(id).children = children; };
+    }
+    elements.get('calculatorHistoryMore').querySelector = () => makeElement();
+    elements.get('calculatorHistoryMore').contains = () => false;
+    elements.get('calculatorHistoryMorePanel').contains = () => false;
+    elements.get('calculatorHistoryMore').focus = () => {};
+    elements.get('calculatorHistoryMorePanel').hidden = true;
+    elements.get('calculatorHistoryMorePanel').parentElement = { getBoundingClientRect: () => ({ top: 100, bottom: 400 }) };
+    elements.get('calculatorHistoryMorePanel').style = {};
+    elements.get('calculatorHistoryMore').hidden = true;
+    const documentListeners = {};
     const storage = new Map();
     const context = {
         document: {
             getElementById: id => elements.get(id),
             createElement: () => makeElement(),
-            addEventListener() {}
+            addEventListener(type, handler) { documentListeners[type] = handler; }
         },
-        window: {},
+        window: { innerHeight: 600 },
         localStorage: {
             getItem: key => storage.get(key) || null,
             setItem: (key, value) => storage.set(key, value)
@@ -1546,6 +1653,20 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.equal(calculateTokens(['1', 'e', '3']), '1000');
     assert.equal(calculateTokens(['3', 'e', '-', '2']), '0.03');
     assert.equal(calculateTokens(['2', '7', '^', '(', '1', '/', '3', ')']), '3');
+    const historyRecords = JSON.parse(storage.values().next().value);
+    assert.equal(historyRecords.length, 10);
+    assert.equal(elements.get('calculatorHistoryList').children.length, 3);
+    assert.equal(elements.get('calculatorHistoryMoreList').children.length, 7);
+    assert.equal(elements.get('calculatorHistoryMore').hidden, false);
+    assert.match(elements.get('calculatorHistoryMoreLabel').textContent, /7/);
+    elements.get('calculatorHistoryMore').listeners.click();
+    assert.equal(elements.get('calculatorHistoryMorePanel').hidden, false);
+    assert.equal(elements.get('calculatorHistoryMore').attributes['aria-expanded'], 'true');
+    assert.equal(elements.get('calculatorHistoryMorePanel').dataset.placement, 'below');
+    assert.equal(elements.get('calculatorHistoryMorePanel').style.maxHeight, '196px');
+    documentListeners.keydown({ key: 'Escape' });
+    assert.equal(elements.get('calculatorHistoryMorePanel').hidden, true);
+    assert.equal(elements.get('calculatorHistoryMorePanel').style.maxHeight, '');
     press({ action: 'clear' });
     press({ action: 'second' });
     assert.equal(inverseTrigButton.textContent, 'sin⁻¹');
@@ -1616,6 +1737,8 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
 
     elements.get('calculatorClearHistory').listeners.click();
     assert.deepEqual(JSON.parse(storage.values().next().value), []);
+    assert.equal(elements.get('calculatorHistoryList').children.length, 1);
+    assert.equal(elements.get('calculatorHistoryMore').hidden, true);
     assert.doesNotMatch(calculator, /\beval\s*\(/);
 });
 
