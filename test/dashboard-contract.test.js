@@ -1493,11 +1493,15 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.match(keypadMarkup, /data-action="random"/);
     assert.match(html, /class="calculator-history card-box"[\s\S]*id="calculatorHistoryList"/);
     assert.match(html, /id="calculatorHistoryMore"[^>]*aria-controls="calculatorHistoryMorePanel"/);
-    assert.match(html, /id="calculatorHistoryMorePanel"[^>]*hidden[\s\S]*id="calculatorHistoryMoreList"/);
-    assert.match(styles, /\.calculator-history-list \{[^}]*gap: 6px;[^}]*padding: 10px 0 2px;/);
-    assert.match(styles, /\.calculator-history-more-panel \{[\s\S]*position: absolute;[\s\S]*max-height: min\(280px/);
-    assert.match(styles, /\.calculator-history-more-panel\[data-placement="above"\] \{ top: auto; bottom: calc\(100% - 8px\); \}/);
-    assert.match(styles, /\.calculator-history-more-panel\[hidden\] \{ display: none; \}/);
+    assert.match(html, /id="calculatorHistoryMorePanel"[^>]*data-open="false" aria-hidden="true"/);
+    assert.match(html, /id="calculatorHistoryMoreTitle"/);
+    assert.match(html, /id="calculatorHistoryClose"/);
+    assert.match(styles, /\.calculator-history \{[\s\S]*height: 270px;[\s\S]*flex: 0 0 270px;[\s\S]*overflow: hidden;/);
+    assert.match(styles, /\.calculator-history-list \{[^}]*grid-template-rows: repeat\(3, minmax\(0, 1fr\)\);[^}]*gap: 6px;[^}]*padding: 10px 0 2px;/);
+    assert.match(styles, /\.calculator-history-more-panel \{[\s\S]*position: absolute;[\s\S]*inset: 0;[\s\S]*transform: translateX\(100%\);[\s\S]*overflow: hidden;/);
+    assert.match(styles, /\.calculator-history-more-panel\[data-open="true"\] \{[\s\S]*transform: translateX\(0\);/);
+    assert.match(styles, /\.calculator-history-more-list \{[\s\S]*overflow-y: auto;[\s\S]*scrollbar-width: thin;/);
+    assert.match(styles, /\.calculator-history-more-list \.calculator-history-entry \{ min-height: 40px;/);
     assert.match(html, /class="calculator-side-panel"[\s\S]*id="currencyConverterTitle"[\s\S]*id="calculatorHistoryList"/);
     assert.match(html, /id="currencyFrom"/);
     assert.match(html, /id="currencyTo"/);
@@ -1545,7 +1549,7 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
             return selector === '[data-alt-value]' ? [inverseTrigButton] : [];
         }
     });
-    for (const id of ['scientificCalculator', 'view-calculadora', 'calculatorExpression', 'calculatorResult', 'calculatorKeypad', 'calculatorAngleMode', 'calculatorHistoryList', 'calculatorClearHistory', 'calculatorHistoryMore', 'calculatorHistoryMoreLabel', 'calculatorHistoryMorePanel', 'calculatorHistoryMoreList']) {
+    for (const id of ['scientificCalculator', 'view-calculadora', 'calculatorExpression', 'calculatorResult', 'calculatorKeypad', 'calculatorAngleMode', 'calculatorHistoryList', 'calculatorClearHistory', 'calculatorHistoryMore', 'calculatorHistoryMoreLabel', 'calculatorHistoryMorePanel', 'calculatorHistoryMoreList', 'calculatorHistoryClose']) {
         elements.set(id, makeElement());
     }
     elements.get('view-calculadora').classList.contains = () => true;
@@ -1558,9 +1562,8 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     elements.get('calculatorHistoryMore').contains = () => false;
     elements.get('calculatorHistoryMorePanel').contains = () => false;
     elements.get('calculatorHistoryMore').focus = () => {};
-    elements.get('calculatorHistoryMorePanel').hidden = true;
-    elements.get('calculatorHistoryMorePanel').parentElement = { getBoundingClientRect: () => ({ top: 100, bottom: 400 }) };
-    elements.get('calculatorHistoryMorePanel').style = {};
+    elements.get('calculatorHistoryMorePanel').dataset.open = 'false';
+    elements.get('calculatorHistoryClose').focus = () => {};
     elements.get('calculatorHistoryMore').hidden = true;
     const documentListeners = {};
     const storage = new Map();
@@ -1660,13 +1663,15 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.equal(elements.get('calculatorHistoryMore').hidden, false);
     assert.match(elements.get('calculatorHistoryMoreLabel').textContent, /7/);
     elements.get('calculatorHistoryMore').listeners.click();
-    assert.equal(elements.get('calculatorHistoryMorePanel').hidden, false);
+    assert.equal(elements.get('calculatorHistoryMorePanel').dataset.open, 'true');
+    assert.equal(elements.get('calculatorHistoryMorePanel').attributes['aria-hidden'], 'false');
     assert.equal(elements.get('calculatorHistoryMore').attributes['aria-expanded'], 'true');
-    assert.equal(elements.get('calculatorHistoryMorePanel').dataset.placement, 'below');
-    assert.equal(elements.get('calculatorHistoryMorePanel').style.maxHeight, '196px');
     documentListeners.keydown({ key: 'Escape' });
-    assert.equal(elements.get('calculatorHistoryMorePanel').hidden, true);
-    assert.equal(elements.get('calculatorHistoryMorePanel').style.maxHeight, '');
+    assert.equal(elements.get('calculatorHistoryMorePanel').dataset.open, 'false');
+    assert.equal(elements.get('calculatorHistoryMorePanel').attributes['aria-hidden'], 'true');
+    elements.get('calculatorHistoryMore').listeners.click();
+    elements.get('calculatorHistoryClose').listeners.click();
+    assert.equal(elements.get('calculatorHistoryMorePanel').dataset.open, 'false');
     press({ action: 'clear' });
     press({ action: 'second' });
     assert.equal(inverseTrigButton.textContent, 'sin⁻¹');
