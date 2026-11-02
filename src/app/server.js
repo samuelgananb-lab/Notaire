@@ -1,212 +1,241 @@
-/**
- * Notaire Server - Entry Point
- * 
- * Servidor Express optimizado y basado estrictamente en el Modelo Relacional de 5 Tablas:
- * ROL, USUARIO, META_FINANCIERA, REGISTRO_FINANCIERO, NOTIFICACION.
- */
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { supabase } from './database/supabase.js';
 
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const db = require('../database/db');
-const dbSqlServer = require('../database/db_mssql');
+import transaccionesRouter from './routes/transacciones.routes.js';
+import authRouter from './routes/auth.routes.js';
+import metasRouter from './routes/metas.routes.js';
+import patrimonioRouter from './routes/patrimonio.routes.js';
+import recordatoriosRouter from './routes/recordatorios.routes.js';
+import eventosRouter from './routes/eventos.routes.js';
+import adminRouter from './routes/admin.routes.js';
+import solicitudesRouter from './routes/solicitudes.routes.js';
+import exchangeRateRouter from './routes/exchange-rate.routes.js';
+import { startEventNotificationScheduler } from './services/event-notifications.service.js';
+import { startWeeklySummaryScheduler } from './services/finance-alerts.service.js';
+import { calculateFinancialSummary, createLiquidityTrend, currentFinancialMonth, monthReferenceDate } from './services/financial-summary.service.js';
+import { loginRateLimit } from './middlewares/login-rate-limit.middleware.js';
+import { JWT_SECRET, bloquearEmpleado, verificarToken } from './middlewares/auth.middleware.js';
 
-try { require('dotenv').config(); } catch (e) { }
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(cors());
+const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
+app.use(cors({ origin: corsOrigins.length ? corsOrigins : false }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 app.use(express.json());
 
-const getCookies = (req) => {
-    const cookieHeader = req.headers.cookie;
-    if (!cookieHeader) return {};
-    return cookieHeader.split(';').reduce((acc, cookie) => {
-        const parts = cookie.split('=');
-        if (parts.length >= 2) {
-            const key = parts[0].trim();
-            const value = parts.slice(1).join('=').trim();
-            acc[key] = value;
-        }
-        return acc;
-    }, {});
-};
-
-const authMiddleware = (req, res, next) => {
-    const cookies = getCookies(req);
-    const token = cookies.session_token;
-
-    if (token && token.startsWith('sess_') && token.includes('_auth_')) {
-        const email = token.split('_auth_')[1];
-        const user = db.findUserByEmail(email);
-
-        if (user) {
-            const userRole = user.rol;
-            if (req.path.includes('/admin') && userRole !== 'admin') {
-                return res.status(403).send('<h1>403 Acceso Denegado</h1><p>No tienes permisos de administrador.</p><a href="/auth/login.html">Volver al login</a>');
-            }
-            if (req.path.includes('/cliente') && userRole !== 'cliente') {
-                return res.status(403).send('<h1>403 Acceso Denegado</h1><p>No tienes permisos de cliente.</p><a href="/auth/login.html">Volver al login</a>');
-            }
-
-            req.user = user;
-            return next();
-        }
-    }
-
-    if (req.path.startsWith('/api/')) {
-        return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    res.redirect('/auth/login.html');
-};
-
-const adminOnlyMiddleware = (req, res, next) => {
-    if (!req.user || req.user.rol !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Acceso restringido únicamente a Administradores' });
-    }
-    next();
-};
-
-// --- AUTENTICACIÓN ---
-
-app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = db.findUserByEmail(email);
-
-    if (user && user.password === password) {
-        const redirectPath = user.rol === 'admin'
-            ? '/panel_control/admin/dashboard.html'
-            : '/panel_control/cliente/dashboard.html';
-
-        const sessionToken = `sess_${Date.now()}_auth_${user.email}`;
-
-        res.setHeader('Set-Cookie', [
-            `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600`,
-            `user_role=${user.rol}; Path=/; SameSite=Lax; Max-Age=3600`
-        ]);
-
-        res.json({
-            success: true,
-            role: user.rol,
-            name: user.nombre,
-            redirect: redirectPath
-        });
-    } else {
-        res.status(401).json({ success: false, message: 'Credenciales inválidas' });
-    }
-});
-
-app.post('/api/auth/register', (req, res) => {
-    const { nombre, email, password, rol, telefono, documento_identidad } = req.body;
-
-    if (!email || !password || !nombre) {
-        return res.status(400).json({ success: false, message: 'Nombre, email y contraseña son obligatorios' });
-    }
-
-    const existingUser = db.findUserByEmail(email);
-    if (existingUser) {
-        return res.status(400).json({ success: false, message: 'El correo electrónico ya está registrado' });
-    }
-
-    const newUser = db.createUser({
-        nombre,
-        email,
-        password,
-        rol: (rol === 'admin' ? 'admin' : (rol === 'empleado' ? 'empleado' : 'cliente')),
-        telefono: telefono || '',
-        documento_identidad: documento_identidad || ''
-    });
-
-    res.json({ success: true, user: { id: newUser.id_usuario, nombre: newUser.nombre, email: newUser.email, rol: newUser.rol } });
-});
-
-app.get('/api/auth/verify', (req, res) => {
-    const cookies = getCookies(req);
-    const token = cookies.session_token;
-
-    if (token && token.startsWith('sess_')) {
-        const email = token.split('_auth_')[1];
-        const user = db.findUserByEmail(email);
-        if (user) {
-            return res.json({ authenticated: true, role: user.rol, user: { id: user.id_usuario, nombre: user.nombre, email: user.email } });
-        }
-    }
-    res.json({ authenticated: false });
-});
-
-app.post('/api/auth/logout', (req, res) => {
-    res.setHeader('Set-Cookie', [
-        'session_token=; Path=/; Max-Age=0',
-        'user_role=; Path=/; Max-Age=0'
-    ]);
-    res.json({ success: true });
-});
-
-// --- API ENDPOINTS (FINANCIEROS, METAS Y NOTIFICACIONES) ---
-
-// Metas financieras
-app.get('/api/metas', authMiddleware, (req, res) => {
-    const metas = db.getMetasFinancieras(req.user.id_usuario || req.user.id);
-    res.json({ success: true, data: metas });
-});
-
-// Registros financieros (Transacciones)
-app.get('/api/transacciones', authMiddleware, (req, res) => {
-    const usuarioId = req.user.id_usuario || req.user.id;
-    const txs = db.getRegistrosFinancieros(usuarioId);
-    const presupuesto = db.getPresupuesto(usuarioId);
-    res.json({ success: true, transacciones: txs, presupuesto });
-});
-
-app.post('/api/transacciones', authMiddleware, (req, res) => {
-    const newReg = db.createRegistroFinanciero({
-        ...req.body,
-        id_usuario: req.user.id_usuario || req.user.id
-    });
-    res.json({ success: true, data: newReg });
-});
-
-// Notificaciones
-app.get('/api/notificaciones', authMiddleware, (req, res) => {
-    const notifs = db.getNotificaciones(req.user.id_usuario || req.user.id);
-    res.json({ success: true, data: notifs });
-});
-
-app.post('/api/notificaciones/read', authMiddleware, (req, res) => {
-    db.markNotificacionesAsRead(req.user.id_usuario || req.user.id);
-    res.json({ success: true });
-});
-
-// --- API ENDPOINTS ADMINISTRACIÓN ---
-
-app.get('/api/admin/metrics', authMiddleware, adminOnlyMiddleware, (req, res) => {
-    const metrics = db.getMetricasAdmin();
-    res.json({ success: true, data: metrics });
-});
-
-app.get('/api/admin/users', authMiddleware, adminOnlyMiddleware, (req, res) => {
-    const users = db.getUsuarios();
-    res.json({ success: true, data: users });
-});
-
-app.get('/api/admin/sqlserver-status', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    const status = await dbSqlServer.checkConnection();
-    res.json(status);
-});
-
-// Estáticos
-app.use('/panel_control', authMiddleware, express.static(path.join(__dirname, '../../public/panel_control')));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '../../public')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../public/index.html'));
+async function consultarTodasLasFilas(crearConsulta, etiqueta, pageSize = 1000) {
+  const filas = [];
+  for (let inicio = 0; ; inicio += pageSize) {
+    const { data, error } = await crearConsulta().range(inicio, inicio + pageSize - 1);
+    if (error) throw new Error(`No se pudieron consultar ${etiqueta}: ${error.message}`);
+    filas.push(...(data || []));
+    if (!data || data.length < pageSize) return filas;
+  }
+}
+
+/* ========================================================================== 
+   RUTAS DE AUTENTICACIÓN
+   ========================================================================== */
+
+app.post('/api/v1/auth/registro', async (req, res) => {
+  try {
+    const { nombre, email, password } = req.body;
+    if (!nombre || !email || !password) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
+    const { data: existingUser, error: lookupError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (existingUser) {
+      return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
+    }
+
+    const { data: clienteRole, error: roleError } = await supabase
+      .from('roles')
+      .select('id_rol')
+      .eq('nombre_rol', 'cliente')
+      .maybeSingle();
+
+    if (roleError) throw roleError;
+    if (!clienteRole) {
+      return res.status(500).json({ error: 'No existe el rol cliente en la base de datos' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data: user, error } = await supabase
+      .from('usuarios')
+      .insert([{ 
+        id_rol: clienteRole.id_rol, 
+        nombre: nombre, 
+        email: email, 
+        password: hashedPassword 
+      }])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({
+      mensaje: 'Usuario registrado exitosamente',
+      usuarioId: user.id,
+      usuario: { id: user.id, nombre: user.nombre, email: user.email }
+    });
+  } catch (error) {
+    console.error('Error en registro:', error.message);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
 });
 
+app.post('/api/v1/auth/login', loginRateLimit, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!usuario || !(await bcrypt.compare(password, usuario.password))) {
+      return res.status(400).json({ error: 'Credenciales inválidas' });
+    }
+
+    const now = Math.floor(Date.now() / 1000) - 120;
+    const token = jwt.sign(
+      { id: usuario.id, email: usuario.email, id_rol: usuario.id_rol, iat: now },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      mensaje: 'Inicio de sesión exitoso',
+      token,
+      usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
+    });
+  } catch (error) {
+    console.error('Error en login:', error.message);
+    res.status(500).json({ error: 'Error en el login' });
+  }
+});
+
+/* ========================================================================== 
+   RUTAS DEL DASHBOARD (PROTEGIDAS)
+   ========================================================================== */
+
+app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const [transacciones, patrimonio, recentResult, goalsResult] = await Promise.all([
+      consultarTodasLasFilas(() => supabase
+        .from('transacciones')
+        .select('id, monto, tipo, fecha')
+        .eq('usuario_id', usuarioId)
+        .order('fecha', { ascending: true })
+        .order('id', { ascending: true }), 'transacciones'),
+      consultarTodasLasFilas(() => supabase
+        .from('patrimonio')
+        .select('id, tipo, monto')
+        .eq('usuario_id', usuarioId)
+        .order('id', { ascending: true }), 'patrimonio', 300),
+      supabase
+        .from('transacciones')
+        .select('id, monto, tipo, fecha, categoria, descripcion')
+        .eq('usuario_id', usuarioId)
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(5),
+      supabase
+        .from('metas')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+    ]);
+    if (recentResult.error) throw recentResult.error;
+    if (goalsResult.error) throw goalsResult.error;
+
+    const metas = (goalsResult.data || []).map(meta => ({
+      ...meta,
+      actual: Number(meta.monto_actual || 0),
+      objetivo: Number(meta.monto_objetivo || 0),
+      porcentaje: meta.monto_objetivo
+        ? Math.min(100, Math.round((meta.monto_actual / meta.monto_objetivo) * 100))
+        : 0
+    }));
+
+    const totalAhorrado = metas.reduce((total, meta) => total + meta.actual, 0);
+    const referenceDate = monthReferenceDate(req.query.mes);
+    const monthKey = currentFinancialMonth(referenceDate);
+    const financialSummary = calculateFinancialSummary(transacciones, patrimonio, referenceDate, totalAhorrado);
+    const [year, month] = monthKey.split('-').map(Number);
+    const ingresosMensuales = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(Date.UTC(year, month - 1 - (5 - index), 1));
+      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      const total = transacciones.reduce((sum, transaction) =>
+        String(transaction.fecha || '').slice(0, 7) === key &&
+        String(transaction.tipo || '').toLowerCase() === 'ingreso'
+          ? sum + Number(transaction.monto || 0)
+          : sum, 0);
+      return { month: key, total };
+    });
+
+    res.json({
+      ...financialSummary,
+      metas,
+      recentTransactions: recentResult.data || [],
+      ingresosMensuales,
+      totalIngresos: financialSummary.ingresosAcumulados,
+      totalGastos: financialSummary.gastosAcumulados,
+      evolucion: createLiquidityTrend(transacciones, referenceDate)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar resumen', detalle: error.message });
+  }
+});
+
+app.get('/api/health', async (req, res) => {
+  const { error } = await supabase.from('usuarios').select('id').limit(1);
+  if (error) return res.status(500).json({ status: 'Error', error: error.message });
+  res.json({ status: 'OK', message: 'Conectado exitosamente a Supabase' });
+});
+
+// Enrutadores principales
+app.use('/api/transacciones', verificarToken, bloquearEmpleado, transaccionesRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/metas', verificarToken, bloquearEmpleado, metasRouter);
+app.use('/api/patrimonio', verificarToken, bloquearEmpleado, patrimonioRouter);
+app.use('/api/recordatorios', recordatoriosRouter);
+app.use('/api/eventos', eventosRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/solicitudes', solicitudesRouter);
+app.use('/api/exchange-rates', verificarToken, exchangeRateRouter);
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor Notaire iniciado con éxito!`);
-    console.log(`🌍 URL Principal: http://localhost:${PORT}`);
-    console.log(`📊 Panel Admin:  http://localhost:${PORT}/panel_control/admin/dashboard.html`);
-    console.log(`🗄️ SQL Server:   Script T-SQL generado en /src/database/schema_sqlserver.sql\n`);
+  console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+  startEventNotificationScheduler();
+  startWeeklySummaryScheduler();
 });
