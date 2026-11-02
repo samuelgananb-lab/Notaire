@@ -104,7 +104,8 @@ async function registrarAporte(req, res, metaId) {
       .eq('usuario_id', req.usuario.id)
       .single();
 
-    if (metaError || !meta) return res.status(404).json({ error: 'Meta no encontrada' });
+    if (metaError) throw metaError;
+    if (!meta) return res.status(404).json({ error: 'Meta no encontrada' });
 
     const montoRestanteMeta = Math.max(0, Number(meta.monto_objetivo || 0) - Number(meta.monto_actual || 0));
     if (montoNumerico > montoRestanteMeta) {
@@ -125,6 +126,12 @@ async function registrarAporte(req, res, metaId) {
       p_meta_id: Number(metaId),
       p_monto: montoNumerico
     });
+    if (aporteError?.code === 'PGRST202' || aporteError?.code === '42883') {
+      return res.status(503).json({
+        error: 'Los aportes a metas no están configurados en la base de datos.',
+        detalle: 'Ejecuta src/database/metas_notificaciones_migration.sql en el editor SQL de Supabase y vuelve a intentar.'
+      });
+    }
     if (aporteError) throw aporteError;
     if (aporte?.codigo === 'META_NO_ENCONTRADA') {
       return res.status(404).json({ error: 'Meta no encontrada' });

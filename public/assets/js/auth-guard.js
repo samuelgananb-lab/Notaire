@@ -13,7 +13,7 @@
         : (['dark', 'light', 'notaire'].includes(storedTheme) ? storedTheme : 'notaire');
     document.documentElement.setAttribute('data-theme', savedTheme);
     const savedPalette = localStorage.getItem('notaire_color_palette');
-    if (['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'].includes(savedPalette)) {
+    if (['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'].includes(savedPalette)) {
         document.documentElement.setAttribute('data-color-palette', savedPalette);
     }
 
@@ -309,7 +309,7 @@
                     width: 100%;
                     min-height: 46px;
                     margin-top: 7px;
-                    padding: 10px 13px;
+                    padding: 10px 46px 10px 13px;
                     color: inherit;
                     background: var(--color-input-bg, rgba(0, 0, 0, .24));
                     border: 1px solid var(--color-card-border, rgba(255, 255, 255, .14));
@@ -317,6 +317,37 @@
                     font: inherit;
                 }
                 .notaire-password-field input:focus { outline: 2px solid var(--color-primary, var(--primary, #a855f7)); outline-offset: 1px; }
+                .notaire-password-input-wrapper { position: relative; display: block; }
+                .notaire-password-input-wrapper .password-toggle {
+                    position: absolute;
+                    top: calc(50% + 3.5px);
+                    right: 8px;
+                    display: grid;
+                    width: 30px;
+                    height: 30px;
+                    padding: 0;
+                    place-items: center;
+                    color: var(--color-text-muted, #b8b2c4);
+                    background: transparent;
+                    border: 0;
+                    cursor: pointer;
+                    transform: translateY(-50%);
+                }
+                .notaire-password-input-wrapper .password-toggle-animate {
+                    animation: password-toggle-eye .3s cubic-bezier(.2, .8, .2, 1);
+                }
+                .notaire-password-input-wrapper input:-webkit-autofill,
+                .notaire-password-input-wrapper input:-webkit-autofill:hover,
+                .notaire-password-input-wrapper input:-webkit-autofill:focus,
+                .notaire-password-input-wrapper input:-webkit-autofill:active {
+                    -webkit-text-fill-color: var(--color-text-main, #f4f1fa);
+                    caret-color: var(--color-text-main, #f4f1fa);
+                    -webkit-box-shadow: inset 0 0 0 1000px var(--color-input-bg, rgba(0, 0, 0, .24));
+                }
+                @keyframes password-toggle-eye {
+                    45% { opacity: .55; transform: rotate(-12deg) scale(.72); }
+                    75% { transform: rotate(7deg) scale(1.16); }
+                }
                 .notaire-password-status { margin: 14px 0 0; color: var(--color-text-muted, #b8b2c4); }
                 .notaire-password-status.is-error { color: #ff9a9a; }
                 .notaire-password-status[hidden] { display: none; }
@@ -343,6 +374,9 @@
                     .notaire-password-description { margin-left: 0; }
                     .notaire-password-actions button { flex: 1; }
                 }
+                @media (prefers-reduced-motion: reduce) {
+                    .notaire-password-input-wrapper .password-toggle-animate { animation: none; }
+                }
             `;
             document.head.appendChild(styles);
             dialog = document.createElement('dialog');
@@ -358,11 +392,17 @@
                     <p class="notaire-password-description">Elige una contraseña nueva de al menos 8 caracteres.</p>
                     <label class="notaire-password-field" for="notaireNewPassword">
                         Nueva contraseña
-                        <input id="notaireNewPassword" type="password" minlength="8" autocomplete="new-password" required>
+                        <span class="notaire-password-input-wrapper">
+                            <input id="notaireNewPassword" type="password" minlength="8" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle" data-password-target="notaireNewPassword" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                        </span>
                     </label>
                     <label class="notaire-password-field" for="notaireConfirmPassword">
                         Confirmar contraseña
-                        <input id="notaireConfirmPassword" type="password" minlength="8" autocomplete="new-password" required>
+                        <span class="notaire-password-input-wrapper">
+                            <input id="notaireConfirmPassword" type="password" minlength="8" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle" data-password-target="notaireConfirmPassword" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                        </span>
                     </label>
                     <p class="notaire-password-status" id="notairePasswordStatus" role="status" aria-live="polite" hidden></p>
                     <div class="notaire-password-actions">

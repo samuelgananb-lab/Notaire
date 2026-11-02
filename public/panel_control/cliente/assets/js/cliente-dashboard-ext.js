@@ -34,6 +34,7 @@ const DEFAULT_BUDGET_CATEGORY_ORDER_VERSION = 2;
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
     initCalendar();
+    initEventDateTimePickers();
     void initConfigView();
     initEmojiPicker();
     initNotificationCenter();
@@ -41,6 +42,16 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleNotificationChecks();
     cargarEventosPersistidos();
 });
+
+function initEventDateTimePickers() {
+    ['eventoFecha', 'eventoHora'].forEach(id => {
+        const input = document.getElementById(id);
+        if (!(input instanceof HTMLInputElement)) return;
+        input.addEventListener('click', () => {
+            if (typeof input.showPicker === 'function') input.showPicker();
+        });
+    });
+}
 
 async function cargarEventosPersistidos() {
     const token = localStorage.getItem('notaire_token');
@@ -987,10 +998,17 @@ function setThemeSwatch(themeName) {
 
     document.documentElement.setAttribute('data-color-palette', themeName);
     localStorage.setItem('notaire_color_palette', themeName);
+    const currentLabel = typeof document.getElementById === 'function'
+        ? document.getElementById('themeCurrentLabel')
+        : null;
     document.querySelectorAll('.theme-swatch').forEach(swatch => {
         const selected = swatch.dataset.theme === themeName;
         swatch.classList.toggle('active', selected);
         swatch.setAttribute('aria-pressed', String(selected));
+        if (selected && currentLabel && typeof swatch.querySelector === 'function') {
+            const label = swatch.querySelector('.theme-swatch-name');
+            if (label) currentLabel.textContent = label.textContent;
+        }
     });
     document.dispatchEvent(new Event('notaire:palettechange'));
 }

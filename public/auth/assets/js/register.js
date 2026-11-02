@@ -89,11 +89,3 @@ function initializeRegisterScreen() {
 
 window.NotaireAuthScreens = window.NotaireAuthScreens || {};
 window.NotaireAuthScreens.register = initializeRegisterScreen;
-
-function togglePassword(inputId, toggleElement) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-
-    input.type = input.type === 'password' ? 'text' : 'password';
-    toggleElement?.querySelector('i')?.classList.toggle('fa-eye-slash');
-}

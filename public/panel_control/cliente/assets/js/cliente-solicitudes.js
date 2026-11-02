@@ -34,7 +34,7 @@
                         <p data-user-content="true">${esc(item.descripcion)}</p>
                         ${item.respuesta ? `<p class="cli-sol-reply"><b>Respuesta:</b> <span data-user-content="true">${esc(item.respuesta)}</span></p>` : ''}
                     </article>`).join('')
-                    : '<p>Aún no has enviado solicitudes.</p>';
+                    : '<div class="cli-sol-empty"><i class="fas fa-inbox" aria-hidden="true"></i><strong>Aún no has enviado solicitudes.</strong><p>Cuando envíes una, podrás seguir su estado y respuesta aquí.</p></div>';
                 solicitudesCargadas = true;
             } catch (error) {
                 list.innerHTML = `<p class="cli-sol-msg error">${esc(error.message)}</p>`;

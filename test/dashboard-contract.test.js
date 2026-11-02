@@ -425,8 +425,10 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     context.setThemeSwatch('purple');
     assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal', 'purple', 'purple']);
     assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'purple'));
-    assert.match(html, /data-theme="purple"[\s\S]*data-theme="blue"[\s\S]*data-theme="emerald"[\s\S]*data-theme="gold"[\s\S]*data-theme="rose"[\s\S]*data-theme="teal"[\s\S]*data-theme="orange"[\s\S]*data-theme="cyan"[\s\S]*data-theme="indigo"[\s\S]*data-theme="red"[\s\S]*data-theme="gray"[\s\S]*data-theme="black"/);
-    assert.match(html, /Morado original/);
+    for (const palette of ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black']) {
+        assert.match(html, new RegExp(`data-theme="${palette}"`));
+    }
+    assert.match(html, /data-theme="purple"[^>]*title="Notaire"/);
     assert.match(styles, /html\[data-color-palette="emerald"\]/);
     assert.match(styles, /html\[data-color-palette="rose"\]/);
     assert.match(styles, /html\[data-color-palette="purple"\]/);
@@ -454,7 +456,10 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     assert.match(styles, /html\[data-theme="light"\] \.cal-event-pill/);
     assert.match(styles, /html\[data-theme="light"\] \.hero-welcome-title span[\s\S]*-webkit-text-fill-color: var\(--color-primary\)/);
     assert.match(styles, /--color-bg: #f3f5f8/);
-    assert.match(mobileStyles, /financial-history-filters \{ grid-template-columns: 1fr 1fr/);
+    assert.match(mobileStyles, /financial-history-filters \{ grid-template-columns: minmax\(0, 1fr\) auto/);
+    assert.match(styles, /\.theme-swatch-color\s*\{[^}]*width: 34px;[^}]*height: 34px;/s);
+    assert.match(styles, /\.theme-swatch-name\s*\{[^}]*font-size: 10\.5px;[^}]*white-space: nowrap;/s);
+    assert.match(mobileStyles, /\.theme-swatch-color \{ width: 32px; height: 32px; \}/);
     assert.match(script, /color:var\(--color-text-main\);\">\$\{escapeHtmlExt\(evt\.titulo\)\}/);
     assert.match(styles, /\.theme-swatch-gold/);
     assert.match(styles, /\.theme-swatch-black/);
@@ -954,14 +959,14 @@ test('la página de ahorros muestra el tip solicitado y los emojis caben en una 
     ]);
 
     assert.match(html, /Ahorros<\/span>/);
-    assert.match(html, /id="ahorroTipTitle">Tip<\/h4>/);
+    assert.match(html, /id="ahorroTipTitle">Tip Notaire<\/h4>/);
     assert.match(html, /No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando\./);
     assert.match(i18n, /tipText: 'No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando\.'/);
-    assert.match(html, /data-target="view-metas"><i class="fas fa-piggy-bank"><\/i> <span>Ahorros<\/span>/);
+    assert.match(html, /data-target="view-metas"[^>]*><i class="fas fa-piggy-bank"><\/i> <span>Ahorros<\/span>/);
     assert.match(html, /data-nav="view-metas"><i class="fas fa-piggy-bank"><\/i><span>Ahorros<\/span>/);
     assert.match(html, /fas fa-piggy-bank/);
     assert.match(html, /class="tip-icon-glow" aria-hidden="true">💡<\/div>/);
-    assert.match(i18n, /tipTitle: 'Tip'/);
+    assert.match(i18n, /tipTitle: 'Tip Notaire'/);
     const budgetMarkup = html.match(/<div class="budget-categories-list"[\s\S]*?id="budgetCategoryAdd"/)?.[0] || '';
     assert.match(budgetMarkup, /data-emoji="🏠"/);
     assert.match(budgetMarkup, /data-emoji="🍽️"/);
@@ -973,6 +978,33 @@ test('la página de ahorros muestra el tip solicitado y los emojis caben en una 
     assert.match(styles, /\.emoji-picker-row \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto/s);
     assert.match(styles, /\*::-webkit-scrollbar-thumb \{[^}]*linear-gradient/s);
     assert.match(styles, /\.tip-content h4 \{[^}]*text-align: center/);
+});
+
+test('el panel conecta tips, filtros y controles de soporte con estilos responsivos', async () => {
+    const [html, styles, mobileStyles, supportStyles, dashboard, goalsRoute] = await Promise.all([
+        read('public/panel_control/cliente/dashboard.html'),
+        read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
+        read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
+        read('public/panel_control/cliente/assets/css/cliente-solicitudes.css'),
+        read('public/panel_control/cliente/assets/js/cliente-dashboard.js'),
+        read('src/app/routes/metas.routes.js')
+    ]);
+
+    assert.match(html, /class="cal-tip-action"[^>]*onclick="openNotifSettings\(\)"/);
+    assert.match(styles, /\.cal-tip-action:focus-visible/);
+    const filters = Array.from(html.matchAll(/<div class="financial-history-filters">([\s\S]*?)<\/div>/g), match => match[1]);
+    assert.equal(filters.length, 2);
+    for (const [index, type] of ['gasto', 'ingreso'].entries()) {
+        const filter = filters[index];
+        assert.ok(filter.indexOf('data-history-filter="search"') < filter.indexOf(`limpiarFiltros('${type}')`));
+        assert.ok(filter.indexOf(`limpiarFiltros('${type}')`) < filter.indexOf('data-history-filter="from"'));
+    }
+    assert.match(mobileStyles, /\.financial-history-filters \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
+    assert.match(supportStyles, /\.cli-sol-form select \{[\s\S]*appearance: none;[\s\S]*color-scheme: dark;/);
+    assert.match(supportStyles, /html\[data-theme="light"\] \.cli-sol-form select \{ color-scheme: light; \}/);
+    assert.match(styles, /\.saldo-summary-item strong \{[\s\S]*font-variant-numeric: tabular-nums;[\s\S]*white-space: nowrap;/);
+    assert.match(dashboard, /result\.detalle/);
+    assert.match(goalsRoute, /PGRST202[\s\S]*metas_notificaciones_migration\.sql/);
 });
 
 test('actividad reciente muestra solo ingresos y gastos y elimina el acceso adicional a gastos', async () => {

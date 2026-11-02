@@ -16,15 +16,17 @@ body {
 body.auth-page {
     position: relative;
     display: grid;
+    box-sizing: border-box;
     min-height: 100vh;
     min-height: 100dvh;
     height: auto;
     place-items: center;
     overflow-x: clip;
     overflow-y: auto;
+    margin: 0;
     padding: 32px 16px;
     color: #fff;
-    background: #08050f;
+    background: #100a1c;
     font-family: 'Outfit', 'Segoe UI', sans-serif;
 }
 
@@ -41,15 +43,15 @@ body.auth-page {
     overflow: clip;
     pointer-events: none;
     background:
-        radial-gradient(ellipse at 50% 45%, rgba(32, 12, 57, .22), transparent 58%),
-        #08050f;
+        radial-gradient(ellipse at 50% 45%, rgba(52, 24, 78, .3), transparent 62%),
+        #100a1c;
 }
 
 .auth-page .shape {
     position: absolute;
     border-radius: 50%;
     filter: blur(100px);
-    opacity: .48;
+    opacity: .54;
     will-change: transform;
     animation: auth-light-drift 29s ease-in-out infinite alternate;
 }
@@ -105,7 +107,7 @@ body.auth-page {
 }
 
 [data-auth-screen="register"] {
-    width: 484px;
+    width: min(660px, 100%);
 }
 
 .auth-panel {
@@ -191,6 +193,99 @@ body.auth-page {
     font-size: 14px;
     line-height: 1.55;
     opacity: 1;
+    text-align: center;
+}
+
+.auth-page [data-auth-screen="register"] .auth-panel {
+    padding: 24px clamp(24px, 5vw, 40px);
+}
+
+.auth-page [data-auth-screen="register"] .brand-logo-container {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 10px;
+}
+
+.auth-page [data-auth-screen="register"] .register-heading {
+    margin: 0 0 6px;
+    text-align: center;
+}
+
+.auth-page [data-auth-screen="register"] .register-subtitle {
+    max-width: 420px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+        "name phone"
+        "email email"
+        "password confirm"
+        "message message"
+        "submit submit"
+        "footer footer";
+    gap: 10px 16px;
+    margin-top: 16px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form > .input-group:nth-child(1) {
+    grid-area: name;
+}
+
+.auth-page [data-auth-screen="register"] .register-form > .input-group:nth-child(2) {
+    grid-area: phone;
+}
+
+.auth-page [data-auth-screen="register"] .register-form > .input-group:nth-child(3) {
+    grid-area: email;
+}
+
+.auth-page [data-auth-screen="register"] .register-form > .input-group:nth-child(4) {
+    grid-area: password;
+}
+
+.auth-page [data-auth-screen="register"] .register-form > .input-group:nth-child(5) {
+    grid-area: confirm;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .input-group {
+    align-content: start;
+    align-self: start;
+    gap: 5px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .input-group label {
+    line-height: 1.3;
+    font-size: 13px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .input-field {
+    height: 42px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .password-meter {
+    margin-top: 1px;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .password-hint {
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .form-message {
+    grid-area: message;
+}
+
+.auth-page [data-auth-screen="register"] .register-form .btn-create {
+    grid-area: submit;
+}
+
+.auth-page [data-auth-screen="register"] .register-footer {
+    grid-area: footer;
+}
+
+.auth-page [data-auth-screen="register"] .register-footer {
+    margin-top: 2px;
 }
 
 .auth-page .login-form,
@@ -261,6 +356,16 @@ body.auth-page {
     box-shadow: 0 0 0 3px rgba(140, 0, 255, .16), inset 0 2px 6px rgba(0, 0, 0, .2);
 }
 
+.auth-page input:-webkit-autofill,
+.auth-page input:-webkit-autofill:hover,
+.auth-page input:-webkit-autofill:focus,
+.auth-page input:-webkit-autofill:active {
+    -webkit-text-fill-color: #fbfaff;
+    caret-color: #fbfaff;
+    -webkit-box-shadow: inset 0 0 0 1000px rgba(5, 3, 12, .76);
+    box-shadow: inset 0 0 0 1000px rgba(5, 3, 12, .76);
+}
+
 .auth-page .input-icon {
     position: absolute;
     z-index: 1;
@@ -298,6 +403,15 @@ body.auth-page {
     opacity: .78;
     transform: translateY(-50%);
     transition: color .2s ease, opacity .2s ease;
+}
+
+.auth-page .password-toggle-animate {
+    animation: password-toggle-eye .3s cubic-bezier(.2, .8, .2, 1);
+}
+
+@keyframes password-toggle-eye {
+    45% { opacity: .55; transform: rotate(-12deg) scale(.72); }
+    75% { transform: rotate(7deg) scale(1.16); }
 }
 
 .auth-page .toggle-password:hover,
@@ -602,9 +716,62 @@ body.auth-page {
         width: 100%;
     }
 
+    [data-auth-screen="register"] {
+        width: 100%;
+    }
+
     .auth-panel {
         padding: 27px 22px;
         border-radius: 19px;
+    }
+
+    .auth-page [data-auth-screen="register"] .auth-panel {
+        padding: 17px 20px;
+    }
+
+    .auth-page [data-auth-screen="register"] .brand-logo-container {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 6px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-heading {
+        margin-bottom: 4px;
+        font-size: 23px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-subtitle {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "name"
+            "phone"
+            "email"
+            "password"
+            "confirm"
+            "message"
+            "submit"
+            "footer";
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form .input-group {
+        gap: 3px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form .input-field {
+        height: 36px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form .form-message,
+    .auth-page [data-auth-screen="register"] .register-form .btn-create,
+    .auth-page [data-auth-screen="register"] .register-footer {
+        grid-column: auto;
     }
 
     .auth-page .card-header {
@@ -617,13 +784,45 @@ body.auth-page {
     }
 }
 
+@media (max-width: 360px) and (max-height: 650px) {
+    body.auth-page {
+        padding: 10px 8px;
+    }
+
+    .auth-page [data-auth-screen="register"] .auth-panel {
+        padding: 12px 14px;
+    }
+
+    .auth-page [data-auth-screen="register"] .brand-logo-container {
+        width: 42px;
+        height: 42px;
+        margin-bottom: 4px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form {
+        gap: 5px;
+        margin-top: 7px;
+    }
+
+    .auth-page [data-auth-screen="register"] .register-form .input-field {
+        height: 34px;
+    }
+}
+
 @media (max-height: 720px) and (min-width: 521px) {
     body.auth-page {
         place-items: start center;
     }
+
+    body.auth-page.auth-login {
+        place-items: center;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .auth-page .password-toggle-animate { animation: none; }
     .auth-page *,
     .auth-page *::before,
     .auth-page *::after {

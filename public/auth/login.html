@@ -8,7 +8,7 @@
     <!-- Incluimos la fuente Outfit de Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/auth.css?v=20261101-auth-glow1">
+    <link rel="stylesheet" href="assets/css/auth.css?v=20261102-password-eye2">
 </head>
 <body class="auth-page">
     <!-- Efecto visual de fondo -->
@@ -20,7 +20,7 @@
     
     <canvas id="windParticles" aria-hidden="true"></canvas>
     
-    <main id="authApp" class="container auth-container" data-auth-screen="login" data-auth-script="assets/js/login.js?v=20261101-auth-glow1">
+    <main id="authApp" class="container auth-container" data-auth-screen="login" data-auth-script="assets/js/login.js?v=20261102-password-eye">
         <section id="authPanel" class="login-card auth-panel">
             <div class="card-header">
                 <div class="brand-logo-container">
@@ -44,7 +44,9 @@
                     <div class="input-wrapper">
                         <i class="fas fa-lock input-icon"></i>
                         <input type="password" id="password" name="password" placeholder="••••••••" required>
-                        <i class="fas fa-eye toggle-password" id="togglePassword"></i>
+                        <button type="button" class="toggle-password password-toggle" data-password-target="password" aria-label="Mostrar contraseña" aria-pressed="false">
+                            <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -68,7 +70,8 @@
         </section>
     </main>
 
-    <script src="assets/js/login.js?v=20261101-auth-glow1" data-auth-screen-script></script>
-    <script src="assets/js/auth-app.js?v=20261101-auth-glow1"></script>
+    <script src="../assets/js/password-toggle.js?v=20261102-password-eye2"></script>
+    <script src="assets/js/login.js?v=20261102-password-eye" data-auth-screen-script></script>
+    <script src="assets/js/auth-app.js?v=20261102-auth-password-eye2"></script>
 </body>
 </html>

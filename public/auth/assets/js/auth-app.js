@@ -6,6 +6,7 @@
     const loadedScripts = new Set();
     let activeScreenCleanup = null;
     let frameId = 0;
+    let refreshBackground = () => {};
 
     if (!root || !background) return;
 
@@ -23,18 +24,20 @@
         let lastFrameTime = 0;
 
         function seedScene() {
-            const streakCount = Math.min(42, Math.max(22, Math.round(window.innerWidth / 32)));
+            const streakCount = Math.min(14, Math.max(8, Math.round(window.innerWidth / 130)));
             streaks.length = 0;
             particles.length = 0;
             for (let index = 0; index < streakCount; index += 1) {
                 streaks.push({
                     x: Math.random() * width,
                     y: Math.random() * height,
-                    length: 10 + Math.random() * 33,
-                    speed: .12 + Math.random() * .35,
-                    direction: Math.random() > .17 ? 1 : -1,
-                    driftY: (Math.random() - .5) * .1,
-                    opacity: .08 + Math.random() * .18,
+                    length: 22 + Math.random() * 32,
+                    direction: 1,
+                    opacity: .16 + Math.random() * .1,
+                    curve: 2 + Math.random() * 6,
+                    delay: index === 0 ? 0 : index / streakCount * 4200 + Math.random() * 350,
+                    elapsed: index === 0 ? 1200 : 0,
+                    duration: 2800 + Math.random() * 2200,
                     phase: Math.random() * Math.PI * 2,
                     phaseSpeed: .00035 + Math.random() * .00055
                 });
@@ -65,7 +68,7 @@
         }
 
         function drawFrame(timestamp) {
-            if (document.hidden || reduceMotion.matches) {
+            if (document.hidden) {
                 frameId = 0;
                 return;
             }
@@ -74,28 +77,41 @@
                 lastFrameTime = timestamp;
                 context.clearRect(0, 0, width, height);
                 streaks.forEach(streak => {
-                    const frameScale = delta / 33;
-                    streak.x += streak.speed * streak.direction * frameScale;
-                    streak.y += streak.driftY * frameScale;
-                    if (streak.direction > 0 && streak.x > width + streak.length) streak.x = -streak.length;
-                    if (streak.direction < 0 && streak.x < -streak.length) streak.x = width + streak.length;
-                    if (streak.y < -4) streak.y = height + 4;
-                    if (streak.y > height + 4) streak.y = -4;
+                    let alpha;
+                    if (streak.delay > 0) {
+                        streak.delay -= delta;
+                        return;
+                    }
+                    streak.elapsed += delta;
+                    if (streak.elapsed >= streak.duration) {
+                        streak.elapsed = 0;
+                        streak.delay = 900 + Math.random() * 2800;
+                        streak.duration = 2800 + Math.random() * 2200;
+                        streak.y = Math.random() * height;
+                        return;
+                    }
+                    const progress = streak.elapsed / streak.duration;
+                    streak.x = -streak.length + progress * (width + streak.length * 2);
+                    alpha = streak.opacity * Math.min(1, progress / .14, (1 - progress) / .2);
                     streak.phase += streak.phaseSpeed * delta;
-                    const alpha = streak.opacity * (.48 + .52 * Math.sin(streak.phase) ** 2);
                     const trail = context.createLinearGradient(
                         streak.x,
                         streak.y,
                         streak.x - streak.length * streak.direction,
                         streak.y
                     );
-                    trail.addColorStop(0, `rgba(220, 188, 255, ${alpha})`);
-                    trail.addColorStop(1, 'rgba(177, 115, 255, 0)');
+                    trail.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+                    trail.addColorStop(1, 'rgba(255, 255, 255, 0)');
                     context.beginPath();
                     context.moveTo(streak.x, streak.y);
-                    context.lineTo(streak.x - streak.length * streak.direction, streak.y);
+                    context.quadraticCurveTo(
+                        streak.x - streak.length * streak.direction * .5,
+                        streak.y + Math.sin(streak.phase) * streak.curve,
+                        streak.x - streak.length * streak.direction,
+                        streak.y
+                    );
                     context.strokeStyle = trail;
-                    context.lineWidth = .65;
+                    context.lineWidth = .85;
                     context.stroke();
                 });
                 particles.forEach(particle => {
@@ -139,19 +155,19 @@
         }
 
         function startAnimation() {
-            if (!frameId && !document.hidden && !reduceMotion.matches) {
+            if (!frameId && !document.hidden) {
                 frameId = window.requestAnimationFrame(drawFrame);
             }
         }
 
+        refreshBackground = () => {
+            lastFrameTime = 0;
+            seedScene();
+            startAnimation();
+        };
+
         function updateMotionPreference() {
-            if (reduceMotion.matches) {
-                window.cancelAnimationFrame(frameId);
-                frameId = 0;
-                context.clearRect(0, 0, width, height);
-            } else {
-                startAnimation();
-            }
+            startAnimation();
         }
 
         window.addEventListener('resize', resizeCanvas, { passive: true });
@@ -163,6 +179,7 @@
 
     function initializeScreen() {
         activeScreenCleanup?.();
+        document.body.classList.toggle('auth-login', root.dataset.authScreen === 'login');
         const initialize = screenInitializers[root.dataset.authScreen];
         activeScreenCleanup = typeof initialize === 'function' ? initialize() || null : null;
     }
@@ -211,6 +228,7 @@
         currentPanel.replaceWith(document.importNode(nextPanel, true));
         root.dataset.authScreen = nextRoot.dataset.authScreen;
         root.dataset.authScript = nextRoot.dataset.authScript;
+        refreshBackground();
         document.title = nextDocument.title;
         if (addHistory) window.history.pushState({}, '', target.href);
         initializeScreen();

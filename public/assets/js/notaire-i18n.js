@@ -20,6 +20,12 @@
                 metasAhorros: 'Ahorros',
                 saldo: 'Saldo',
                 calendario: 'Calendario',
+                calculadora: 'Calculadora',
+                soporte: 'Soporte',
+                panel: 'Panel',
+                finanzas: 'Finanzas',
+                planificacion: 'Planificación',
+                cuenta: 'Cuenta',
                 configuracion: 'Configuración',
                 verPerfil: 'Ver perfil',
                 admin: 'Administrador'
@@ -106,7 +112,7 @@
                 statActive: 'METAS ACTIVAS',
                 statPct: 'PORCENTAJE TOTAL',
                 recentContributions: 'Ahorros recientes',
-                tipTitle: 'Tip',
+                tipTitle: 'Tip Notaire',
                 tipText: 'No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando.'
             },
             saldo: {
@@ -210,6 +216,12 @@
                 metasAhorros: 'Savings',
                 saldo: 'Balance',
                 calendario: 'Calendar',
+                calculadora: 'Calculator',
+                soporte: 'Support',
+                panel: 'Overview',
+                finanzas: 'Finances',
+                planificacion: 'Planning',
+                cuenta: 'Account',
                 configuracion: 'Settings',
                 verPerfil: 'View profile',
                 admin: 'Administrator'
@@ -296,7 +308,7 @@
                 statActive: 'ACTIVE GOALS',
                 statPct: 'TOTAL PERCENTAGE',
                 recentContributions: 'Recent savings',
-                tipTitle: 'Tip',
+                tipTitle: 'Notaire Tip',
                 tipText: 'Do not work only for money; build something that creates value even when you are not working.'
             },
             saldo: {
@@ -417,6 +429,27 @@
         'Registrar movimiento': 'Add transaction',
         'Ver calendario': 'View calendar',
         'Liquidez': 'Liquidity',
+        'Periodo de estadísticas': 'Statistics period',
+        'Mensual': 'Monthly',
+        'Semanal': 'Weekly',
+        'Últimos 6 meses': 'Last 6 months',
+        'Últimos 7 días': 'Last 7 days',
+        'Cargando estadística semanal...': 'Loading weekly statistics...',
+        'No se pudo cargar la estadística semanal. Intenta de nuevo.': 'Could not load weekly statistics. Try again.',
+        'Mi saldo': 'My balance',
+        'Análisis financiero': 'Financial overview',
+        'Un resumen claro de tu liquidez, tus movimientos y tus ahorros.': 'A clear overview of your liquidity, transactions, and savings.',
+        'Evolución de tu liquidez': 'Liquidity over time',
+        'Ingresos menos gastos a lo largo del tiempo': 'Income minus expenses over time',
+        'Balance neto': 'Net balance',
+        'Así se compone tu liquidez': 'How your liquidity is distributed',
+        'Indicadores principales de tu actividad': 'Key indicators of your activity',
+        'Entradas registradas': 'Recorded income',
+        'Salidas registradas': 'Recorded expenses',
+        'Ahorro acumulado': 'Accumulated savings',
+        'Disponible actualmente': 'Currently available',
+        'Movimiento total': 'Total transactions',
+        'Ingresos y gastos': 'Income and expenses',
         'Sin datos registrados': 'No data recorded',
         'Ingresos del mes': 'Monthly income',
         'Gastos del mes': 'Monthly expenses',
@@ -657,8 +690,45 @@
         'Próximos eventos': 'Upcoming events',
         'Resumen del mes': 'Monthly summary',
         'Tip Notaire': 'Notaire tip',
+        'Ir a la configuración de notificaciones': 'Go to notification settings',
+        'Notaire Tip': 'Notaire Tip',
         'Activa las notificaciones para recibir recordatorios antes de cada evento.': 'Enable notifications to get reminders before each event.',
         'SOPORTE Y SOLICITUDES': 'SUPPORT AND REQUESTS',
+        'Centro de ayuda Notaire': 'NOTAIRE HELP CENTER',
+        'Cuéntanos qué necesitas': 'Tell us what you need',
+        'Elige el tipo y la prioridad para orientar mejor tu solicitud.': 'Choose a type and priority to help route your request.',
+        'Resume tu solicitud en una frase': 'Summarize your request in one sentence',
+        'Incluye los detalles necesarios para poder ayudarte.': 'Include the details needed to help you.',
+        'El equipo de Notaire te responderá en esta sección.': 'The Notaire team will reply in this section.',
+        'Seguimiento y respuestas del equipo': 'Track your requests and team replies',
+        'Aún no has enviado solicitudes.': 'You have not sent any requests yet.',
+        'Cuando envíes una, podrás seguir su estado y respuesta aquí.': 'Once you send one, you can track its status and reply here.',
+        'Colores de marca': 'Brand colors',
+        'Acentos y neutros': 'Accents and neutrals',
+        'Notaire': 'Notaire',
+        'Aplicar tema Notaire': 'Apply Notaire theme',
+        'Azul': 'Blue',
+        'Aplicar tema azul': 'Apply blue theme',
+        'Índigo': 'Indigo',
+        'Aplicar tema índigo': 'Apply indigo theme',
+        'Cian': 'Cyan',
+        'Aplicar tema cian': 'Apply cyan theme',
+        'Turquesa': 'Teal',
+        'Aplicar tema turquesa': 'Apply teal theme',
+        'Esmeralda': 'Emerald',
+        'Aplicar tema esmeralda': 'Apply emerald theme',
+        'Dorado': 'Gold',
+        'Aplicar tema dorado': 'Apply gold theme',
+        'Naranja': 'Orange',
+        'Aplicar tema naranja': 'Apply orange theme',
+        'Rojo': 'Red',
+        'Aplicar tema rojo': 'Apply red theme',
+        'Rosa': 'Rose',
+        'Aplicar tema rosa': 'Apply rose theme',
+        'Gris': 'Gray',
+        'Aplicar tema gris': 'Apply gray theme',
+        'Carbón': 'Charcoal',
+        'Aplicar tema carbón': 'Apply charcoal theme',
         'Reporte de error': 'Bug report',
         'Soporte / ayuda': 'Support / help',
         'Solicitud (cambio, permiso o trámite)': 'Request (change, permission, or procedure)',
@@ -950,11 +1020,13 @@
         // 3. Menú de navegación lateral (Sidebar)
         const navMap = [
             { target: 'view-inicio', key: 'inicio' },
-            { target: 'view-gastos', key: 'gastos' },
-            { target: 'view-ingresos', key: 'ingresos' },
-            { target: 'view-metas', key: 'metasAhorros' },
             { target: 'view-saldo', key: 'saldo' },
+            { target: 'view-ingresos', key: 'ingresos' },
+            { target: 'view-gastos', key: 'gastos' },
+            { target: 'view-metas', key: 'metasAhorros' },
             { target: 'view-recordatorios', key: 'calendario' },
+            { target: 'view-calculadora', key: 'calculadora' },
+            { target: 'view-solicitudes', key: 'soporte' },
             { target: 'view-configuracion', key: 'configuracion' }
         ];
 
@@ -964,6 +1036,10 @@
                 const span = a.querySelector('span');
                 if (span) span.textContent = t.nav[item.key];
             }
+        });
+        document.querySelectorAll('#sidebarMenu [data-nav-label]').forEach(label => {
+            const translation = t.nav[label.dataset.navLabel];
+            if (translation) label.textContent = translation;
         });
 
         // 4. Perfil en sidebar

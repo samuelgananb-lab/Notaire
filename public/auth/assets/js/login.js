@@ -2,8 +2,6 @@ function initializeLoginScreen() {
     const eventController = new AbortController();
     const listenerOptions = { signal: eventController.signal };
     const loginForm = document.getElementById('loginForm');
-    const togglePass = document.getElementById('togglePassword');
-    const passInput = document.getElementById('password');
     const loginBtn = document.getElementById('loginBtn');
     const loginError = document.getElementById('loginError');
 
@@ -17,14 +15,6 @@ function initializeLoginScreen() {
     };
 
     window.addEventListener('pageshow', resetLoginState, listenerOptions);
-
-    if (togglePass && passInput) {
-        togglePass.addEventListener('click', () => {
-            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passInput.setAttribute('type', type);
-            togglePass.classList.toggle('fa-eye-slash');
-        }, listenerOptions);
-    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async e => {

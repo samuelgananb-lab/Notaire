@@ -606,7 +606,12 @@ async function handleGuardarAporteMeta(event) {
             mostrarErrorAporte(result);
             return;
         }
-        if (!response.ok) throw new Error(result.error || 'No se pudo registrar el aporte');
+        if (!response.ok) {
+            const details = [result.error, result.detalle]
+                .filter((message, index, messages) => typeof message === 'string' && message.trim() && messages.indexOf(message) === index)
+                .join(': ');
+            throw new Error(details || 'No se pudo registrar el aporte');
+        }
 
         invalidateApiCache();
         closeModal('modalAportarMeta');

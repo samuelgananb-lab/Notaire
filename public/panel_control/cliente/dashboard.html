@@ -11,10 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261102-goals-cards">
-    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261102-goals-cards">
-    <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261026-goals">
-    <script src="../../assets/js/auth-guard.js?v=20261026-password-dialog1"></script>
+    <link rel="stylesheet" href="assets/css/cliente-dashboard.css?v=20261105-panel-finishes">
+    <link rel="stylesheet" href="assets/css/cliente-mobile.css?v=20261105-panel-finishes">
+    <link rel="stylesheet" href="assets/css/cliente-solicitudes.css?v=20261105-panel-finishes">
+    <script src="../../assets/js/password-toggle.js?v=20261102-password-eye2"></script>
+    <script src="../../assets/js/auth-guard.js?v=20261105-panel-finishes"></script>
 </head>
 
 <body>
@@ -40,15 +41,19 @@
 
                 <nav class="sidebar-nav">
                     <ul id="sidebarMenu">
-                        <li class="active"><a href="#" data-target="view-inicio"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
-                        <li><a href="#" data-target="view-gastos"><i class="fas fa-receipt"></i> <span>Gastos</span></a></li>
-                        <li><a href="#" data-target="view-ingresos"><i class="fas fa-chart-line"></i> <span>Ingresos</span></a></li>
-                        <li><a href="#" data-target="view-saldo"><i class="fas fa-scale-balanced"></i> <span>Saldo</span></a></li>
-                        <li><a href="#" data-target="view-metas"><i class="fas fa-piggy-bank"></i> <span>Ahorros</span></a></li>
-                        <li><a href="#" data-target="view-calculadora"><i class="fas fa-calculator"></i> <span>Calculadora</span></a></li>
-                        <li><a href="#" data-target="view-recordatorios"><i class="fas fa-calendar-alt"></i> <span>Calendario</span></a></li>
-                        <li><a href="#" data-target="view-solicitudes"><i class="fas fa-life-ring"></i> <span>Soporte</span></a></li>
-                        <li><a href="#" data-target="view-configuracion"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="panel">Panel</span></li>
+                        <li class="active"><a href="#" data-target="view-inicio" title="Inicio"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="finanzas">Finanzas</span></li>
+                        <li><a href="#" data-target="view-saldo" title="Saldo"><i class="fas fa-scale-balanced"></i> <span>Saldo</span></a></li>
+                        <li><a href="#" data-target="view-ingresos" title="Ingresos"><i class="fas fa-chart-line"></i> <span>Ingresos</span></a></li>
+                        <li><a href="#" data-target="view-gastos" title="Gastos"><i class="fas fa-receipt"></i> <span>Gastos</span></a></li>
+                        <li><a href="#" data-target="view-metas" title="Ahorros"><i class="fas fa-piggy-bank"></i> <span>Ahorros</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="planificacion">Planificación</span></li>
+                        <li><a href="#" data-target="view-recordatorios" title="Calendario"><i class="fas fa-calendar-alt"></i> <span>Calendario</span></a></li>
+                        <li><a href="#" data-target="view-calculadora" title="Calculadora"><i class="fas fa-calculator"></i> <span>Calculadora</span></a></li>
+                        <li class="sidebar-nav-heading"><span data-nav-label="cuenta">Cuenta</span></li>
+                        <li><a href="#" data-target="view-solicitudes" title="Soporte"><i class="fas fa-life-ring"></i> <span>Soporte</span></a></li>
+                        <li><a href="#" data-target="view-configuracion" title="Configuración"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
                     </ul>
                 </nav>
             </div>
@@ -225,9 +230,9 @@
                         </div>
                         <div class="financial-history-filters">
                             <label><span>Buscar</span><input type="search" data-history-filter="search" placeholder="Buscar por categoría o descripción..." oninput="aplicarFiltros('gasto')"></label>
+                            <button type="button" onclick="limpiarFiltros('gasto')">Limpiar</button>
                             <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros('gasto')"></label>
                             <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros('gasto')"></label>
-                            <button type="button" onclick="limpiarFiltros('gasto')">Limpiar</button>
                         </div>
                         <div class="financial-history-table-wrap">
                             <table class="financial-history-table">
@@ -256,9 +261,9 @@
                         </div>
                         <div class="financial-history-filters">
                             <label><span>Buscar</span><input type="search" data-history-filter="search" placeholder="Buscar por categoría o descripción..." oninput="aplicarFiltros('ingreso')"></label>
+                            <button type="button" onclick="limpiarFiltros('ingreso')">Limpiar</button>
                             <label><span>Desde</span><input type="date" data-history-filter="from" onchange="aplicarFiltros('ingreso')"></label>
                             <label><span>Hasta</span><input type="date" data-history-filter="to" onchange="aplicarFiltros('ingreso')"></label>
-                            <button type="button" onclick="limpiarFiltros('ingreso')">Limpiar</button>
                         </div>
                         <div class="financial-history-table-wrap">
                             <table class="financial-history-table">
@@ -274,20 +279,49 @@
                 <!-- MI SALDO                                                      -->
                 <!-- ============================================================ -->
                 <div class="content-section" id="view-saldo">
-                    <!-- Sección Módulo Saldo -->
-                    <div id="seccion-saldo" style="margin-top: 10px;">
-                        <h2 style="color: var(--color-text-main); margin-bottom: 20px; font-weight: 700;">MI SALDO</h2>
+                    <div id="seccion-saldo" class="saldo-page">
+                        <header class="saldo-page-header">
+                            <div>
+                                <span class="saldo-page-eyebrow"><i class="fas fa-chart-line" aria-hidden="true"></i> Análisis financiero</span>
+                                <h2>Mi saldo</h2>
+                                <p>Un resumen claro de tu liquidez, tus movimientos y tus ahorros.</p>
+                            </div>
+                            <span class="saldo-page-mark" aria-hidden="true"><i class="fas fa-wallet"></i></span>
+                        </header>
 
                         <div class="saldo-charts-grid">
                             <div class="saldo-chart-card saldo-trend-card">
-                                <h4 style="color: var(--color-text-main); margin-top: 0; margin-bottom: 15px;">Evolución de tu liquidez (ingresos − gastos)</h4>
-                                <div class="financial-chart-canvas" style="position: relative; height: 260px; width: 100%;">
+                                <div class="saldo-trend-header saldo-card-header">
+                                    <div class="saldo-card-heading">
+                                        <span class="saldo-card-icon"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></span>
+                                        <div>
+                                            <h3>Evolución de tu liquidez</h3>
+                                            <p>Ingresos menos gastos a lo largo del tiempo</p>
+                                        </div>
+                                    </div>
+                                    <div class="saldo-period-toggle" role="group" aria-label="Periodo de estadísticas">
+                                        <button type="button" class="is-active" data-saldo-period="monthly" aria-pressed="true">Mensual</button>
+                                        <button type="button" data-saldo-period="weekly" aria-pressed="false">Semanal</button>
+                                    </div>
+                                </div>
+                                <div class="saldo-trend-meta">
+                                    <p class="saldo-trend-range" id="saldoTrendRange"><i class="far fa-calendar" aria-hidden="true"></i> Últimos 6 meses</p>
+                                    <span class="saldo-trend-caption"><span aria-hidden="true"></span> Balance neto</span>
+                                </div>
+                                <p class="saldo-trend-status" id="saldoTrendStatus" role="status" aria-live="polite" hidden></p>
+                                <div class="financial-chart-canvas saldo-trend-canvas">
                                     <canvas id="graficoEvolucion"></canvas>
                                 </div>
                             </div>
 
                             <div class="saldo-chart-card saldo-distribution-card">
-                                <h4 style="color: var(--color-text-main); margin-top: 0; margin-bottom: 10px; width: 100%; text-align: left;">Distribución</h4>
+                                <div class="saldo-card-heading saldo-distribution-heading">
+                                    <span class="saldo-card-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>
+                                    <div>
+                                        <h3>Distribución</h3>
+                                        <p>Así se compone tu liquidez</p>
+                                    </div>
+                                </div>
                                 <div class="saldo-donut-layout">
                                     <canvas id="graficoSaldoDona"></canvas>
                                     <div class="saldo-donut-center" aria-live="polite">
@@ -300,31 +334,44 @@
                             </div>
                         </div>
 
-                        <div class="saldo-chart-card saldo-summary-card">
-                            <h4 style="color: var(--color-text-main); margin-top: 0; margin-bottom: 15px;">Resumen financiero</h4>
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-card-border); padding-bottom: 8px;">
-                                    <span style="color: var(--color-text-muted);">Ingresos totales</span>
-                                    <strong id="saldo-ingresos" style="color: #22c55e; font-size: 1.1em;">$0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-card-border); padding-bottom: 8px;">
-                                    <span style="color: var(--color-text-muted);">Gastos totales</span>
-                                    <strong id="saldo-gastos" style="color: #ef4444; font-size: 1.1em;">-$0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-card-border); padding-bottom: 8px;">
-                                    <span style="color: var(--color-text-muted);">Ahorros / Metas</span>
-                                    <strong id="saldo-ahorrado" style="color: var(--color-secondary-light); font-size: 1.1em;">+$0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-card-border); padding-bottom: 8px;">
-                                    <span style="color: var(--color-text-main); font-weight: bold;">Liquidez disponible</span>
-                                    <strong id="saldo-disponible" style="color: var(--color-primary); font-size: 1.2em;">$0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
-                                    <span style="color: var(--color-text-muted);">Movimiento total (ingresos + gastos)</span>
-                                    <strong id="saldo-movimiento-total" style="color: var(--color-text-main); font-size: 1.1em;">$0</strong>
+                        <section class="saldo-chart-card saldo-summary-card" aria-labelledby="saldoSummaryTitle">
+                            <div class="saldo-summary-header">
+                                <div class="saldo-card-heading">
+                                    <span class="saldo-card-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
+                                    <div>
+                                        <h3 id="saldoSummaryTitle">Resumen financiero</h3>
+                                        <p>Indicadores principales de tu actividad</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                            <div class="saldo-summary-grid">
+                                <article class="saldo-summary-item is-income">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-up" aria-hidden="true"></i> Ingresos totales</span>
+                                    <strong id="saldo-ingresos">$0</strong>
+                                    <small>Entradas registradas</small>
+                                </article>
+                                <article class="saldo-summary-item is-expense">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-down" aria-hidden="true"></i> Gastos totales</span>
+                                    <strong id="saldo-gastos">$0</strong>
+                                    <small>Salidas registradas</small>
+                                </article>
+                                <article class="saldo-summary-item is-savings">
+                                    <span class="saldo-summary-label"><i class="fas fa-piggy-bank" aria-hidden="true"></i> Ahorros / Metas</span>
+                                    <strong id="saldo-ahorrado">$0</strong>
+                                    <small>Ahorro acumulado</small>
+                                </article>
+                                <article class="saldo-summary-item is-available">
+                                    <span class="saldo-summary-label"><i class="fas fa-wallet" aria-hidden="true"></i> Liquidez disponible</span>
+                                    <strong id="saldo-disponible">$0</strong>
+                                    <small>Disponible actualmente</small>
+                                </article>
+                                <article class="saldo-summary-item is-volume">
+                                    <span class="saldo-summary-label"><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Movimiento total</span>
+                                    <strong id="saldo-movimiento-total">$0</strong>
+                                    <small>Ingresos y gastos</small>
+                                </article>
+                            </div>
+                        </section>
                     </div>
                 </div>
 
@@ -429,7 +476,7 @@
                         <div class="savings-tip-card">
                             <div class="tip-icon-glow" aria-hidden="true">💡</div>
                             <div class="tip-content">
-                                <h4 id="ahorroTipTitle">Tip</h4>
+                                <h4 id="ahorroTipTitle">Tip Notaire</h4>
                                 <p id="ahorroTipText">No trabajes solo por dinero; construye algo que genere valor incluso cuando tú no estés trabajando.</p>
                             </div>
                         </div>
@@ -612,7 +659,9 @@
                                     <h4>Tip Notaire</h4>
                                     <p>Activa las notificaciones para recibir recordatorios antes de cada evento.</p>
                                 </div>
-                                <i class="fas fa-chevron-right" style="color: var(--color-text-dim);"></i>
+                                <button class="cal-tip-action" type="button" onclick="openNotifSettings()" aria-label="Ir a la configuración de notificaciones">
+                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -737,15 +786,24 @@
                 <!-- CONFIGURACIÓN                                                 -->
                 <!-- ============================================================ -->
                 <div class="content-section" id="view-solicitudes">
-                    <div class="section-header-bar">
-                        <div class="section-title-group">
+                    <div class="section-header-bar support-section-header">
+                        <div class="support-heading-icon" aria-hidden="true"><i class="fas fa-life-ring"></i></div>
+                        <div class="section-title-group support-section-title">
+                            <span class="support-eyebrow">Centro de ayuda Notaire</span>
                             <h2>SOPORTE Y SOLICITUDES</h2>
                             <p>Reporta un error o envía una solicitud. Un administrador o empleado te responderá aquí.</p>
                         </div>
                     </div>
-                    <div class="card-box">
+                    <div class="card-box support-compose-card">
+                        <div class="support-card-heading">
+                            <div class="support-card-icon" aria-hidden="true"><i class="fas fa-paper-plane"></i></div>
+                            <div>
+                                <h3>Cuéntanos qué necesitas</h3>
+                                <p>Elige el tipo y la prioridad para orientar mejor tu solicitud.</p>
+                            </div>
+                        </div>
                         <form id="clienteSolForm" class="cli-sol-form">
-                            <label>Tipo
+                            <label><span>Tipo</span>
                                 <select id="clienteSolTipo" required>
                                     <option value="reporte_error">Reporte de error</option>
                                     <option value="solicitud_soporte">Soporte / ayuda</option>
@@ -753,20 +811,26 @@
                                     <option value="otro">Otro</option>
                                 </select>
                             </label>
-                            <label>Prioridad
+                            <label><span>Prioridad</span>
                                 <select id="clienteSolPrioridad">
                                     <option value="baja">Baja</option>
                                     <option value="media" selected>Media</option>
                                     <option value="alta">Alta</option>
                                 </select>
                             </label>
-                            <label class="wide">Asunto<input id="clienteSolAsunto" required maxlength="180"></label>
-                            <label class="wide">Descripción<textarea id="clienteSolDescripcion" rows="4" required></textarea></label>
-                            <div class="wide"><button class="btn-primary-action" type="submit"><i class="fas fa-paper-plane"></i> Enviar</button> <span id="clienteSolMsg" class="cli-sol-msg"></span></div>
+                            <label class="wide"><span>Asunto</span><input id="clienteSolAsunto" required maxlength="180" placeholder="Resume tu solicitud en una frase"></label>
+                            <label class="wide"><span>Descripción</span><textarea id="clienteSolDescripcion" rows="4" required placeholder="Incluye los detalles necesarios para poder ayudarte."></textarea></label>
+                            <div class="support-form-actions wide">
+                                <p><i class="fas fa-shield-halved" aria-hidden="true"></i> El equipo de Notaire te responderá en esta sección.</p>
+                                <div><button class="btn-primary-action" type="submit"><i class="fas fa-paper-plane"></i> Enviar</button> <span id="clienteSolMsg" class="cli-sol-msg"></span></div>
+                            </div>
                         </form>
                     </div>
-                    <div class="card-box">
-                        <div class="card-box-header"><h3>Mis solicitudes</h3></div>
+                    <div class="card-box support-history-card">
+                        <div class="card-box-header support-history-header">
+                            <div><h3>Mis solicitudes</h3><p>Seguimiento y respuestas del equipo</p></div>
+                            <span class="support-history-icon" aria-hidden="true"><i class="fas fa-inbox"></i></span>
+                        </div>
                         <div id="clienteSolList" class="cli-sol-list"><p>Cargando...</p></div>
                     </div>
                 </div>
@@ -821,20 +885,31 @@
                                         <div class="theme-palette-heading">
                                             <label class="config-field-label">Tema de color</label>
                                             <p>Personaliza los colores de tu panel</p>
+                                            <span class="theme-current-label" id="themeCurrentLabel">Notaire</span>
                                         </div>
-                                        <div class="theme-swatches">
-                                            <button type="button" class="theme-swatch active theme-swatch-purple" data-theme="purple" title="Morado original" aria-label="Aplicar tema morado original" aria-pressed="true" onclick="setThemeSwatch('purple')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-blue" data-theme="blue" title="Azul oscuro" aria-label="Aplicar tema azul oscuro" aria-pressed="false" onclick="setThemeSwatch('blue')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-emerald" data-theme="emerald" title="Verde oscuro" aria-label="Aplicar tema verde oscuro" aria-pressed="false" onclick="setThemeSwatch('emerald')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-gold" data-theme="gold" title="Dorado" aria-label="Aplicar tema dorado" aria-pressed="false" onclick="setThemeSwatch('gold')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-rose" data-theme="rose" title="Rosado oscuro" aria-label="Aplicar tema rosado oscuro" aria-pressed="false" onclick="setThemeSwatch('rose')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-teal" data-theme="teal" title="Verde azulado" aria-label="Aplicar tema verde azulado" aria-pressed="false" onclick="setThemeSwatch('teal')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-orange" data-theme="orange" title="Naranja" aria-label="Aplicar tema naranja" aria-pressed="false" onclick="setThemeSwatch('orange')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-cyan" data-theme="cyan" title="Cian" aria-label="Aplicar tema cian" aria-pressed="false" onclick="setThemeSwatch('cyan')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-indigo" data-theme="indigo" title="Índigo" aria-label="Aplicar tema índigo" aria-pressed="false" onclick="setThemeSwatch('indigo')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-red" data-theme="red" title="Rojo" aria-label="Aplicar tema rojo" aria-pressed="false" onclick="setThemeSwatch('red')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-gray" data-theme="gray" title="Gris oscuro" aria-label="Aplicar tema gris oscuro" aria-pressed="false" onclick="setThemeSwatch('gray')"></button>
-                                            <button type="button" class="theme-swatch theme-swatch-black" data-theme="black" title="Carbón" aria-label="Aplicar tema negro carbón" aria-pressed="false" onclick="setThemeSwatch('black')"></button>
+                                        <div class="theme-swatch-groups">
+                                            <div class="theme-swatch-group" aria-label="Colores de marca">
+                                                <span class="theme-swatch-group-title">Colores de marca</span>
+                                                <div class="theme-swatches">
+                                                    <button type="button" class="theme-swatch active theme-swatch-purple" data-theme="purple" title="Notaire" aria-label="Aplicar tema Notaire" aria-pressed="true" onclick="setThemeSwatch('purple')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Notaire</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-blue" data-theme="blue" title="Azul" aria-label="Aplicar tema azul" aria-pressed="false" onclick="setThemeSwatch('blue')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Azul</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-indigo" data-theme="indigo" title="Índigo" aria-label="Aplicar tema índigo" aria-pressed="false" onclick="setThemeSwatch('indigo')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Índigo</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-cyan" data-theme="cyan" title="Cian" aria-label="Aplicar tema cian" aria-pressed="false" onclick="setThemeSwatch('cyan')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Cian</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-teal" data-theme="teal" title="Turquesa" aria-label="Aplicar tema turquesa" aria-pressed="false" onclick="setThemeSwatch('teal')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Turquesa</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-emerald" data-theme="emerald" title="Esmeralda" aria-label="Aplicar tema esmeralda" aria-pressed="false" onclick="setThemeSwatch('emerald')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Esmeralda</span></button>
+                                                </div>
+                                            </div>
+                                            <div class="theme-swatch-group" aria-label="Colores de acento y neutros">
+                                                <span class="theme-swatch-group-title">Acentos y neutros</span>
+                                                <div class="theme-swatches">
+                                                    <button type="button" class="theme-swatch theme-swatch-gold" data-theme="gold" title="Dorado" aria-label="Aplicar tema dorado" aria-pressed="false" onclick="setThemeSwatch('gold')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Dorado</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-orange" data-theme="orange" title="Naranja" aria-label="Aplicar tema naranja" aria-pressed="false" onclick="setThemeSwatch('orange')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Naranja</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-red" data-theme="red" title="Rojo" aria-label="Aplicar tema rojo" aria-pressed="false" onclick="setThemeSwatch('red')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Rojo</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-rose" data-theme="rose" title="Rosa" aria-label="Aplicar tema rosa" aria-pressed="false" onclick="setThemeSwatch('rose')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Rosa</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-gray" data-theme="gray" title="Gris" aria-label="Aplicar tema gris" aria-pressed="false" onclick="setThemeSwatch('gray')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Gris</span></button>
+                                                    <button type="button" class="theme-swatch theme-swatch-black" data-theme="black" title="Carbón" aria-label="Aplicar tema carbón" aria-pressed="false" onclick="setThemeSwatch('black')"><span class="theme-swatch-color"></span><span class="theme-swatch-name">Carbón</span></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="theme-mode-section">
@@ -1142,12 +1217,26 @@
 
     <!-- Modal: Nuevo Evento (Calendario) -->
     <div class="modal-overlay" id="modalNuevoEvento">
-        <div class="modal-container-box calendar-event-modal">
-            <div class="modal-header-box"><h3><i class="fas fa-calendar-plus" style="color: var(--color-secondary-light); margin-right: 10px;"></i>Nuevo Evento</h3><button class="modal-close-btn" onclick="closeModal('modalNuevoEvento')">&times;</button></div>
-            <form id="formNuevoEvento" onsubmit="handleGuardarEvento(event)">
+        <div class="modal-container-box calendar-event-modal" role="dialog" aria-modal="true" aria-labelledby="calendarEventTitle">
+            <header class="modal-header-box calendar-event-header">
+                <div class="calendar-event-heading">
+                    <span class="calendar-event-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                    <div>
+                        <span class="calendar-event-eyebrow">AGENDA</span>
+                        <h3 id="calendarEventTitle">Nuevo Evento</h3>
+                        <p>Organiza tus fechas importantes y recibe avisos a tiempo.</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" aria-label="Cerrar formulario" onclick="closeModal('modalNuevoEvento')">&times;</button>
+            </header>
+            <form id="formNuevoEvento" class="calendar-event-form" onsubmit="handleGuardarEvento(event)">
                 <div class="calendar-event-error" id="calendarEventError" role="alert" hidden></div>
-                <div class="form-group"><label>Título del evento</label><input type="text" class="form-control" id="eventoTitulo" placeholder="Ej: Pago de hipoteca" required></div>
-                <div class="form-group"><label>Tipo</label>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoTitulo">Título del evento</label>
+                    <input type="text" class="form-control" id="eventoTitulo" placeholder="Ej.: Pago de hipoteca" maxlength="120" required>
+                </div>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoTipo">Tipo de evento</label>
                     <select class="form-control" id="eventoTipo">
                         <option value="purple">📅 Eventos</option>
                         <option value="green">💳 Pagos</option>
@@ -1155,18 +1244,33 @@
                         <option value="blue">👤 Personal</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Fecha</label><input type="date" class="form-control" id="eventoFecha" required></div>
-                <div class="form-group"><label>Hora</label><input type="time" class="form-control" id="eventoHora"></div>
-                <div class="form-group"><label>Nota / Descripción</label><textarea class="form-control" id="eventoNota" rows="3" placeholder="Detalles del evento..."></textarea></div>
-                <div class="form-group">
-                    <label>Notificaciones</label>
-                    <div class="notif-opts-row">
-                        <label class="notif-opt-label"><input type="checkbox" id="notifDiaBefore" checked> 24h antes</label>
-                        <label class="notif-opt-label"><input type="checkbox" id="notifHourBefore" checked> 1h antes</label>
-                        <label class="notif-opt-label"><input type="checkbox" id="notifOnDay"> El mismo día</label>
+                <div class="calendar-event-date-row">
+                    <div class="form-group">
+                        <label for="eventoFecha">Fecha</label>
+                        <input type="date" class="form-control" id="eventoFecha" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventoHora">Hora <span>(opcional)</span></label>
+                        <input type="time" class="form-control" id="eventoHora">
                     </div>
                 </div>
-                <button type="submit" class="btn-primary-action" style="width:100%; justify-content:center;"><i class="fas fa-calendar-plus"></i> Guardar Evento</button>
+                <div class="form-group calendar-event-field-wide">
+                    <label for="eventoNota">Nota o descripción <span>(opcional)</span></label>
+                    <textarea class="form-control" id="eventoNota" rows="3" maxlength="500" placeholder="Añade detalles que quieras recordar..."></textarea>
+                </div>
+                <fieldset class="calendar-event-notifications calendar-event-field-wide">
+                    <legend>Notificaciones</legend>
+                    <p>Elige cuándo quieres recibir un aviso.</p>
+                    <div class="notif-opts-row">
+                        <label class="notif-opt-label" for="notifDiaBefore"><input type="checkbox" id="notifDiaBefore" checked><span>24 horas antes</span></label>
+                        <label class="notif-opt-label" for="notifHourBefore"><input type="checkbox" id="notifHourBefore" checked><span>1 hora antes</span></label>
+                        <label class="notif-opt-label" for="notifOnDay"><input type="checkbox" id="notifOnDay"><span>El mismo día</span></label>
+                    </div>
+                </fieldset>
+                <div class="calendar-event-actions calendar-event-field-wide">
+                    <span><i class="fas fa-lock" aria-hidden="true"></i> Solo tú verás tus recordatorios.</span>
+                    <button type="submit" class="btn-primary-action"><i class="fas fa-calendar-check" aria-hidden="true"></i> Guardar evento</button>
+                </div>
             </form>
         </div>
     </div>
@@ -1290,18 +1394,18 @@
     <script src="../assets/js/month-selector.js?v=1"></script>
     <script src="../../assets/js/number-input-format.js?v=2"></script>
     <script src="assets/js/api.js?v=20261031-2"></script>
-    <script src="assets/js/cliente-dashboard.js?v=20261105-financial-history-tables"></script>
-    <script src="assets/js/cliente-dashboard-ext.js?v=20261104-panel-polish2"></script>
+    <script src="assets/js/cliente-dashboard.js?v=20261105-panel-finishes"></script>
+    <script src="assets/js/cliente-dashboard-ext.js?v=20261105-panel-finishes"></script>
     <script src="assets/js/movimientos.js?v=20261105-financial-history-tables"></script>
     <script src="assets/js/metas.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/ahorros.js?v=20261027"></script>
     <script src="assets/js/recordatorios.js?v=20261105-calendar-payments"></script>
-    <script src="assets/js/scientific-calculator.js?v=20261031-9"></script>
-    <script src="assets/js/saldo.js?v=20261102-dashboard-fixes1"></script>
+    <script src="assets/js/scientific-calculator.js?v=20261102-rate-fix5"></script>
+    <script src="assets/js/saldo.js?v=20261105-panel-finishes"></script>
     <script src="assets/js/inicio.js?v=20261104-panel-polish2"></script>
     <script src="assets/js/mobile-nav.js?v=9"></script>
-    <script src="assets/js/cliente-solicitudes.js?v=20261031-2"></script>
-    <script src="../../assets/js/notaire-i18n.js?v=20261105-calendar-payments"></script>
+    <script src="assets/js/cliente-solicitudes.js?v=20261105-panel-finishes"></script>
+    <script src="../../assets/js/notaire-i18n.js?v=20261105-panel-finishes"></script>
 </body>
 
 </html>
