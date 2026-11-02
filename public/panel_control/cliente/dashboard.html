@@ -819,6 +819,11 @@
                                             <button type="button" class="theme-swatch theme-swatch-emerald" data-theme="emerald" title="Verde oscuro" aria-label="Aplicar tema verde oscuro" aria-pressed="false" onclick="setThemeSwatch('emerald')"></button>
                                             <button type="button" class="theme-swatch theme-swatch-gold" data-theme="gold" title="Dorado" aria-label="Aplicar tema dorado" aria-pressed="false" onclick="setThemeSwatch('gold')"></button>
                                             <button type="button" class="theme-swatch theme-swatch-rose" data-theme="rose" title="Rosado oscuro" aria-label="Aplicar tema rosado oscuro" aria-pressed="false" onclick="setThemeSwatch('rose')"></button>
+                                            <button type="button" class="theme-swatch theme-swatch-teal" data-theme="teal" title="Verde azulado" aria-label="Aplicar tema verde azulado" aria-pressed="false" onclick="setThemeSwatch('teal')"></button>
+                                            <button type="button" class="theme-swatch theme-swatch-orange" data-theme="orange" title="Naranja" aria-label="Aplicar tema naranja" aria-pressed="false" onclick="setThemeSwatch('orange')"></button>
+                                            <button type="button" class="theme-swatch theme-swatch-cyan" data-theme="cyan" title="Cian" aria-label="Aplicar tema cian" aria-pressed="false" onclick="setThemeSwatch('cyan')"></button>
+                                            <button type="button" class="theme-swatch theme-swatch-indigo" data-theme="indigo" title="Índigo" aria-label="Aplicar tema índigo" aria-pressed="false" onclick="setThemeSwatch('indigo')"></button>
+                                            <button type="button" class="theme-swatch theme-swatch-red" data-theme="red" title="Rojo" aria-label="Aplicar tema rojo" aria-pressed="false" onclick="setThemeSwatch('red')"></button>
                                             <button type="button" class="theme-swatch theme-swatch-gray" data-theme="gray" title="Gris oscuro" aria-label="Aplicar tema gris oscuro" aria-pressed="false" onclick="setThemeSwatch('gray')"></button>
                                             <button type="button" class="theme-swatch theme-swatch-black" data-theme="black" title="Carbón" aria-label="Aplicar tema negro carbón" aria-pressed="false" onclick="setThemeSwatch('black')"></button>
                                         </div>
@@ -1189,45 +1194,56 @@
     </div>
 
     <!-- Modal para Registrar Movimiento -->
-    <div id="modalMovimiento" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: var(--color-card-bg); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; color: var(--color-text-main); box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
-            <h3 style="margin-top: 0;">Registrar Movimiento</h3>
+    <div id="modalMovimiento" class="movement-modal-overlay" style="display: none;">
+        <section class="movement-modal" role="dialog" aria-modal="true" aria-labelledby="tituloModalMovimiento">
+            <header class="movement-modal-header">
+                <div class="movement-modal-icon"><i class="fas fa-exchange-alt" aria-hidden="true"></i></div>
+                <div>
+                    <span class="movement-modal-eyebrow">Control financiero</span>
+                    <h3 id="tituloModalMovimiento">Registrar Movimiento</h3>
+                    <p>Registra tus ingresos y gastos en un solo lugar.</p>
+                </div>
+                <button type="button" class="movement-modal-close" aria-label="Cerrar" onclick="idEdicionActual = null; document.getElementById('modalMovimiento').style.display='none';">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </header>
 
-            <form id="formMovimiento">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px;">Tipo:</label>
-                    <select id="tipoMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required>
-                        <option value="ingreso">Ingreso</option>
-                        <option value="gasto">Gasto</option>
-                    </select>
+            <form id="formMovimiento" class="movement-form">
+                <div class="movement-form-grid">
+                    <div class="movement-field">
+                        <label for="tipoMovimiento">Tipo de movimiento</label>
+                        <select id="tipoMovimiento" required>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="gasto">Gasto</option>
+                        </select>
+                    </div>
+                    <div class="movement-field movement-amount-field">
+                        <label for="montoMovimiento">Monto ($)</label>
+                        <div class="movement-input-with-icon">
+                            <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+                            <input type="text" inputmode="decimal" data-format-number autocomplete="off" id="montoMovimiento" required placeholder="Ej. 150.000">
+                        </div>
+                    </div>
+                    <div class="movement-field">
+                        <label for="categoriaMovimiento">Categoría</label>
+                        <input type="text" id="categoriaMovimiento" required placeholder="Ej. Honorarios, oficina">
+                    </div>
+                    <div class="movement-field">
+                        <label for="fechaMovimiento">Fecha</label>
+                        <input type="date" id="fechaMovimiento" required>
+                    </div>
+                    <div class="movement-field movement-description-field">
+                        <label for="descripcionMovimiento">Descripción <span>(opcional)</span></label>
+                        <input type="text" id="descripcionMovimiento" placeholder="Agrega un detalle para identificarlo">
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px;">Monto ($):</label>
-                    <input type="text" inputmode="decimal" data-format-number autocomplete="off" id="montoMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required placeholder="Ej: 150000">
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px;">Categoría:</label>
-                    <input type="text" id="categoriaMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required placeholder="Ej: Honorarios, Oficina...">
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px;" for="fechaMovimiento">Fecha:</label>
-                    <input type="date" id="fechaMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" required>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px;">Descripción:</label>
-                    <input type="text" id="descripcionMovimiento" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--color-input-bg); color: var(--color-text-main); border: 1px solid var(--color-card-border);" placeholder="Ej: Pago de servicios">
-                </div>
-
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" id="btnCerrarModal" onclick="idEdicionActual = null; document.getElementById('modalMovimiento').style.display='none';" style="padding: 8px 16px; border-radius: 999px; border: 1px solid var(--color-card-border); background: var(--color-card-hover); color: var(--color-text-main); cursor: pointer;">Cancelar</button>
-                    <button type="submit" style="padding: 9px 16px; border-radius: 999px; border: none; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 5px 14px var(--color-primary-glow);">Guardar</button>
+                <div class="movement-form-actions">
+                    <button type="button" id="btnCerrarModal" class="movement-cancel-button" onclick="idEdicionActual = null; document.getElementById('modalMovimiento').style.display='none';">Cancelar</button>
+                    <button type="submit" class="movement-save-button"><i class="fas fa-check" aria-hidden="true"></i> Guardar movimiento</button>
                 </div>
             </form>
-        </div>
+        </section>
     </div>
 
     <!-- Modal Abonar a Meta -->

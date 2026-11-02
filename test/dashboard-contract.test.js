@@ -386,7 +386,8 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
 
     const selected = [];
     const events = [];
-    const swatches = ['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'].map(theme => ({
+    const paletteNames = ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'];
+    const swatches = paletteNames.map(theme => ({
         dataset: { theme },
         active: false,
         pressed: 'false',
@@ -408,22 +409,39 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     context.setThemeSwatch('gold');
     assert.deepEqual(selected, ['gold', 'gold']);
     assert.deepEqual(events, ['notaire:palettechange']);
-    assert.deepEqual(swatches.map(swatch => swatch.active), [false, false, false, true, false, false, false]);
-    assert.deepEqual(swatches.map(swatch => swatch.pressed), ['false', 'false', 'false', 'true', 'false', 'false', 'false']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'gold'));
+    assert.deepEqual(swatches.map(swatch => swatch.pressed), paletteNames.map(theme => String(theme === 'gold')));
 
+    context.setThemeSwatch('teal');
+    assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'teal'));
     context.setThemeSwatch('amber');
-    assert.equal(selected.length, 2);
-    assert.equal(events.length, 1);
+    assert.equal(selected.length, 4);
+    assert.equal(events.length, 2);
     context.setThemeSwatch('purple');
-    assert.deepEqual(selected, ['gold', 'gold', 'purple', 'purple']);
-    assert.deepEqual(swatches.map(swatch => swatch.active), [true, false, false, false, false, false, false]);
-    assert.match(html, /data-theme="purple"[\s\S]*data-theme="blue"[\s\S]*data-theme="emerald"[\s\S]*data-theme="gold"[\s\S]*data-theme="rose"[\s\S]*data-theme="gray"[\s\S]*data-theme="black"/);
+    assert.deepEqual(selected, ['gold', 'gold', 'teal', 'teal', 'purple', 'purple']);
+    assert.deepEqual(swatches.map(swatch => swatch.active), paletteNames.map(theme => theme === 'purple'));
+    assert.match(html, /data-theme="purple"[\s\S]*data-theme="blue"[\s\S]*data-theme="emerald"[\s\S]*data-theme="gold"[\s\S]*data-theme="rose"[\s\S]*data-theme="teal"[\s\S]*data-theme="orange"[\s\S]*data-theme="cyan"[\s\S]*data-theme="indigo"[\s\S]*data-theme="red"[\s\S]*data-theme="gray"[\s\S]*data-theme="black"/);
     assert.match(html, /Morado original/);
     assert.match(styles, /html\[data-color-palette="emerald"\]/);
     assert.match(styles, /html\[data-color-palette="rose"\]/);
     assert.match(styles, /html\[data-color-palette="purple"\]/);
     assert.match(styles, /html\[data-color-palette="gray"\]/);
     assert.match(styles, /html\[data-color-palette="gold"\]/);
+    for (const palette of ['teal', 'orange', 'cyan', 'indigo', 'red']) {
+        assert.match(styles, new RegExp(`html\\[data-color-palette="${palette}"\\]`));
+        assert.match(styles, new RegExp(`html\\[data-theme="light"\\]\\[data-color-palette="${palette}"\\]`));
+        assert.match(styles, new RegExp(`\\.theme-swatch-${palette}`));
+    }
+    assert.match(html, /id="modalMovimiento" class="movement-modal-overlay"/);
+    assert.match(html, /id="formMovimiento" class="movement-form"/);
+    for (const id of ['tipoMovimiento', 'montoMovimiento', 'categoriaMovimiento', 'fechaMovimiento', 'descripcionMovimiento', 'btnCerrarModal']) {
+        assert.match(html, new RegExp(`id="${id}"`));
+    }
+    assert.match(styles, /\[data-theme="light"\] \.config-security-button/);
+    assert.match(styles, /\[data-theme="light"\] \.financial-history-filters input/);
+    assert.match(styles, /\[data-theme="light"\] \.movement-field input/);
+    assert.match(styles, /--color-input-bg: #ffffff/);
     assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="black"\][\s\S]*--color-bg: #101216/);
     assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="gray"\][\s\S]*--color-bg: #181d25/);
     assert.match(styles, /html\[data-theme="dark"\]\[data-color-palette="gold"\]/);
@@ -446,8 +464,8 @@ test('las paletas, el modo claro y los controles visuales aplican y persisten su
     assert.doesNotMatch(`${styles}\n${mobileStyles}\n${requestsStyles}\n${html}`, /#8a2be2|#8b5cf6/);
     assert.match(balanceScript, /notaire:palettechange/);
     assert.match(balanceScript, /chartDona\.update\(\)/);
-    assert.match(script, /allowedThemes = \['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'\]/);
-    assert.match(script, /'emerald', 'gold', 'rose', 'gray', 'black'\]\.includes\(savedTheme\)/);
+    assert.match(script, /allowedThemes = \['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'\]/);
+    assert.match(script, /'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'\]\.includes\(savedTheme\)/);
     assert.match(script, /setDisplayMode\(mode, el\)[\s\S]*data-theme', effectiveMode/);
 
     const displayModeSource = script.match(/function setDisplayMode\(mode, el\) \{[\s\S]*?\n\}/)?.[0];

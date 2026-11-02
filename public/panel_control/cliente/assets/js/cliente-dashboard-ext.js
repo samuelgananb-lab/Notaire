@@ -982,7 +982,7 @@ function refreshConfigDisplay() {
 }
 
 function setThemeSwatch(themeName) {
-    const allowedThemes = ['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'];
+    const allowedThemes = ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'];
     if (!allowedThemes.includes(themeName)) return;
 
     document.documentElement.setAttribute('data-color-palette', themeName);
@@ -997,7 +997,7 @@ function setThemeSwatch(themeName) {
 
 function initThemePalette() {
     const savedTheme = localStorage.getItem('notaire_color_palette');
-    const theme = ['purple', 'blue', 'emerald', 'gold', 'rose', 'gray', 'black'].includes(savedTheme) ? savedTheme : 'purple';
+    const theme = ['purple', 'blue', 'emerald', 'gold', 'rose', 'teal', 'orange', 'cyan', 'indigo', 'red', 'gray', 'black'].includes(savedTheme) ? savedTheme : 'purple';
     setThemeSwatch(theme);
     const storedMode = localStorage.getItem('notaire_theme');
     const savedMode = ['dark', 'light', 'auto'].includes(storedMode) ? storedMode : 'dark';
