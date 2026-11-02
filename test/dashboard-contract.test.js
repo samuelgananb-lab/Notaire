@@ -1493,6 +1493,7 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     assert.match(keypadMarkup, /data-action="random"/);
     assert.match(html, /class="calculator-history card-box"[\s\S]*id="calculatorHistoryList"/);
     assert.match(html, /id="calculatorHistoryMore"[^>]*aria-controls="calculatorHistoryMorePanel"/);
+    assert.doesNotMatch(html.match(/<button[^>]*id="calculatorHistoryMore"[^>]*>/)?.[0] || '', /\shidden(?:\s|>)/);
     assert.match(html, /id="calculatorHistoryMorePanel"[^>]*data-open="false" aria-hidden="true"/);
     assert.match(html, /id="calculatorHistoryMoreTitle"/);
     assert.match(html, /id="calculatorHistoryClose"/);
@@ -1743,7 +1744,9 @@ test('la calculadora científica evalúa operaciones y funciones trigonométrica
     elements.get('calculatorClearHistory').listeners.click();
     assert.deepEqual(JSON.parse(storage.values().next().value), []);
     assert.equal(elements.get('calculatorHistoryList').children.length, 1);
-    assert.equal(elements.get('calculatorHistoryMore').hidden, true);
+    assert.equal(elements.get('calculatorHistoryMore').hidden, false);
+    assert.match(elements.get('calculatorHistoryMoreLabel').textContent, /historial/i);
+    assert.equal(elements.get('calculatorHistoryMoreList').children.length, 1);
     assert.doesNotMatch(calculator, /\beval\s*\(/);
 });
 

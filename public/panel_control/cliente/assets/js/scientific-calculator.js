@@ -110,16 +110,20 @@
         renderHistoryEntries(historyList, history.slice(0, visibleHistoryItems), history.length
             ? ''
             : (english ? 'Your completed calculations will be saved here.' : 'Tus cálculos realizados aparecerán aquí.'));
-        renderHistoryEntries(historyMoreList, history.slice(visibleHistoryItems, maxHistoryItems));
+        renderHistoryEntries(historyMoreList, history.slice(visibleHistoryItems, maxHistoryItems), english
+            ? 'There are no older calculations yet.'
+            : 'No hay operaciones anteriores todavía.');
         const additionalCount = Math.min(Math.max(history.length - visibleHistoryItems, 0), maxHistoryItems - visibleHistoryItems);
         if (historyMoreButton) {
-            historyMoreButton.hidden = additionalCount === 0;
+            historyMoreButton.hidden = false;
             if (historyMoreLabel) {
-                historyMoreLabel.textContent = english ? `See ${additionalCount} more` : `Ver ${additionalCount} más`;
+                historyMoreLabel.textContent = additionalCount
+                    ? (english ? `See ${additionalCount} more` : `Ver ${additionalCount} más`)
+                    : (english ? 'View history' : 'Ver historial');
             }
             historyMoreButton.setAttribute('aria-label', english
-                ? `Show ${additionalCount} older calculations`
-                : `Mostrar ${additionalCount} operaciones anteriores`);
+                ? (additionalCount ? `Show ${additionalCount} older calculations` : 'Open calculation history')
+                : (additionalCount ? `Mostrar ${additionalCount} operaciones anteriores` : 'Abrir historial de operaciones'));
         }
         if (additionalCount === 0) setHistoryMenuOpen(false);
     }
