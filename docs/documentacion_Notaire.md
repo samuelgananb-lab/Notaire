@@ -23,6 +23,16 @@ Es la carpeta raíz de los archivos estáticos servidos por Express.
 ### 3. Directorio `docs/`
 - Espacio centralizado para la documentación técnica, manuales de usuario y especificaciones de negocio (como este archivo).
 
+## Persistencia y migraciones
+
+La persistencia activa del backend usa Supabase. Las tablas canónicas son:
+`usuarios`, `roles`, `metas`, `aportes_meta`, `transacciones`, `recordatorios`,
+`eventos_calendario` y `patrimonio`.
+
+Los modelos legacy de SQLite/SQL Server (`schema.sql`, `schema_sqlserver.sql`,
+`seed.sql`, `db.js`, `db_mssql.js`) fueron eliminados. Para Supabase deben
+revisarse y ejecutarse únicamente las migraciones SQL de `src/database/`.
+
 ## Usuarios de Prueba (Demo)
 
 Para propósitos de demostración y pruebas de integración, se han preconfigurado los siguientes usuarios:

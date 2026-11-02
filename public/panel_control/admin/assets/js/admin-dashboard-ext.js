@@ -9,14 +9,7 @@
 const CalendarState = {
     currentDate: new Date(),
     viewMode: 'month', // 'month' | 'week' | 'day'
-    events: [
-        { id: 1, titulo: 'Pago Arancel Notarial', tipo: 'green', fecha: '2026-08-10', hora: '11:15', nota: 'Banco de Bogotá', notif24h: true, notif1h: true },
-        { id: 2, titulo: 'Renovación Documento', tipo: 'orange', fecha: '2026-08-13', hora: '09:00', nota: 'Cédula de ciudadanía', notif24h: true, notif1h: false },
-        { id: 3, titulo: 'Cumpleaños María', tipo: 'pink', fecha: '2026-08-15', hora: '16:00', nota: 'Celebración', notif24h: true, notif1h: false },
-        { id: 4, titulo: 'Revisar Poder Especial', tipo: 'purple', fecha: '2026-08-17', hora: '14:30', nota: 'Documento legal', notif24h: true, notif1h: true },
-        { id: 5, titulo: 'Firma Escritura', tipo: 'purple', fecha: '2026-08-20', hora: '10:00', nota: 'Notaría 12 – Centro', notif24h: true, notif1h: true },
-        { id: 6, titulo: 'Pago Hipoteca', tipo: 'green', fecha: '2026-08-27', hora: '11:15', nota: 'Bancolombia', notif24h: true, notif1h: false },
-    ],
+    events: [],
     currentEventId: null
 };
 
@@ -41,12 +34,39 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNavigateTo();
     requestBrowserNotifications();
     scheduleNotificationChecks();
+    cargarEventosPersistidos();
 });
+
+async function cargarEventosPersistidos() {
+    const token = localStorage.getItem('notaire_token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/eventos', { headers: { Authorization: `Bearer ${token}` } });
+        if (!response.ok) throw new Error('No se pudieron cargar los eventos');
+        const eventos = await response.json();
+        const tiposVisuales = { notarial: 'purple', financiero: 'green', recordatorio: 'orange', personal: 'blue', cumpleanos: 'pink' };
+        CalendarState.events = (eventos || []).map(evento => ({
+            ...evento,
+            tipo: tiposVisuales[evento.tipo] || evento.tipo || 'purple',
+            fecha: evento.fecha || String(evento.fecha_hora || '').slice(0, 10),
+            hora: evento.hora || String(evento.fecha_hora || '').slice(11, 16),
+            notif24h: evento.notif24h !== false,
+            notif1h: evento.notif1h !== false,
+            notifOnDay: evento.notifonday === true
+        }));
+        renderCalendar();
+    } catch (error) {
+        console.error('Error al cargar eventos administrativos:', error);
+    }
+}
 
 /* ============================================================
    NAVEGACIÓN HELPER
    ============================================================ */
 function navigateTo(viewId) {
+    const financeViews = ['view-gastos', 'view-ingresos', 'view-ahorros', 'view-saldo', 'view-metas'];
+    if (document.body.classList.contains('employee-mode') && financeViews.includes(viewId)) viewId = 'view-inicio';
     document.querySelectorAll('#sidebarMenu li').forEach(li => li.classList.remove('active'));
     document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
 
@@ -55,9 +75,16 @@ function navigateTo(viewId) {
 
     const link = document.querySelector(`#sidebarMenu a[data-target="${viewId}"]`);
     if (link) link.parentElement.classList.add('active');
+    const parentSubmenu = link?.closest('.has-submenu');
+    if (parentSubmenu) parentSubmenu.classList.add('open');
 
     const currentLang = (typeof getCurrentLang === 'function') ? getCurrentLang() : (localStorage.getItem('notaire_lang') || 'es');
     const titlesObj = (window.translations && window.translations[currentLang] && window.translations[currentLang].titles) ? window.translations[currentLang].titles : {
+        'view-usuarios': 'GESTIÓN DE USUARIOS',
+        'view-tramites': 'TRÁMITES NOTARIALES',
+        'view-auditoria': 'AUDITORÍA',
+        'view-notificaciones': 'CENTRO DE NOTIFICACIONES',
+        'view-reportes': 'REPORTES',
         'view-gastos': 'MIS GASTOS',
         'view-ingresos': 'MIS INGRESOS',
         'view-ahorros': 'MIS AHORROS',
@@ -337,7 +364,7 @@ function openModalNuevoEvento() {
     openModal('modalNuevoEvento');
 }
 
-function handleGuardarEvento(event) {
+async function handleGuardarEvento(event) {
     event.preventDefault();
     const titulo = document.getElementById('eventoTitulo').value;
     const tipo = document.getElementById('eventoTipo').value;
@@ -360,11 +387,21 @@ function handleGuardarEvento(event) {
         notifOnDay
     };
 
-    CalendarState.events.push(newEvt);
-    closeModal('modalNuevoEvento');
-    renderCalendar();
-    showToast(`✅ Evento "${titulo}" guardado. Recibirás recordatorios programados.`);
-    scheduleEventNotifications(newEvt);
+    const token = localStorage.getItem('notaire_token');
+    try {
+        const response = await fetch('/api/eventos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(newEvt)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.detalle || result.error || 'No se pudo guardar el evento');
+        await cargarEventosPersistidos();
+        closeModal('modalNuevoEvento');
+        showToast(`Evento "${titulo}" guardado.`);
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 /* ============================================================
@@ -401,24 +438,41 @@ function openDetalleEvento(id) {
     openModal('modalDetalleEvento');
 }
 
-function deleteCurrentEvent() {
+async function deleteCurrentEvent() {
     const id = CalendarState.currentEventId;
     if (!id) return;
     const evt = CalendarState.events.find(e => e.id === id);
-    CalendarState.events = CalendarState.events.filter(e => e.id !== id);
-    closeModal('modalDetalleEvento');
-    renderCalendar();
-    showToast(`🗑️ Evento "${evt?.titulo || ''}" eliminado.`);
+    const token = localStorage.getItem('notaire_token');
+    try {
+        const response = await fetch(`/api/eventos/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('No se pudo eliminar el evento');
+        await cargarEventosPersistidos();
+        closeModal('modalDetalleEvento');
+        showToast(`Evento "${evt?.titulo || ''}" eliminado.`);
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
-function toggleEventNotif(e, id) {
+async function toggleEventNotif(e, id) {
     e.stopPropagation();
     const evt = CalendarState.events.find(ev => ev.id === id);
     if (!evt) return;
-    evt.notif24h = !evt.notif24h;
-    evt.notif1h = !evt.notif1h;
-    renderUpcomingEvents();
-    showToast(evt.notif24h ? '🔔 Notificaciones activadas para el evento.' : '🔕 Notificaciones desactivadas.');
+    const token = localStorage.getItem('notaire_token');
+    try {
+        const response = await fetch(`/api/eventos/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ notif24h: !evt.notif24h, notif1h: !evt.notif1h, notifOnDay: evt.notifOnDay })
+        });
+        if (!response.ok) throw new Error('No se pudo actualizar la notificación');
+        await cargarEventosPersistidos();
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 /* ============================================================
@@ -567,6 +621,7 @@ function renderMetasView() {
                     <div class="goal-details-list"><span>Falta: ${formatCOP(falta)}</span><span>Fecha: ${meta.fecha || '2026'}</span></div>
                     <div style="display:flex; gap:8px; margin-top:12px;">
                         <button class="btn-aportar-goal" style="flex:1;" onclick="openModalAportarMeta(${meta.id}, '${escapeHtmlExt(meta.nombre)}')"><i class="fas fa-plus"></i> Aportar</button>
+                        <button class="btn-tx-edit" title="Editar meta" onclick="openModalEditarMeta(${meta.id})"><i class="fas fa-pen"></i></button>
                         <button class="btn-delete-goal" onclick="deleteMeta(${meta.id})" title="Eliminar meta"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -583,17 +638,6 @@ function renderMetasView() {
     if (totalAhorrado) totalAhorrado.textContent = formatCOP(totalAh);
     if (countEl) countEl.textContent = metas.length;
     if (avgPctEl) avgPctEl.textContent = `${avgPct}%`;
-}
-
-function deleteMeta(id) {
-    if (typeof NotaireState === 'undefined') return;
-    const meta = NotaireState.metas.find(m => m.id === id);
-    if (!meta) return;
-    if (!confirm(`¿Eliminar la meta "${meta.nombre}"?`)) return;
-    NotaireState.metas = NotaireState.metas.filter(m => m.id !== id);
-    updateAllMetrics();
-    renderMetasView();
-    showToast(`🗑️ Meta "${meta.nombre}" eliminada.`);
 }
 
 /* ============================================================
@@ -623,9 +667,11 @@ function refreshConfigDisplay() {
     if (typeof NotaireState === 'undefined') return;
     const configNombre = document.getElementById('configNombre');
     const configEmail = document.getElementById('configEmail');
+    const configTelefono = document.getElementById('configTelefono');
     const configAvatar = document.getElementById('configAvatarLarge');
     if (configNombre) configNombre.textContent = NotaireState.user.nombre;
     if (configEmail) configEmail.textContent = NotaireState.user.email;
+    if (configTelefono) configTelefono.textContent = NotaireState.user.telefono || 'Sin teléfono';
     if (configAvatar) configAvatar.textContent = NotaireState.user.iniciales || 'SG';
 }
 
@@ -673,18 +719,30 @@ function saveRegionConfig() {
 }
 
 function saveBudgetConfig() {
-    const total = document.getElementById('cfgPresupuesto')?.value;
-    if (typeof NotaireState !== 'undefined' && total) {
-        NotaireState.presupuestoTotal = parseFloat(total);
-        updateAllMetrics();
+    const input = document.getElementById('cfgPresupuesto');
+    const rawTotal = input?.value.trim() || '';
+    if (!rawTotal) {
+        localStorage.removeItem('notaire_presupuesto');
+        if (typeof NotaireState !== 'undefined') NotaireState.presupuestoTotal = 0;
+        if (typeof loadAdminSummary === 'function') void loadAdminSummary();
+        showToast('Presupuesto mensual eliminado.');
+        return;
     }
-    showToast(`✅ Presupuesto mensual actualizado: $${parseInt(total || 0).toLocaleString('es-CO')}`);
+
+    const total = parseFormattedAmount(rawTotal);
+    if (!Number.isFinite(total) || total <= 0) {
+        showToast('Ingresa un presupuesto mensual mayor que cero.');
+        return;
+    }
+
+    localStorage.setItem('notaire_presupuesto', String(total));
+    if (typeof NotaireState !== 'undefined') NotaireState.presupuestoTotal = total;
+    if (typeof loadAdminSummary === 'function') void loadAdminSummary();
+    showToast(`✅ Presupuesto mensual actualizado: $${Math.round(total).toLocaleString('es-CO')}`);
 }
 
 function confirmLogout() {
-    if (confirm('¿Seguro que deseas cerrar sesión?')) {
-        window.location.href = '../../auth/login.html';
-    }
+    if (typeof window.logout === 'function') void window.logout();
 }
 
 /* ============================================================
