@@ -2,7 +2,6 @@ import { supabaseAuth } from '../database/supabase.js';
 
 export const DEFAULT_PREFS = Object.freeze({
   browser: true,
-  email: true,
   h24: true,
   h1: true,
   gastos: true,
@@ -40,7 +39,6 @@ export function normalizePrefs(raw = {}) {
   const categoriesVersion = Number(source.presupuesto_categorias_version);
   return {
     browser: bool('browser'),
-    email: bool('email'),
     h24: bool('h24'),
     h1: bool('h1'),
     gastos: bool('gastos'),

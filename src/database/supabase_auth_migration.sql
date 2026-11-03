@@ -15,71 +15,31 @@ alter table if exists public.recordatorios enable row level security;
 alter table if exists public.patrimonio enable row level security;
 
 drop policy if exists metas_owner_policy on public.metas;
-create policy metas_owner_policy on public.metas
-    for all to authenticated
-    using (exists (
-        select 1 from public.usuarios u
-        where u.id = metas.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ))
-    with check (exists (
-        select 1 from public.usuarios u
-        where u.id = metas.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ));
+drop policy if exists backend_only_access on public.metas;
+create policy backend_only_access on public.metas as restrictive
+    for all to anon, authenticated using (false) with check (false);
 
 drop policy if exists aportes_meta_owner_policy on public.aportes_meta;
-create policy aportes_meta_owner_policy on public.aportes_meta
-    for all to authenticated
-    using (exists (
-        select 1 from public.usuarios u
-        where u.id = aportes_meta.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ))
-    with check (exists (
-        select 1 from public.usuarios u
-        where u.id = aportes_meta.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ));
+drop policy if exists backend_only_access on public.aportes_meta;
+create policy backend_only_access on public.aportes_meta as restrictive
+    for all to anon, authenticated using (false) with check (false);
 
 drop policy if exists transacciones_owner_policy on public.transacciones;
-create policy transacciones_owner_policy on public.transacciones
-    for all to authenticated
-    using (exists (
-        select 1 from public.usuarios u
-        where u.id = transacciones.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ))
-    with check (exists (
-        select 1 from public.usuarios u
-        where u.id = transacciones.usuario_id
-          and (u.auth_id = auth.uid() or u.id = auth.uid())
-    ));
+drop policy if exists backend_only_access on public.transacciones;
+create policy backend_only_access on public.transacciones as restrictive
+    for all to anon, authenticated using (false) with check (false);
 
 drop policy if exists recordatorios_owner_policy on public.recordatorios;
-create policy recordatorios_owner_policy on public.recordatorios
-        for all to authenticated
-        using (exists (
-                select 1 from public.usuarios u
-                where u.id = recordatorios.usuario_id
-                    and (u.auth_id = auth.uid() or u.id = auth.uid())
-        ))
-        with check (exists (
-                select 1 from public.usuarios u
-                where u.id = recordatorios.usuario_id
-                    and (u.auth_id = auth.uid() or u.id = auth.uid())
-        ));
+drop policy if exists backend_only_access on public.recordatorios;
+create policy backend_only_access on public.recordatorios as restrictive
+    for all to anon, authenticated using (false) with check (false);
 
 drop policy if exists patrimonio_owner_policy on public.patrimonio;
-create policy patrimonio_owner_policy on public.patrimonio
-        for all to authenticated
-        using (exists (
-                select 1 from public.usuarios u
-                where u.id = patrimonio.usuario_id
-                    and (u.auth_id = auth.uid() or u.id = auth.uid())
-        ))
-        with check (exists (
-                select 1 from public.usuarios u
-                where u.id = patrimonio.usuario_id
-                    and (u.auth_id = auth.uid() or u.id = auth.uid())
-        ));
+drop policy if exists backend_only_access on public.patrimonio;
+create policy backend_only_access on public.patrimonio as restrictive
+    for all to anon, authenticated using (false) with check (false);
+
+revoke all privileges on table public.metas, public.aportes_meta, public.transacciones,
+    public.recordatorios, public.patrimonio from public, anon, authenticated;
+grant all privileges on table public.metas, public.aportes_meta, public.transacciones,
+    public.recordatorios, public.patrimonio to service_role;

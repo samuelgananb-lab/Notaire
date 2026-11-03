@@ -21,10 +21,9 @@ create index if not exists idx_auditoria_recurso on public.auditoria_acciones(re
 alter table public.auditoria_acciones enable row level security;
 
 drop policy if exists auditoria_admin_read_policy on public.auditoria_acciones;
-create policy auditoria_admin_read_policy on public.auditoria_acciones
-    for select to authenticated
-    using (exists (
-        select 1 from public.usuarios u
-        join public.roles r on r.id_rol = u.id_rol
-        where u.id = auth.uid() and lower(r.nombre_rol) = 'admin'
-    ));
+drop policy if exists backend_only_access on public.auditoria_acciones;
+create policy backend_only_access on public.auditoria_acciones as restrictive
+    for all to anon, authenticated using (false) with check (false);
+
+revoke all privileges on table public.auditoria_acciones from public, anon, authenticated;
+grant all privileges on table public.auditoria_acciones to service_role;

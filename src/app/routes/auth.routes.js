@@ -5,7 +5,6 @@ import { supabase, supabaseAuth } from '../database/supabase.js';
 import { JWT_SECRET, verificarToken } from '../middlewares/auth.middleware.js';
 import { loginRateLimit } from '../middlewares/login-rate-limit.middleware.js';
 import { registrarAuditoria } from '../services/audit.service.js';
-import { sendNotificationEmail } from '../services/event-notifications.service.js';
 import { getPrefs, savePrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
@@ -19,8 +18,8 @@ function auditarResultadoLogin(req, res) {
       req,
       accion: res.statusCode === 200 ? 'login_exitoso' : 'login_fallido',
       recurso: 'autenticacion',
-      detalles: { email: String(req.body.email || '').trim().toLowerCase(), status: res.statusCode }
-    });
+      detalles: { status: res.statusCode }
+    }).catch(() => console.error('No se pudo registrar la auditoría de autenticación.'));
   });
 }
 
@@ -84,7 +83,7 @@ router.post('/registro', async (req, res) => {
     });
 
     if (authError || !authData.user) {
-      return res.status(400).json({ error: 'No se pudo crear la cuenta de autenticación', detalle: authError?.message });
+      return res.status(400).json({ error: 'No se pudo crear la cuenta de autenticación' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -105,20 +104,14 @@ router.post('/registro', async (req, res) => {
 
     if (error) {
       await supabaseAuth.auth.admin.deleteUser(authData.user.id);
-      console.error('Error al insertar usuario en Supabase:', error);
-      return res.status(400).json({ error: 'Error al registrar en la base de datos', detalle: error.message });
+      console.error('Error al guardar el perfil del usuario registrado.');
+      return res.status(400).json({ error: 'Error al registrar en la base de datos' });
     }
 
     const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
     if (sessionError || !sessionData.session) throw sessionError || new Error('No se pudo iniciar la sesión');
 
     const rol = await obtenerNombreRol(nuevoUsuario.id_rol) || 'cliente';
-    void sendNotificationEmail({
-      to: nuevoUsuario.email,
-      subject: 'Bienvenido a Notaire',
-      text: `Hola ${nuevoUsuario.nombre},\n\nTu cuenta fue creada correctamente. Ya puedes ingresar a Notaire para consultar tus finanzas y gestionar tus trámites.\n\nSi no creaste esta cuenta, responde a este correo para solicitar ayuda.`
-    });
-
     res.status(201).json({
       mensaje: 'Usuario registrado con éxito',
       token: sessionData.session.access_token,
@@ -133,7 +126,7 @@ router.post('/registro', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error general en el servidor:', error);
+    console.error('Error general durante el registro:', error.name || 'Error');
     res.status(500).json({ error: 'Error en el servidor al registrar', detalle: error.message });
   }
 });
@@ -159,11 +152,6 @@ router.post('/login', loginRateLimit, async (req, res) => {
 
       if (error || !usuario) return res.status(401).json({ error: 'Perfil de usuario no encontrado' });
       const rol = await obtenerNombreRol(usuario.id_rol);
-      void sendNotificationEmail({
-        to: usuario.email,
-        subject: 'Nuevo inicio de sesión',
-        text: `Hola ${usuario.nombre},\n\nSe inició sesión en tu cuenta de Notaire el ${new Date().toLocaleString('es-CO')}.\n\nSi no reconoces este acceso, cambia tu contraseña y contacta al equipo de soporte.`
-      });
       return res.json({
         mensaje: 'Inicio de sesión exitoso',
         token: authData.session.access_token,
@@ -197,12 +185,6 @@ router.post('/login', loginRateLimit, async (req, res) => {
     }
 
     const rol = await obtenerNombreRol(usuario.id_rol);
-    void sendNotificationEmail({
-      to: usuario.email,
-      subject: 'Nuevo inicio de sesión',
-      text: `Hola ${usuario.nombre},\n\nSe inició sesión en tu cuenta de Notaire el ${new Date().toLocaleString('es-CO')}.\n\nSi no reconoces este acceso, cambia tu contraseña y contacta al equipo de soporte.`
-    });
-
     const session = crearSesionLocal(usuario);
     res.json({
       mensaje: 'Inicio de sesión exitoso',
@@ -216,7 +198,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en el login:', error);
+    console.error('Error durante el inicio de sesión:', error.name || 'Error');
     res.status(500).json({ error: 'Error en el servidor durante el inicio de sesión' });
   }
 });
@@ -278,13 +260,13 @@ router.post('/recover', async (req, res) => {
   try {
     const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) {
-      console.error('Error en recuperación de contraseña:', error.message);
+      console.error('Supabase Auth rechazó la recuperación de contraseña.');
       return res.status(502).json({ error: 'No se pudieron enviar las instrucciones. Inténtalo más tarde.' });
     }
 
     res.json({ mensaje: 'Si el correo está registrado, recibirás instrucciones para recuperar la contraseña.' });
   } catch (error) {
-    console.error('Error en recuperación de contraseña:', error.message);
+    console.error('No se pudo completar la recuperación de contraseña.');
     res.status(502).json({ error: 'No se pudieron enviar las instrucciones. Inténtalo más tarde.' });
   }
 });
@@ -304,14 +286,10 @@ router.put('/password', verificarToken, async (req, res) => {
     }
 
     await registrarAuditoria({ req, accion: 'cambiar_password', recurso: 'autenticacion', detalles: {} });
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: 'Contraseña actualizada',
-      text: 'La contraseña de tu cuenta Notaire fue actualizada. Si no reconoces este cambio, contacta de inmediato al equipo de soporte.'
-    });
     res.json({ mensaje: 'Contraseña actualizada correctamente' });
   } catch (error) {
-    res.status(500).json({ error: 'No se pudo actualizar la contraseña', detalle: error.message });
+    console.error('No se pudo actualizar la contraseña:', error.name || 'Error');
+    res.status(500).json({ error: 'No se pudo actualizar la contraseña' });
   }
 });
 
@@ -363,14 +341,10 @@ router.put('/me', verificarToken, async (req, res) => {
       .single();
 
     if (error) throw error;
-    const aviso = `Hola ${nombre},\n\nLos datos de tu perfil en Notaire fueron actualizados. Si no reconoces este cambio, contacta de inmediato al equipo de soporte.`;
-    void sendNotificationEmail({ to: email, subject: 'Perfil actualizado', text: aviso });
-    if (req.usuario.email && req.usuario.email.toLowerCase() !== email) {
-      void sendNotificationEmail({ to: req.usuario.email, subject: 'Tu correo fue cambiado', text: `El correo de tu cuenta Notaire cambió a ${email}. Si no fuiste tú, contacta de inmediato al equipo de soporte.` });
-    }
     res.json({ mensaje: 'Perfil actualizado', usuario: { ...data, documento } });
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar el perfil', detalle: error.message });
+    console.error('No se pudo actualizar el perfil:', error.name || 'Error');
+    res.status(500).json({ error: 'Error al actualizar el perfil' });
   }
 });
 

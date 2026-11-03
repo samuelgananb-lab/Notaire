@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
 import { registrarAuditoria } from '../services/audit.service.js';
-import { sendNotificationEmail } from '../services/event-notifications.service.js';
 import {
   calculateFinancialSummary,
   currentFinancialMonth,
@@ -354,11 +353,6 @@ router.put('/users/:id/role', verificarAdmin, async (req, res) => {
       .single();
     if (error) throw error;
 
-    void sendNotificationEmail({
-      to: data.email,
-      subject: 'Tu rol de Notaire fue actualizado',
-      text: `Hola ${data.nombre || ''},\n\nEl rol de tu cuenta Notaire se actualizó a "${role.nombre_rol}". Si no esperabas este cambio, contacta al administrador del sistema.`
-    });
     await registrarAuditoria({
       req,
       accion: 'cambiar_rol',
@@ -391,27 +385,6 @@ async function enrichTramites(tramites) {
     cliente: names.get(String(tramite.usuario_id)) || null,
     responsable: names.get(String(tramite.responsable_id)) || null
   }));
-}
-
-async function notificarParticipantesTramite(tramite, accion) {
-  try {
-    const userIds = [...new Set([tramite.usuario_id, tramite.responsable_id].filter(Boolean))];
-    if (!userIds.length) return;
-
-    const { data: usuarios, error } = await supabase
-      .from('usuarios')
-      .select('id, nombre, email')
-      .in('id', userIds);
-    if (error) throw error;
-
-    await Promise.all((usuarios || []).map(usuario => sendNotificationEmail({
-      to: usuario.email,
-      subject: `Trámite ${accion}: ${tramite.titulo}`,
-      text: `Hola ${usuario.nombre || ''},\n\nEl trámite "${tramite.titulo}" (${tramite.tipo}) fue ${accion}.\nEstado: ${tramite.estado}\nFecha límite: ${tramite.fecha_limite || 'Sin fecha definida'}\n\nIngresa a Notaire para ver los detalles.`
-    })));
-  } catch (error) {
-    console.error('Error notificando participantes del trámite:', error.message);
-  }
 }
 
 router.get('/tramites', verificarOperacion, async (_req, res) => {
@@ -501,7 +474,6 @@ router.put('/tramites/:id', verificarOperacion, async (req, res) => {
       .select('*')
       .single();
     if (error) throw error;
-    void notificarParticipantesTramite(data, 'actualizado');
     await registrarAuditoria({
       req,
       accion: 'actualizar_tramite',
@@ -527,7 +499,6 @@ router.delete('/tramites/:id', verificarOperacion, async (req, res) => {
 
     const { error } = await supabase.from('tramites_notariales').delete().eq('id', req.params.id);
     if (error) throw error;
-    void notificarParticipantesTramite(tramite, 'eliminado');
     await registrarAuditoria({
       req,
       accion: 'eliminar_tramite',

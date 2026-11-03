@@ -826,8 +826,13 @@ test('el login tiene límite de intentos y auditoría', async () => {
     assert.match(authRoute, /router\.post\('\/login', loginRateLimit/);
     assert.match(authRoute, /login_exitoso/);
     assert.match(authRoute, /login_fallido/);
-    assert.match(limiter, /MAX_ATTEMPTS = 5/);
+    assert.match(limiter, /LOGIN_RATE_LIMIT_ACCOUNT_MAX', 5/);
+    assert.match(limiter, /LOGIN_RATE_LIMIT_IP_MAX', 30/);
+    assert.match(limiter, /LOGIN_RATE_LIMIT_WINDOW_SECONDS', 900/);
+    assert.match(limiter, /consume_login_attempt/);
+    assert.match(limiter, /createHmac\('sha256'/);
     assert.match(limiter, /status\(429\)/);
+    assert.match(limiter, /status\(503\)/);
     assert.match(limiter, /Retry-After/);
 });
 
@@ -1155,16 +1160,14 @@ test('el logo y el avatar quedan centrados al colapsar el menú lateral', async 
     assert.match(styles, /\.sidebar \{[^}]*transition: width 0\.42s cubic-bezier\(0\.22, 1, 0\.36, 1\)/s);
 });
 
-test('el panel cliente tiene centro de notificaciones, avisos periódicos y navegación priorizada', async () => {
-    const [html, notifications, mobileNav, mobileStyles, styles, preferenceService, eventNotifications, financeAlerts] = await Promise.all([
+test('el panel cliente tiene centro de notificaciones internas y navegación priorizada', async () => {
+    const [html, notifications, mobileNav, mobileStyles, styles, preferenceService] = await Promise.all([
         read('public/panel_control/cliente/dashboard.html'),
         read('public/panel_control/cliente/assets/js/cliente-dashboard-ext.js'),
         read('public/panel_control/cliente/assets/js/mobile-nav.js'),
         read('public/panel_control/cliente/assets/css/cliente-mobile.css'),
         read('public/panel_control/cliente/assets/css/cliente-dashboard.css'),
-        read('src/app/services/notification-prefs.service.js'),
-        read('src/app/services/event-notifications.service.js'),
-        read('src/app/services/finance-alerts.service.js')
+        read('src/app/services/notification-prefs.service.js')
     ]);
 
     const destinations = [...html.matchAll(/data-target="(view-[^"]+)"/g)].map(match => match[1]);
@@ -1177,10 +1180,14 @@ test('el panel cliente tiene centro de notificaciones, avisos periódicos y nave
     assert.match(styles, /background-image: linear-gradient\(var\(--color-card-bg\), var\(--color-card-bg\)\)/);
     assert.match(html, /id="togNotifDaily"/);
     assert.match(html, /id="togNotifMonthly"/);
+    assert.doesNotMatch(html, /togNotifEmail|Avisos por correo/);
     assert.match(notifications, /notaire_notification_center/);
     assert.match(notifications, /dedupeKey: `daily:/);
     assert.match(notifications, /dedupeKey: `monthly:/);
     assert.match(notifications, /dedupeKey: `event:/);
+    assert.match(notifications, /function scheduleNotificationChecks\(\)/);
+    assert.match(notifications, /new Notification\(title/);
+    assert.match(notifications, /type: 'weekly'/);
     assert.match(mobileNav, /view-calculadora/);
     assert.match(mobileNav, /let lastSyncedView = null/);
     assert.match(mobileNav, /if \(lastSyncedView === view\) return/);
@@ -1194,20 +1201,9 @@ test('el panel cliente tiene centro de notificaciones, avisos periódicos y nave
     assert.match(mobileNav, /document\.getElementById\('mobileMenuTrigger'\)\?\.click\(\)/);
     assert.match(preferenceService, /daily: bool\('daily'\)/);
     assert.match(preferenceService, /monthly: bool\('monthly'\)/);
+    assert.doesNotMatch(preferenceService, /email: true|email: bool\('email'\)/);
     assert.match(notifications, /if \(!response\.ok\) throw new Error\(`El servidor respondió HTTP \$\{response\.status\}`\)/);
     assert.match(notifications, /input\.checked = await requestBrowserNotifications\(\)/);
-    assert.match(eventNotifications, /evento\.fecha\}T\$\{String\(evento\.hora \|\| '08:00'\)\.slice\(0, 5\)\}:00-05:00/);
-    assert.match(eventNotifications, /T09:00:00-05:00/);
-    assert.match(financeAlerts, /timezone: 'America\/Bogota'/);
-    assert.match(financeAlerts, /\.lt\('fecha', endExclusive\)/);
-
-    const minutesUntilSource = eventNotifications.match(/function minutesUntil\(evento, now = Date\.now\(\)\) \{[\s\S]*?\n\}/)?.[0];
-    assert.ok(minutesUntilSource);
-    const minutesUntil = vm.runInNewContext(`(${minutesUntilSource})`, { Date });
-    assert.equal(minutesUntil(
-        { fecha: '2026-10-27', hora: '08:00:00' },
-        Date.parse('2026-10-27T12:00:00.000Z')
-    ), 60);
 });
 
 test('las opciones de notificación reflejan permisos del navegador y errores de sincronización', async () => {

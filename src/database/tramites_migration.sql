@@ -23,7 +23,9 @@ create index if not exists idx_tramites_fecha_limite on public.tramites_notarial
 alter table public.tramites_notariales enable row level security;
 
 drop policy if exists tramites_admin_policy on public.tramites_notariales;
-create policy tramites_admin_policy on public.tramites_notariales
-    for all to authenticated
-    using (true)
-    with check (true);
+drop policy if exists backend_only_access on public.tramites_notariales;
+create policy backend_only_access on public.tramites_notariales as restrictive
+    for all to anon, authenticated using (false) with check (false);
+
+revoke all privileges on table public.tramites_notariales from public, anon, authenticated;
+grant all privileges on table public.tramites_notariales to service_role;

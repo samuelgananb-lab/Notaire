@@ -84,9 +84,7 @@ Guarda compromisos financieros, como una factura o un pago próximo.
 - `monto`: valor esperado.
 - `fecha_vencimiento`: fecha de pago.
 - `estado`: normalmente `pendiente` o `pagado`.
-- `email_24h_sent` y `email_due_sent`: indican si ya se enviaron los avisos automáticos de vencimiento.
-
-Las dos últimas columnas son necesarias para que el sistema no mande el mismo correo repetidamente. Se agregan con `recordatorios_notificaciones_migration.sql`.
+Los recordatorios permanecen disponibles en el calendario y en los paneles. El envío automático de correos de vencimiento fue retirado; no ejecutes migraciones antiguas que solo añadían flags de correo.
 
 ### 7. `eventos_calendario`
 
@@ -96,8 +94,7 @@ Guarda eventos personales, financieros o notariales del calendario.
 - `usuario_id`: dueño; conecta con `usuarios`.
 - `titulo`, `tipo` y `nota`: descripción y categoría.
 - `fecha`, `hora` y `fecha_hora`: cuándo ocurre.
-- `notif24h`, `notif1h` y `notifonday`: preferencias para avisar antes o el mismo día.
-- `notif24_sent`, `notif1h_sent` y `notifonday_sent`: marcas que evitan enviar el mismo aviso más de una vez.
+- `notif24h`, `notif1h` y `notifonday`: preferencias para avisos internos del navegador; el historial y la deduplicación se conservan en el cliente.
 - `estado`: situación del evento, por ejemplo pendiente.
 
 Las columnas del evento se incorporan con `eventos_calendario_migration.sql` y `eventos_notificaciones_migration.sql`.
@@ -174,8 +171,8 @@ El servidor actual crea el cliente de `@supabase/supabase-js` en `src/app/databa
 | `metas` | Objetivos de ahorro. | Definición exacta en `supabase_schema.sql`: `id bigint identity`, `usuario_id uuid`, `nombre varchar(150)`, `monto_objetivo numeric(12,2)`, `monto_actual numeric(12,2)`, `fecha_limite date`, `icono text`. El objetivo debe ser mayor que cero y el monto actual no puede ser negativo. |
 | `aportes_meta` | Historial de aportes a metas. | `id bigint identity`, `meta_id bigint`, `usuario_id uuid`, `monto numeric(12,2)`, `fecha timestamptz`. El monto debe ser positivo. |
 | `transacciones` | Ingresos y gastos del usuario. | `id bigint identity`, `usuario_id uuid`, `tipo varchar(20)`, `monto numeric(12,2)`, `categoria varchar(100)`, `descripcion text`, `fecha date`. El tipo admite `ingreso` o `gasto`, y el monto debe ser positivo. |
-| `recordatorios` | Compromisos financieros con vencimiento. | Las rutas consultan `id`, `usuario_id`, `titulo`, `monto`, `fecha_vencimiento`, `estado`; la migración añade `email_24h_sent` y `email_due_sent` como booleanos. Los estados usados por la API son `pendiente` y `pagado`. No hay un `CREATE TABLE` de esta tabla en los SQL actuales. |
-| `eventos_calendario` | Eventos personales, financieros o notariales. | Las rutas usan `id`, `usuario_id`, `titulo`, `tipo`, `fecha`, `hora`, `fecha_hora`, `nota`, `estado`, `notif24h`, `notif1h`, `notifonday`, `notif24_sent`, `notif1h_sent` y `notifonday_sent`. Las dos migraciones de eventos añaden esos campos, pero presuponen que la tabla ya existe. |
+| `recordatorios` | Compromisos financieros con vencimiento. | Las rutas consultan `id`, `usuario_id`, `titulo`, `monto`, `fecha_vencimiento` y `estado`. Los estados usados por la API son `pendiente` y `pagado`. No hay un `CREATE TABLE` de esta tabla en los SQL actuales. |
+| `eventos_calendario` | Eventos personales, financieros o notariales. | Las rutas usan `id`, `usuario_id`, `titulo`, `tipo`, `fecha`, `hora`, `fecha_hora`, `nota`, `estado`, `notif24h`, `notif1h` y `notifonday`. Las migraciones de eventos presuponen que la tabla ya existe. |
 | `patrimonio` | Activos y pasivos financieros. | Las rutas consultan `id`, `usuario_id`, `tipo`, `categoria`, `monto`. El cálculo neto suma los tipos que empiezan por `activo` y resta los que empiezan por `pasivo`. No hay un `CREATE TABLE` de esta tabla en los SQL actuales. |
 | `tramites_notariales` | Trámites, cliente y responsable. | Definición exacta en `tramites_migration.sql`: `id`, `usuario_id`, `responsable_id`, `tipo`, `titulo`, `estado`, `fecha_limite`, `descripcion`, `created_at`, `updated_at`. El estado está limitado a `recibido`, `en_revision`, `pendiente`, `aprobado`, `finalizado` o `rechazado`. |
 | `auditoria_acciones` | Registro de acciones sensibles y administrativas. | Definición exacta en `auditoria_migration.sql`: `id`, `actor_id`, `accion`, `recurso`, `recurso_id`, `detalles jsonb`, `ip_address inet`, `user_agent`, `created_at`. `detalles` inicia como objeto JSON vacío. |
@@ -207,7 +204,7 @@ Las claves foráneas de `metas`, `aportes_meta`, `transacciones`, `tramites_nota
 - El saldo disponible se calcula como ingresos acumulados menos gastos acumulados menos el total reservado en metas. El ahorro en metas es una reserva de ese saldo, no un gasto adicional al calcular el patrimonio.
 - Si hay activos o pasivos registrados, el patrimonio neto es activos menos pasivos. Si no hay registros manuales, se estima como ingresos acumulados menos gastos acumulados; los activos y pasivos siguen mostrando solo los valores registrados manualmente.
 - La dona de distribución en los paneles de cliente y empleado comparte la misma fórmula y los mismos valores acumulados: gastos, ahorros y disponible (ingresos menos gastos y ahorros, sin representar un disponible negativo como segmento).
-- Las banderas `email_24h_sent`, `email_due_sent` y las banderas `notif*_sent` evitan repetir avisos en cada ejecución del proceso de notificaciones. Cuando un evento cambia de fecha u hora, la API reinicia sus banderas de envío.
+- Los recordatorios de calendario se programan y deduplican en el cliente; el backend conserva las preferencias del evento y no ejecuta un worker persistente.
 - Los trámites y los recordatorios tienen estados validados por la API. La restricción SQL de estados solo está definida explícitamente para `tramites_notariales`.
 
 ### Catálogo de scripts de `src/database/`
@@ -217,16 +214,20 @@ Las claves foráneas de `metas`, `aportes_meta`, `transacciones`, `tramites_nota
 | `supabase_schema.sql` | Crea `metas`, `aportes_meta` y `transacciones`, sus restricciones e índices. Requiere que `public.usuarios` ya exista. El comentario inicial menciona más tablas activas que las que el archivo realmente crea. |
 | `supabase_metas.sql` | Repite la creación de `metas` y `aportes_meta` e índices. Es redundante con esa parte de `supabase_schema.sql`; no se necesita ejecutar ambos para crear esas tablas. |
 | `roles_migration.sql` | Inserta o actualiza el rol `empleado` y lista los roles. Requiere que `public.roles` exista; no crea los roles `admin` ni `cliente`. |
-| `supabase_auth_migration.sql` | Agrega `usuarios.auth_id` y habilita RLS para metas, aportes, transacciones, recordatorios y patrimonio. Las políticas aceptan que el UUID del token corresponda a `usuarios.auth_id` o a `usuarios.id`. Requiere que esas tablas ya existan. |
-| `supabase_rls.sql` | Otra definición de políticas para esas cinco tablas. Compara directamente `auth.uid()` con `usuario_id`; esta regla no es equivalente a la compatibilidad `auth_id` de la migración anterior. Elige y verifica deliberadamente una estrategia antes de ejecutarla. |
-| `recordatorios_notificaciones_migration.sql` | Añade dos banderas de envío a `recordatorios`; presupone que la tabla existe. |
-| `metas_notificaciones_migration.sql` | Añade banderas para avisos de vencimiento y la función `registrar_aporte_meta`, que registra atómicamente los aportes sin superar el objetivo. Requiere `metas` y `aportes_meta`; aplícala antes de habilitar aportes de metas con la nueva API. |
+| `supabase_auth_migration.sql` | Agrega `usuarios.auth_id` y bloquea acceso directo de `anon`/`authenticated` a las tablas financieras; requiere que las tablas ya existan. El backend sigue usando `service_role`. |
+| `supabase_rls.sql` | Configura RLS backend-only para metas, aportes, transacciones, recordatorios y patrimonio. No concede acceso directo al navegador. |
+| `metas_notificaciones_migration.sql` | Crea la función `registrar_aporte_meta`, que registra atómicamente los aportes sin superar el objetivo. Requiere `metas` y `aportes_meta`; aplícala antes de habilitar aportes de metas con la nueva API. |
 | `eventos_calendario_migration.sql` | Añade fecha, hora, fecha-hora, nota y preferencias de aviso; crea un índice por usuario y fecha. Presupone que la tabla existe. |
 | `eventos_calendario_tipo_migration.sql` | Reemplaza la restricción anterior de tipo por las cuatro categorías del calendario (`notarial`, `financiero`, `recordatorio`, `personal`) y normaliza alias visuales y cumpleaños existentes a una de ellas. Ejecuta los nuevos tipos bajo la restricción desde su aplicación, sin validar de nuevo filas históricas. |
-| `eventos_notificaciones_migration.sql` | Añade banderas de envío y estado a `eventos_calendario`; presupone que la tabla existe. |
-| `tramites_migration.sql` | Crea trámites, índices y una política RLS. La política actual permite todas las operaciones a cualquier usuario autenticado; véase la advertencia de seguridad más abajo. |
-| `auditoria_migration.sql` | Crea auditoría, índices y una política para que administradores autenticados lean registros. La comprobación de administrador compara `usuarios.id` con `auth.uid()`, no consulta `auth_id`. |
-| `solicitudes_empleado_migration.sql` | Crea `solicitudes_empleado` (solicitudes y reportes de clientes y empleados). Idempotente. |
+| `eventos_notificaciones_migration.sql` | Añade el estado requerido por el centro de notificaciones administrativas a `eventos_calendario`; presupone que la tabla existe. |
+| `desactivar_cron_avisos_legacy.sql` | Desactiva el cron de Supabase que invocaba el envío de correos retirado; no elimina datos ni objetos. |
+| `tramites_migration.sql` | Crea trámites e índices; RLS deniega el acceso directo a `anon`/`authenticated`. La API comprueba roles. |
+| `auditoria_migration.sql` | Crea auditoría e índices; solo el backend con `service_role` accede a la tabla. |
+| `solicitudes_empleado_migration.sql` | Crea `solicitudes_empleado`, índices y RLS backend-only. La API aplica propietario/rol. |
+| `backend_only_access_migration.sql` | Refuerza RLS y revoca privilegios de tablas activas a `PUBLIC`, `anon` y `authenticated`; conserva `service_role`. No modifica filas. Ejecutar después de crear tablas y políticas. |
+| `login_rate_limit_migration.sql` | Crea almacenamiento central, función RPC atómica y limpieza de contadores vencidos para el limitador de login. Requerida antes de habilitar `/api/auth/login` en producción. |
+
+En desarrollo local, si la RPC responde `PGRST202` porque aún no existe, el login usa temporalmente un contador en memoria del proceso y registra una advertencia. Ese fallback no comparte el límite entre procesos ni instancias. En `NODE_ENV=production` no se usa fallback: si la RPC falta o Supabase falla, el login responde `503` hasta aplicar la migración y validar la función.
 
 ### Instalación y migraciones Supabase
 
@@ -236,25 +237,28 @@ Para una base que ya tenga las tablas base, el orden orientativo es:
 
 1. Confirmar `usuarios` y `roles`, incluyendo las columnas usadas por autenticación y el perfil.
 2. Ejecutar `supabase_schema.sql` para el modelo financiero, si esas tablas aún no existen.
-3. Crear previamente `recordatorios`, `eventos_calendario` y `patrimonio` si faltan; aplicar sus migraciones de notificaciones/eventos después.
-4. Ejecutar `roles_migration.sql` si se necesita agregar o corregir el rol `empleado`.
-5. Ejecutar `tramites_migration.sql` y `auditoria_migration.sql` para esos módulos.
-6. Elegir una sola estrategia de políticas de propietario y revisar las políticas de auditoría y trámites antes de habilitar el acceso de usuarios.
+3. Ejecutar `supabase_auth_migration.sql` para vincular `usuarios.auth_id`, si aún no está aplicado.
+4. Crear previamente `recordatorios`, `eventos_calendario` y `patrimonio` si faltan; aplicar sus migraciones de eventos después.
+5. Ejecutar `roles_migration.sql` si se necesita agregar o corregir el rol `empleado`.
+6. Ejecutar `tramites_migration.sql`, `solicitudes_empleado_migration.sql` y `auditoria_migration.sql` para esos módulos.
 7. Ejecutar `metas_notificaciones_migration.sql` después de crear `metas` y `aportes_meta`, antes de desplegar la API que registra aportes.
+8. Ejecutar `login_rate_limit_migration.sql` antes de desplegar el login protegido por RPC.
+9. Ejecutar `backend_only_access_migration.sql` al final, después de que existan todas las tablas a proteger. No ejecutes las migraciones contra producción sin revisar el proyecto y respaldar la base.
+
+Si una instalación anterior aplicó la migración histórica de notificaciones, ejecuta manualmente `desactivar_cron_avisos_legacy.sql` para retirar únicamente el cron de correo legado. No se eliminan tablas ni columnas de la base existente.
 
 Las migraciones con `add column if not exists` pueden repetirse para las columnas, pero eso no garantiza que todas las operaciones sean idempotentes o que el esquema resultante sea seguro. Usa primero un entorno de prueba, respalda los datos y valida las políticas con cuentas de distintos roles.
 
 ### Seguridad: límites conocidos
 
 - El cliente Supabase del backend usa `SUPABASE_SERVICE_ROLE_KEY`. La clave `service_role` omite RLS; por tanto, son las rutas Express y sus filtros por `usuario_id` las que deben validar cada operación. Nunca incluyas esa clave en frontend, documentación pública o repositorios.
-- `supabase_auth_migration.sql` y `supabase_rls.sql` definen políticas distintas para las tablas financieras. En particular, una compara `auth_id` o `id` con el usuario autenticado y la otra compara directamente `usuario_id` con `auth.uid()`. No asumas que ambas son intercambiables.
-- `tramites_migration.sql` crea `tramites_admin_policy` con `using (true)` y `with check (true)` para `authenticated`. Eso no restringe filas por propietario ni rol. Debe revisarse antes de usar RLS como barrera de acceso.
-- `auditoria_admin_read_policy` solo concede lectura a administradores y no define una política de inserción para usuarios normales. El servicio backend con `service_role` puede insertar igualmente porque omite RLS.
+- Las migraciones backend-only revocan permisos de tabla a `anon`/`authenticated` y añaden una política restrictiva denegatoria; Express es la única capa que usa `service_role` y comprueba identidad, propietario y rol.
+- `service_role` omite RLS. Mantén su clave solo en el servidor y nunca la expongas al frontend.
 - Si una credencial real llegó a GitHub, borrar `.env` del último commit no la elimina de commits anteriores. Rótala en el proveedor correspondiente y, si GitHub bloquea un push, elimina el secreto del historial que se va a publicar.
 
 ### Variables de conexión
 
-El backend Supabase requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el entorno del servidor. Los avisos por correo requieren además `RESEND_API_KEY` y `MAIL_FROM`, configurados con un remitente/dominio válido en Resend; sin ellos, el servidor omite los envíos. El adaptador opcional SQL Server lee `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_NAME`, `DB_PORT`, `DB_ENCRYPT` y `DB_TRUST_SERVER_CERTIFICATE`. No copies valores reales a esta guía; documenta únicamente nombres de variables y usa `.env.example` con marcadores no secretos.
+El backend Supabase requiere `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `JWT_SECRET`. La recuperación usa Supabase Auth y `PASSWORD_RESET_REDIRECT_URL`. Los envíos propios y el adaptador SQL Server fueron retirados. El rate limit admite `LOGIN_RATE_LIMIT_IP_MAX`, `LOGIN_RATE_LIMIT_ACCOUNT_MAX` y `LOGIN_RATE_LIMIT_WINDOW_SECONDS`, con valores predeterminados en `.env.example`.
 
 ### Comprobación del esquema remoto
 

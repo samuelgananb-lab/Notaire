@@ -1063,9 +1063,11 @@ async function toggleNotifBrowser(input) {
 }
 
 function notifCfg() {
-    const defaults = { browser: true, email: true, h24: true, h1: true, gastos: true, semanal: false, daily: true, monthly: true };
+    const defaults = { browser: true, h24: true, h1: true, gastos: true, semanal: false, daily: true, monthly: true };
     try {
-        return { ...defaults, ...JSON.parse(localStorage.getItem('notaire_notif_cfg') || '{}') };
+        const stored = JSON.parse(localStorage.getItem('notaire_notif_cfg') || '{}');
+        if (stored && typeof stored === 'object') delete stored.email;
+        return { ...defaults, ...stored };
     } catch {
         return defaults;
     }
@@ -1078,7 +1080,6 @@ function authHeadersExt() {
 function applyNotifConfigToUI(cfg, presupuesto) {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.checked = Boolean(value); };
     set('togNotifBrowser', cfg.browser);
-    set('togNotifEmail', cfg.email);
     set('togNotif24h', cfg.h24);
     set('togNotif1h', cfg.h1);
     set('togNotifGastos', cfg.gastos);
@@ -1169,7 +1170,6 @@ async function persistirPreferencias(extra = {}) {
 function saveNotifConfig() {
     const cfg = {
         browser: document.getElementById('togNotifBrowser')?.checked,
-        email: document.getElementById('togNotifEmail')?.checked,
         h24: document.getElementById('togNotif24h')?.checked,
         h1: document.getElementById('togNotif1h')?.checked,
         gastos: document.getElementById('togNotifGastos')?.checked,

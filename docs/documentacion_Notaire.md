@@ -18,7 +18,8 @@ Es la carpeta raíz de los archivos estáticos servidos por Express.
 - **`panel_control/`**: Dashboards específicos para cada rol de usuario (Admin, Cliente).
 
 ### 2. Directorio `src/` (Backend)
-- **`src/app/server.js`**: El corazón del proyecto. Configura Express, sirve los archivos estáticos de `public/` y gestiona el punto de enlace (endpoint) del Asesor Financiero mediante el proxy a la API de Claude.
+- **`src/app/app.js`**: Configura Express, los headers de seguridad y las rutas de la API.
+- **`src/app/server.js`**: Arranque local de Express mediante `npm start`.
 
 ### 3. Directorio `docs/`
 - Espacio centralizado para la documentación técnica, manuales de usuario y especificaciones de negocio (como este archivo).
@@ -29,37 +30,40 @@ La persistencia activa del backend usa Supabase. Las tablas canónicas son:
 `usuarios`, `roles`, `metas`, `aportes_meta`, `transacciones`, `recordatorios`,
 `eventos_calendario` y `patrimonio`.
 
-Los modelos legacy de SQLite/SQL Server (`schema.sql`, `schema_sqlserver.sql`,
-`seed.sql`, `db.js`, `db_mssql.js`) fueron eliminados. Para Supabase deben
-revisarse y ejecutarse únicamente las migraciones SQL de `src/database/`.
+El backend activo usa Supabase. Los conectores legacy `db.js` y `db_mssql.js` y
+el seed con cuentas de demostración fueron retirados porque no tenían
+consumidores. `schema.sql` y `schema_sqlserver.sql` se conservan solo como
+referencia histórica; no inicializan la aplicación activa.
 
-## Usuarios de Prueba (Demo)
+## Autenticación y recuperación
 
-Para propósitos de demostración y pruebas de integración, se han preconfigurado los siguientes usuarios:
+El registro, el inicio de sesión, los roles y la recuperación de contraseña siguen
+integrados con Supabase Auth. La recuperación usa `resetPasswordForEmail` y las
+plantillas/configuración de correo propias de Supabase Auth; no depende del
+sistema de correo transaccional de Notaire, que fue retirado.
 
-| Rol | Correo Electrónico | Contraseña | Destino (Dashboard) |
-| --- | --- | --- | --- |
-| **Administrador** | `admin@notaire.com` | `admin123` | `panel_control/admin/` |
-| **Cliente** | `cliente@notaire.com` | `cliente123` | `panel_control/cliente/` |
+No se incluyen cuentas ni contraseñas de demostración. Crea usuarios y asigna
+roles mediante el flujo de administración configurado para cada entorno.
 
 ## Seguridad y Protección de Rutas
 
-Para garantizar la integridad del sistema y la privacidad de los usuarios, se ha implementado un esquema de seguridad de doble capa:
+Las decisiones de acceso se aplican en la API; el guard del navegador solo
+mejora la navegación y no sustituye la autorización del servidor.
 
-### 1. Protección de Backend (Middleware de Express)
-El servidor (`server.js`) utiliza un middleware personalizado que protege la carpeta `/panel_control`. Sus funciones incluyen:
-- **Verificación de Sesión**: Comprueba si existe una cookie de sesión válida (`session_token`) antes de servir cualquier archivo estático de los dashboards.
-- **Control de Acceso Basado en Roles (RBAC)**: Valida que el rol del usuario autenticado corresponda a la carpeta a la que intenta acceder. Por ejemplo, un usuario con rol "cliente" no puede acceder a `/panel_control/admin/`.
-- **Redirección Automática**: Si un usuario no está autenticado o intenta entrar a una zona prohibida, el servidor lo redirige automáticamente a la página de inicio de sesión.
+### 1. Autorización de API
+Las rutas protegidas verifican el token y resuelven el rol desde `public.usuarios`
+y `public.roles`; el rol enviado dentro del token no se considera autoridad. Las
+rutas administrativas y financieras aplican middleware de rol y propiedad.
 
-### 2. Protección de Frontend (`auth-guard.js`)
-Cada dashboard incluye un script ligero llamado `auth-guard.js` que:
-- Realiza una comprobación instantánea al cargar la página para evitar visualizaciones accidentales de contenido protegido (flash of protected content).
-- Gestiona el estado de la sesión en el navegador.
-- Centraliza la función `logout()` para garantizar que la sesión se cierre correctamente tanto en el cliente como en el servidor.
+### 2. Guard del navegador
+`auth-guard.js` gestiona la sesión local, renueva tokens y redirige a login.
+Las rutas del backend siguen siendo la barrera de seguridad efectiva.
 
-### 3. Gestión de API
-- Los endpoints sensibles de la API (como `/api/auth/verify`) también están protegidos y requieren una sesión activa para responder con información.
+### 3. Acceso a Supabase
+La clave `SUPABASE_SERVICE_ROLE_KEY` solo se utiliza en el servidor. La migración
+`backend_only_access_migration.sql` revoca acceso directo de `anon` y
+`authenticated`; debe aplicarse manualmente en Supabase antes de considerar
+completo el cierre de RLS.
 
 ## Conclusión
 La arquitectura actual prioriza la simplicidad y el rendimiento al utilizar tecnologías web nativas (HTML, CSS, JS) sin la sobrecarga de frameworks innecesarios, manteniendo una organización lógica fácil de navegar para cualquier desarrollador.

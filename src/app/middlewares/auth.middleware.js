@@ -25,7 +25,8 @@ export const bloquearEmpleado = async (req, res, next) => {
     }
     next();
   } catch (error) {
-    res.status(500).json({ error: 'No se pudo validar el rol', detalle: error.message });
+    console.error('No se pudo validar el rol de acceso financiero.');
+    res.status(500).json({ error: 'No se pudo validar el rol' });
   }
 };
 
@@ -73,7 +74,7 @@ export const verificarToken = async (req, res, next) => {
     req.usuario = { id: usuario.id, auth_id: usuario.auth_id, email: usuario.email, id_rol: usuario.id_rol, nombre: usuario.nombre };
     next();
   } catch (error) {
-    console.error('Error al verificar token:', error.message);
+    console.warn('No se pudo validar el token de sesión.');
     return res.status(403).json({ error: 'Token inválido o expirado' });
   }
 };

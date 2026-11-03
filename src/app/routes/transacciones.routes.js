@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
-import { sendNotificationEmail } from '../services/event-notifications.service.js';
-import { checkBudgetAlert } from '../services/finance-alerts.service.js';
 import { calculateFinancialSummary, createLiquidityTrend, monthReferenceDate } from '../services/financial-summary.service.js';
 
 const router = Router();
@@ -123,13 +121,6 @@ router.post('/', verificarToken, async (req, res) => {
       .single();
 
     if (error) throw error;
-    const tipoMovimiento = String(data.tipo || tipo).toLowerCase();
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: `${tipoMovimiento === 'ingreso' ? 'Ingreso' : 'Gasto'} registrado`,
-      text: `Hola ${req.usuario.nombre || ''},\n\nSe registró un ${tipoMovimiento} en tu cuenta Notaire.\nMonto: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(data.monto) || 0)}\nCategoría: ${data.categoria}\nDescripción: ${data.descripcion || 'Sin descripción'}\nFecha: ${data.fecha}\n\nSi no reconoces esta operación, revisa tu cuenta.`
-    });
-    void checkBudgetAlert(req.usuario, data);
     res.status(201).json({ mensaje: 'Transacción creada exitosamente', transaccion: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear transacción', detalle: error.message });
@@ -147,11 +138,6 @@ router.delete('/:id', verificarToken, async (req, res) => {
       .eq('usuario_id', req.usuario.id);
 
     if (error) throw error;
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: 'Movimiento eliminado',
-      text: `Hola ${req.usuario.nombre || ''},\n\nSe eliminó un movimiento de tu cuenta Notaire.\nIdentificador: ${id}\n\nSi no reconoces esta acción, contacta al equipo de soporte.`
-    });
     res.json({ mensaje: 'Transacción eliminada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar transacción', detalle: error.message });
@@ -179,11 +165,6 @@ router.put('/:id', verificarToken, async (req, res) => {
       .single();
 
     if (error) throw error;
-    void sendNotificationEmail({
-      to: req.usuario.email,
-      subject: 'Movimiento actualizado',
-      text: `Hola ${req.usuario.nombre || ''},\n\nSe actualizó un movimiento en tu cuenta Notaire.\nTipo: ${data.tipo}\nMonto: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(data.monto) || 0)}\nCategoría: ${data.categoria}\nFecha: ${data.fecha}\n\nNotaire`
-    });
     res.json({ mensaje: 'Transacción actualizada exitosamente', transaccion: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar transacción', detalle: error.message });

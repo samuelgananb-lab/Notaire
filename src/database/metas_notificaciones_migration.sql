@@ -1,11 +1,5 @@
 -- Ejecutar una vez en Supabase SQL Editor.
--- Añade controles idempotentes para avisos de vencimiento y aporta metas de forma atomica.
-
-alter table public.metas
-    add column if not exists email_vencimiento_7d_sent boolean not null default false,
-    add column if not exists email_vencimiento_3d_sent boolean not null default false,
-    add column if not exists email_vencimiento_1d_sent boolean not null default false,
-    add column if not exists email_vencimiento_hoy_sent boolean not null default false;
+-- Registra aportes a metas de forma atómica sin superar el objetivo.
 
 create or replace function public.registrar_aporte_meta(
     p_usuario_id uuid,

@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
-import { sendNotificationEmail } from '../services/event-notifications.service.js';
-import { getPrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 router.use(verificarToken);
@@ -21,12 +19,6 @@ const EVENT_TYPES = new Set(['notarial', 'financiero', 'recordatorio', 'personal
 function normalizeEventType(tipo) {
   const normalized = EVENT_TYPE_ALIASES[tipo] || tipo || 'notarial';
   return EVENT_TYPES.has(normalized) ? normalized : null;
-}
-
-async function sendEventEmail(usuario, subject, text) {
-  const prefs = await getPrefs(usuario.auth_id);
-  if (!prefs.email) return;
-  await sendNotificationEmail({ to: usuario.email, subject, text });
 }
 
 router.get('/', async (req, res) => {
@@ -57,11 +49,6 @@ router.post('/', async (req, res) => {
       nota: nota || null, notif24h: notif24h !== false, notif1h: notif1h !== false, notifonday: notifOnDay === true
     }]).select('*').single();
     if (error) throw error;
-    void sendEventEmail(
-      req.usuario,
-      'Evento agregado al calendario',
-      `Hola ${req.usuario.nombre || ''},\n\nSe agregó "${data.titulo}" a tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
-    );
     res.status(201).json({ mensaje: 'Evento creado', evento: data });
   } catch (error) {
     if (error.code === '23514' && error.constraint === 'eventos_calendario_tipo_check') {
@@ -102,22 +89,16 @@ router.put('/:id', async (req, res) => {
       payload.fecha = nuevaFecha;
       payload.hora = nuevaHora;
       payload.fecha_hora = `${nuevaFecha}T${nuevaHora || '08:00'}:00`;
-      payload.notif24_sent = false;
-      payload.notif1h_sent = false;
-      payload.notifonday_sent = false;
     }
     if (nota !== undefined) payload.nota = nota || null;
     if (notif24h !== undefined) {
       payload.notif24h = notif24h === true;
-      if (notif24h === true) payload.notif24_sent = false;
     }
     if (notif1h !== undefined) {
       payload.notif1h = notif1h === true;
-      if (notif1h === true) payload.notif1h_sent = false;
     }
     if (notifOnDay !== undefined) {
       payload.notifonday = notifOnDay === true;
-      if (notifOnDay === true) payload.notifonday_sent = false;
     }
 
     const { data, error } = await supabase
@@ -129,11 +110,6 @@ router.put('/:id', async (req, res) => {
       .single();
 
     if (error) throw error;
-    void sendEventEmail(
-      req.usuario,
-      'Evento actualizado',
-      `Hola ${req.usuario.nombre || ''},\n\nSe actualizó el evento "${data.titulo}" de tu calendario notarial.\nFecha y hora: ${data.fecha_hora || data.fecha}\n${data.nota || ''}\n\nNotaire`
-    );
     res.json({ mensaje: 'Evento actualizado', evento: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar evento', detalle: error.message });
@@ -149,11 +125,6 @@ router.delete('/:id', async (req, res) => {
     .select('id, titulo, fecha, hora')
     .single();
   if (error) return res.status(500).json({ error: 'Error al eliminar evento', detalle: error.message });
-  void sendEventEmail(
-    req.usuario,
-    'Evento eliminado del calendario',
-    `Hola ${req.usuario.nombre || ''},\n\nSe eliminó el evento "${data.titulo}" de tu calendario notarial.\nFecha: ${data.fecha || 'No especificada'} ${data.hora || ''}\n\nNotaire`
-  );
   res.json({ mensaje: 'Evento eliminado' });
 });
 

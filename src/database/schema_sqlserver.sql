@@ -126,10 +126,6 @@ SET IDENTITY_INSERT dbo.roles OFF;
 GO
 
 SET IDENTITY_INSERT dbo.usuarios ON;
-INSERT INTO dbo.usuarios (id_usuario, id_rol, nombre, email, password, telefono, documento_identidad, tipo_documento, estado) VALUES
-(1, 1, N'Administrador General', N'admin@notaire.com', N'admin123', N'+57 300 123 4567', N'1098765432', N'CC', N'activo'),
-(2, 2, N'Cliente Ejemplo', N'cliente@notaire.com', N'cliente123', N'+57 315 987 6543', N'1012345678', N'CC', N'activo'),
-(3, 3, N'Oficial de Operaciones', N'empleado@notaire.com', N'empleado123', N'+57 310 555 7788', N'79123456', N'CC', N'activo');
 SET IDENTITY_INSERT dbo.usuarios OFF;
 GO
 

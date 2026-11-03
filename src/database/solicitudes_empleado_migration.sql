@@ -41,7 +41,9 @@ create index if not exists idx_solicitudes_estado on public.solicitudes_empleado
 alter table public.solicitudes_empleado enable row level security;
 
 drop policy if exists solicitudes_admin_policy on public.solicitudes_empleado;
-create policy solicitudes_admin_policy on public.solicitudes_empleado
-    for all to authenticated
-    using (true)
-    with check (true);
+drop policy if exists backend_only_access on public.solicitudes_empleado;
+create policy backend_only_access on public.solicitudes_empleado as restrictive
+    for all to anon, authenticated using (false) with check (false);
+
+revoke all privileges on table public.solicitudes_empleado from public, anon, authenticated;
+grant all privileges on table public.solicitudes_empleado to service_role;

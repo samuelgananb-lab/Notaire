@@ -3,8 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 import { supabase } from './database/supabase.js';
 
 import transaccionesRouter from './routes/transacciones.routes.js';
@@ -17,22 +15,10 @@ import adminRouter from './routes/admin.routes.js';
 import solicitudesRouter from './routes/solicitudes.routes.js';
 import exchangeRateRouter from './routes/exchange-rate.routes.js';
 import { calculateFinancialSummary, createLiquidityTrend, currentFinancialMonth, monthReferenceDate } from './services/financial-summary.service.js';
-import { runScheduledNotifications, enviarResumenSemanal } from './services/scheduled-notifications.service.js';
-import { createCronNotificationHandler } from './services/cron-notifications.service.js';
-import { loginRateLimit } from './middlewares/login-rate-limit.middleware.js';
-import { JWT_SECRET, bloquearEmpleado, verificarToken } from './middlewares/auth.middleware.js';
+import { bloquearEmpleado, verificarToken } from './middlewares/auth.middleware.js';
 
 
 const app = express();
-const cronSecret = process.env.CRON_SECRET?.trim();
-if (process.env.NODE_ENV === 'production' &&
-  (!cronSecret || Buffer.byteLength(cronSecret, 'utf8') < 32)) {
-  throw new Error('CRON_SECRET debe estar configurado con al menos 32 caracteres en producción.');
-}
-const emailMode = String(process.env.EMAIL_MODE || '').trim().toLowerCase();
-if (process.env.NODE_ENV === 'production' && !['production', 'disabled'].includes(emailMode)) {
-  throw new Error('EMAIL_MODE debe ser production o disabled en producción.');
-}
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
 app.use(cors({ origin: corsOrigins.length ? corsOrigins : false }));
 app.disable('x-powered-by');
@@ -46,7 +32,13 @@ app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-if (!process.env.VERCEL) app.use(express.static(path.join(__dirname, '../../public')));
+const publicDirectory = path.resolve(__dirname, '../../public');
+app.use(express.static(publicDirectory));
+app.get('/', (_req, res, next) => {
+  res.sendFile(path.join(publicDirectory, 'index.html'), error => {
+    if (error) next(error);
+  });
+});
 
 async function consultarTodasLasFilas(crearConsulta, etiqueta, pageSize = 1000) {
   const filas = [];
@@ -57,99 +49,6 @@ async function consultarTodasLasFilas(crearConsulta, etiqueta, pageSize = 1000) 
     if (!data || data.length < pageSize) return filas;
   }
 }
-
-/* ========================================================================== 
-   RUTAS DE AUTENTICACIÃ“N
-   ========================================================================== */
-
-app.post('/api/v1/auth/registro', async (req, res) => {
-  try {
-    const { nombre, email, password } = req.body;
-    if (!nombre || !email || !password) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'La contraseÃ±a debe tener al menos 8 caracteres' });
-    }
-
-    const { data: existingUser, error: lookupError } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (lookupError) throw lookupError;
-    if (existingUser) {
-      return res.status(400).json({ error: 'El correo electrÃ³nico ya estÃ¡ registrado' });
-    }
-
-    const { data: clienteRole, error: roleError } = await supabase
-      .from('roles')
-      .select('id_rol')
-      .eq('nombre_rol', 'cliente')
-      .maybeSingle();
-
-    if (roleError) throw roleError;
-    if (!clienteRole) {
-      return res.status(500).json({ error: 'No existe el rol cliente en la base de datos' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const { data: user, error } = await supabase
-      .from('usuarios')
-      .insert([{ 
-        id_rol: clienteRole.id_rol, 
-        nombre: nombre, 
-        email: email, 
-        password: hashedPassword 
-      }])
-      .select('*')
-      .single();
-
-    if (error) throw error;
-    res.status(201).json({
-      mensaje: 'Usuario registrado exitosamente',
-      usuarioId: user.id,
-      usuario: { id: user.id, nombre: user.nombre, email: user.email }
-    });
-  } catch (error) {
-    console.error('Error en registro:', error.message);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
-
-app.post('/api/v1/auth/login', loginRateLimit, async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const { data: usuario, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!usuario || !(await bcrypt.compare(password, usuario.password))) {
-      return res.status(400).json({ error: 'Credenciales invÃ¡lidas' });
-    }
-
-    const now = Math.floor(Date.now() / 1000) - 120;
-    const token = jwt.sign(
-      { id: usuario.id, email: usuario.email, id_rol: usuario.id_rol, iat: now },
-      JWT_SECRET,
-      { expiresIn: '8h' }
-    );
-
-    res.json({
-      mensaje: 'Inicio de sesiÃ³n exitoso',
-      token,
-      usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
-    });
-  } catch (error) {
-    console.error('Error en login:', error.message);
-    res.status(500).json({ error: 'Error en el login' });
-  }
-});
 
 /* ========================================================================== 
    RUTAS DEL DASHBOARD (PROTEGIDAS)
@@ -225,20 +124,12 @@ app.get('/api/v1/cliente/dashboard-summary', verificarToken, bloquearEmpleado, a
 });
 
 
-// Supabase Cron invoca este endpoint cada minuto; la migración hace idempotentes los envíos.
-app.post('/api/cron/notifications', createCronNotificationHandler({
-  runNotifications: runScheduledNotifications,
-  sendWeeklySummary: enviarResumenSemanal
-}));
-
-app.get('/api/cron/diario', createCronNotificationHandler({
-  runNotifications: runScheduledNotifications,
-  sendWeeklySummary: enviarResumenSemanal
-}));
-
 app.get('/api/health', async (req, res) => {
   const { error } = await supabase.from('usuarios').select('id').limit(1);
-  if (error) return res.status(500).json({ status: 'Error', error: error.message });
+  if (error) {
+    console.error('Health check de Supabase falló.');
+    return res.status(500).json({ status: 'Error', error: 'No se pudo conectar a Supabase' });
+  }
   res.json({ status: 'OK', message: 'Conectado exitosamente a Supabase' });
 });
 

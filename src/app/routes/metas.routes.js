@@ -1,22 +1,15 @@
 import { Router } from 'express';
 import { supabase } from '../database/supabase.js';
 import { verificarToken } from '../middlewares/auth.middleware.js';
-import { sendNotificationEmail } from '../services/event-notifications.service.js';
-import { formatCOP } from '../services/finance-alerts.service.js';
-import { getPrefs } from '../services/notification-prefs.service.js';
 
 const router = Router();
 router.use(verificarToken);
 
-async function avisarMeta(req, subject, detalle) {
-  const prefs = await getPrefs(req.usuario.auth_id);
-  if (!prefs.email) return false;
-  return sendNotificationEmail({
-    to: req.usuario.email,
-    subject,
-    text: `Hola ${req.usuario.nombre || ''},\n\n${detalle}\n\nNotaire`
-  });
-}
+const formatCOP = value => new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0
+}).format(Number(value) || 0);
 
 async function calcularSaldoDisponible(usuarioId) {
   const [{ data: movimientos, error: errMov }, { data: metas, error: errMetas }] = await Promise.all([
@@ -82,7 +75,6 @@ router.post('/', async (req, res) => {
       .single();
 
     if (error) throw error;
-    avisarMeta(req, 'Meta creada', `Creaste la meta "${data.nombre}".\nObjetivo: ${formatCOP(data.monto_objetivo)}\nAhorro inicial: ${formatCOP(data.monto_actual)}\nFecha límite: ${data.fecha_limite || 'Sin fecha'}`);
     res.status(201).json({ mensaje: 'Meta creada', meta: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear meta', detalle: error.message });
@@ -155,9 +147,6 @@ async function registrarAporte(req, res, metaId) {
     const progresoAnterior = objetivo > 0 ? Number(meta.monto_actual || 0) / objetivo : 0;
     const progresoNuevo = objetivo > 0 ? nuevoMontoActual / objetivo : 0;
     if (completada) {
-      void avisarMeta(req, '¡Meta alcanzada!', `¡Felicitaciones! Alcanzaste tu meta "${meta.nombre}" (${formatCOP(objetivo)}).`);
-    } else if (progresoAnterior < 0.9 && progresoNuevo >= 0.9) {
-      void avisarMeta(req, 'Te falta poco para tu meta', `Te falta menos del 10% para completar "${meta.nombre}".\nLlevas ${formatCOP(nuevoMontoActual)} de ${formatCOP(objetivo)}.`);
     }
     res.status(201).json({
       mensaje: 'Aporte realizado con éxito',
@@ -239,7 +228,6 @@ router.put('/:id', async (req, res) => {
     }
 
     const fechaActualizada = fecha_limite || null;
-    const cambioFecha = String(existente.fecha_limite || '') !== String(fechaActualizada || '');
     const { data, error } = await supabase
       .from('metas')
       .update({
@@ -247,12 +235,6 @@ router.put('/:id', async (req, res) => {
         monto_objetivo: montoObjetivo,
         monto_actual: montoActual,
         fecha_limite: fechaActualizada,
-        ...(cambioFecha ? {
-          email_vencimiento_7d_sent: false,
-          email_vencimiento_3d_sent: false,
-          email_vencimiento_1d_sent: false,
-          email_vencimiento_hoy_sent: false
-        } : {}),
         ...(icono !== undefined ? { icono } : {})
       })
       .eq('id', metaId)
@@ -262,12 +244,6 @@ router.put('/:id', async (req, res) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'La meta ya no existe o no pertenece a este usuario' });
-    const completada = Number(existente.monto_actual || 0) < montoObjetivo && montoActual >= montoObjetivo;
-    avisarMeta(req,
-      completada ? '¡Meta alcanzada!' : 'Meta actualizada',
-      completada
-        ? `¡Felicitaciones! Alcanzaste tu meta "${data.nombre}" (${formatCOP(montoObjetivo)}).`
-        : `Actualizaste la meta "${data.nombre}".\nObjetivo: ${formatCOP(data.monto_objetivo)}\nAhorrado: ${formatCOP(data.monto_actual)}\nFecha límite: ${data.fecha_limite || 'Sin fecha'}`);
     res.json({ mensaje: 'Meta actualizada correctamente', meta: data });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar meta', detalle: error.message });
@@ -293,7 +269,6 @@ router.delete('/:id', async (req, res) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Meta no encontrada para este usuario' });
-    avisarMeta(req, 'Meta eliminada', `Eliminaste la meta "${data.nombre}".\nAhorro que tenía asignado: ${formatCOP(data.monto_actual)}`);
     res.json({ mensaje: 'Meta eliminada correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar la meta', detalle: error.message });
